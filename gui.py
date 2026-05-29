@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 import requests
-from PyQt6.QtCore import QThread, Qt, pyqtSignal
+from PyQt6.QtCore import QTimer, QThread, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QPainter, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
@@ -46,7 +46,8 @@ BACKGROUND_FILES = (
 TRANSLATIONS = {
     "EN": {
         "app_title": "MSLauncher",
-        "brand_subtitle": "Minecraft launcher",
+        "brand_title": "Nukem Team Launcher",
+        "brand_subtitle": "Built for professional play",
         "language": "Language",
         "build": "Build",
         "username": "Nickname",
@@ -79,7 +80,8 @@ TRANSLATIONS = {
     },
     "RU": {
         "app_title": "MSLauncher",
-        "brand_subtitle": "\u041b\u0430\u0443\u043d\u0447\u0435\u0440 Minecraft",
+        "brand_title": "\u041b\u0430\u0443\u043d\u0447\u0435\u0440 \u043a\u043e\u043c\u0430\u043d\u0434\u044b \u041d\u044e\u043a\u0435\u043c\u0430",
+        "brand_subtitle": "\u0414\u043b\u044f \u0442\u0435\u0445, \u043a\u0442\u043e \u0438\u0433\u0440\u0430\u0435\u0442 \u043d\u0430 \u0443\u0440\u043e\u0432\u043d\u0435",
         "language": "\u042f\u0437\u044b\u043a",
         "build": "\u0421\u0431\u043e\u0440\u043a\u0430",
         "username": "\u041d\u0438\u043a\u043d\u0435\u0439\u043c",
@@ -444,9 +446,16 @@ class ParallaxFrame(QFrame):
     def __init__(self) -> None:
         super().__init__()
         self.setMouseTracking(True)
-        self._offset_x = 0
-        self._offset_y = 0
+        self._current_offset_x = 0.0
+        self._current_offset_y = 0.0
+        self._target_offset_x = 0.0
+        self._target_offset_y = 0.0
+        self._mist_offset = 0
         self._pixmap = self._load_background()
+        self._animation_timer = QTimer(self)
+        self._animation_timer.setInterval(16)
+        self._animation_timer.timeout.connect(self._tick)
+        self._animation_timer.start()
 
     def _load_background(self) -> QPixmap | None:
         available_files = [BACKGROUND_DIR / name for name in BACKGROUND_FILES if (BACKGROUND_DIR / name).is_file()]
@@ -461,16 +470,20 @@ class ParallaxFrame(QFrame):
         position = event.position()
         relative_x = (position.x() / self.width()) - 0.5
         relative_y = (position.y() / self.height()) - 0.5
-        self._offset_x = int(relative_x * 34)
-        self._offset_y = int(relative_y * 22)
-        self.update()
+        self._target_offset_x = relative_x * 58
+        self._target_offset_y = relative_y * 36
         super().mouseMoveEvent(event)
 
     def leaveEvent(self, event) -> None:
-        self._offset_x = 0
-        self._offset_y = 0
-        self.update()
+        self._target_offset_x = 0.0
+        self._target_offset_y = 0.0
         super().leaveEvent(event)
+
+    def _tick(self) -> None:
+        self._current_offset_x += (self._target_offset_x - self._current_offset_x) * 0.08
+        self._current_offset_y += (self._target_offset_y - self._current_offset_y) * 0.08
+        self._mist_offset = (self._mist_offset + 1) % 240
+        self.update()
 
     def paintEvent(self, event) -> None:
         painter = QPainter(self)
@@ -482,20 +495,43 @@ class ParallaxFrame(QFrame):
 
         painter.fillRect(self.rect(), QColor(12, 18, 24, 112))
         painter.fillRect(self.rect(), QColor(36, 54, 66, 76))
+        self._paint_mist(painter)
+        self._paint_vignette(painter)
         super().paintEvent(event)
 
     def _paint_cover_pixmap(self, painter: QPainter) -> None:
-        target_width = max(1, self.width() + 70)
-        target_height = max(1, self.height() + 50)
+        target_width = max(1, int(self.width() * 1.2) + 120)
+        target_height = max(1, int(self.height() * 1.2) + 100)
         scaled = self._pixmap.scaled(
             target_width,
             target_height,
             Qt.AspectRatioMode.KeepAspectRatioByExpanding,
             Qt.TransformationMode.SmoothTransformation,
         )
-        x = (self.width() - scaled.width()) // 2 - self._offset_x
-        y = (self.height() - scaled.height()) // 2 - self._offset_y
+        x = int((self.width() - scaled.width()) / 2 - self._current_offset_x)
+        y = int((self.height() - scaled.height()) / 2 - self._current_offset_y)
         painter.drawPixmap(x, y, scaled)
+
+    def _paint_mist(self, painter: QPainter) -> None:
+        painter.save()
+        painter.setPen(Qt.PenStyle.NoPen)
+        mist_color = QColor(235, 245, 255, 18)
+        painter.setBrush(mist_color)
+        width = max(1, self.width())
+        height = max(1, self.height())
+
+        for index in range(4):
+            x = ((index * 260 + self._mist_offset) % (width + 260)) - 180
+            y = int(height * (0.18 + index * 0.13))
+            painter.drawEllipse(x, y, 360, 84)
+
+        painter.restore()
+
+    def _paint_vignette(self, painter: QPainter) -> None:
+        painter.fillRect(0, 0, self.width(), 26, QColor(0, 0, 0, 45))
+        painter.fillRect(0, self.height() - 60, self.width(), 60, QColor(0, 0, 0, 70))
+        painter.fillRect(0, 0, 42, self.height(), QColor(0, 0, 0, 42))
+        painter.fillRect(self.width() - 42, 0, 42, self.height(), QColor(0, 0, 0, 42))
 
 
 class MSLauncherWindow(QMainWindow):
@@ -534,7 +570,7 @@ class MSLauncherWindow(QMainWindow):
         hero_layout.setContentsMargins(24, 22, 24, 22)
         hero_layout.addStretch()
 
-        self.title_label = QLabel("MSLauncher")
+        self.title_label = QLabel()
         self.title_label.setObjectName("titleLabel")
         self.subtitle_label = QLabel()
         self.subtitle_label.setObjectName("subtitleLabel")
@@ -616,6 +652,7 @@ class MSLauncherWindow(QMainWindow):
 
     def apply_translations(self) -> None:
         self.setWindowTitle(self.translate("app_title"))
+        self.title_label.setText(self.translate("brand_title"))
         self.subtitle_label.setText(self.translate("brand_subtitle"))
         self.language_label.setText(self.translate("language"))
         self.build_label.setText(self.translate("build"))
