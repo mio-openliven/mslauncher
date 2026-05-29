@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+import random
 import sys
 from pathlib import Path
 
 import requests
 from PyQt6.QtCore import QThread, Qt, pyqtSignal
+from PyQt6.QtGui import QColor, QPainter, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -30,6 +32,15 @@ CONFIG_FILE = "launcher_config.json"
 CHUNK_SIZE = 1024 * 1024
 DOWNLOAD_RETRIES = 3
 REQUEST_TIMEOUT = 60
+BACKGROUND_DIR = Path(__file__).resolve().parent / "assets" / "backgrounds"
+BACKGROUND_FILES = (
+    "bg_01.jpg",
+    "bg_02.jpg",
+    "bg_03.jpg",
+    "bg_04.jpg",
+    "bg_05.jpg",
+    "bg_06.jpg",
+)
 
 
 TRANSLATIONS = {
@@ -383,6 +394,64 @@ class LaunchWorker(QThread):
             self.progress_changed.emit(min(100, int(progress * 100 / maximum)))
 
 
+class ParallaxFrame(QFrame):
+    def __init__(self) -> None:
+        super().__init__()
+        self.setMouseTracking(True)
+        self._offset_x = 0
+        self._offset_y = 0
+        self._pixmap = self._load_background()
+
+    def _load_background(self) -> QPixmap | None:
+        available_files = [BACKGROUND_DIR / name for name in BACKGROUND_FILES if (BACKGROUND_DIR / name).is_file()]
+        if not available_files:
+            return None
+        return QPixmap(str(random.choice(available_files)))
+
+    def mouseMoveEvent(self, event) -> None:
+        if self.width() <= 0 or self.height() <= 0:
+            return
+
+        position = event.position()
+        relative_x = (position.x() / self.width()) - 0.5
+        relative_y = (position.y() / self.height()) - 0.5
+        self._offset_x = int(relative_x * 34)
+        self._offset_y = int(relative_y * 22)
+        self.update()
+        super().mouseMoveEvent(event)
+
+    def leaveEvent(self, event) -> None:
+        self._offset_x = 0
+        self._offset_y = 0
+        self.update()
+        super().leaveEvent(event)
+
+    def paintEvent(self, event) -> None:
+        painter = QPainter(self)
+
+        if self._pixmap and not self._pixmap.isNull():
+            self._paint_cover_pixmap(painter)
+        else:
+            painter.fillRect(self.rect(), QColor("#253642"))
+
+        painter.fillRect(self.rect(), QColor(12, 18, 24, 112))
+        painter.fillRect(self.rect(), QColor(36, 54, 66, 76))
+        super().paintEvent(event)
+
+    def _paint_cover_pixmap(self, painter: QPainter) -> None:
+        target_width = max(1, self.width() + 70)
+        target_height = max(1, self.height() + 50)
+        scaled = self._pixmap.scaled(
+            target_width,
+            target_height,
+            Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+        x = (self.width() - scaled.width()) // 2 - self._offset_x
+        y = (self.height() - scaled.height()) // 2 - self._offset_y
+        painter.drawPixmap(x, y, scaled)
+
+
 class MSLauncherWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
@@ -411,7 +480,7 @@ class MSLauncherWindow(QMainWindow):
         root_layout.setContentsMargins(0, 0, 0, 0)
         root_layout.setSpacing(0)
 
-        hero_frame = QFrame()
+        hero_frame = ParallaxFrame()
         hero_frame.setObjectName("heroFrame")
         hero_layout = QVBoxLayout(hero_frame)
         hero_layout.setContentsMargins(24, 22, 24, 22)
