@@ -206,6 +206,8 @@ class MinecraftEngine:
         memory_max = self._clean_config_text(launch_options.get("memory_max"))
         java_path = self._clean_config_text(launch_options.get("java_path"))
         extra_jvm_args = launch_options.get("jvm_args")
+        server = self._clean_config_text(launch_options.get("server"))
+        port = self._clean_config_text(launch_options.get("port"))
 
         if memory_min:
             jvm_arguments.append(f"-Xms{memory_min}")
@@ -219,6 +221,10 @@ class MinecraftEngine:
             options["defaultExecutablePath"] = java_path
         if jvm_arguments:
             options["jvmArguments"] = jvm_arguments
+        if server:
+            options["server"] = server
+        if port:
+            options["port"] = port
 
         return options
 

@@ -31,6 +31,30 @@ python generate_manifest.py --base-dir . --base-url https://raw.githubuserconten
 
 The generated `manifest.json` should be available through a raw URL and configured in `launcher_config.json`.
 
+## Remote Build Config
+
+Each build can use either `manifest_url` directly or a `source_key`.
+
+```json
+{
+  "id": "main",
+  "name": "Main Server",
+  "minecraft_version": "1.20.1",
+  "source_key": "https://example.com/mslauncher/build.json",
+  "server": "play.example.com",
+  "port": "25565",
+  "manifest_url": ""
+}
+```
+
+If `source_key` is not a full URL, MSLauncher treats it as a host and loads:
+
+```text
+http://HOST/mslauncher/build.json
+```
+
+Remote `build.json` can provide `name`, `minecraft_version`, `manifest_url`, `server`, and `port`.
+
 ## Run
 
 ```powershell

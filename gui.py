@@ -55,6 +55,7 @@ TRANSLATIONS = {
         "loading_versions": "Loading versions...",
         "ready": "Ready",
         "status_syncing": "Checking modpack files...",
+        "status_loading_build": "Loading build config...",
         "status_no_downloads": "All files are up to date.",
         "status_downloading": "Downloading files...",
         "status_downloading_file": "Downloading: {file}",
@@ -67,9 +68,10 @@ TRANSLATIONS = {
         "empty_username": "Enter a nickname.",
         "empty_version": "Select a Minecraft version.",
         "empty_build": "Select a build.",
-        "empty_manifest": "Set manifest_url for the selected build in launcher_config.json.",
+        "empty_manifest": "Set manifest_url or source_key for the selected build in launcher_config.json.",
         "versions_failed": "Could not load Minecraft versions: {error}",
         "sync_failed": "Could not sync files: {error}",
+        "build_config_failed": "Could not load build config: {error}",
         "download_failed": "Could not download files: {error}",
         "launch_failed": "Could not launch Minecraft: {error}",
         "hash_failed": "Downloaded file checksum mismatch: {file}",
@@ -86,6 +88,7 @@ TRANSLATIONS = {
         "loading_versions": "\u0417\u0430\u0433\u0440\u0443\u0437\u043a\u0430 \u0432\u0435\u0440\u0441\u0438\u0439...",
         "ready": "\u0413\u043e\u0442\u043e\u0432\u043e",
         "status_syncing": "\u041f\u0440\u043e\u0432\u0435\u0440\u043a\u0430 \u0444\u0430\u0439\u043b\u043e\u0432 \u0441\u0431\u043e\u0440\u043a\u0438...",
+        "status_loading_build": "\u0417\u0430\u0433\u0440\u0443\u0437\u043a\u0430 \u043a\u043e\u043d\u0444\u0438\u0433\u0430 \u0441\u0431\u043e\u0440\u043a\u0438...",
         "status_no_downloads": "\u0412\u0441\u0435 \u0444\u0430\u0439\u043b\u044b \u0443\u0436\u0435 \u0430\u043a\u0442\u0443\u0430\u043b\u044c\u043d\u044b.",
         "status_downloading": "\u0421\u043a\u0430\u0447\u0438\u0432\u0430\u043d\u0438\u0435 \u0444\u0430\u0439\u043b\u043e\u0432...",
         "status_downloading_file": "\u0421\u043a\u0430\u0447\u0438\u0432\u0430\u043d\u0438\u0435: {file}",
@@ -98,9 +101,10 @@ TRANSLATIONS = {
         "empty_username": "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u043d\u0438\u043a\u043d\u0435\u0439\u043c.",
         "empty_version": "\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0432\u0435\u0440\u0441\u0438\u044e Minecraft.",
         "empty_build": "\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0441\u0431\u043e\u0440\u043a\u0443.",
-        "empty_manifest": "\u0423\u043a\u0430\u0436\u0438\u0442\u0435 manifest_url \u0434\u043b\u044f \u0432\u044b\u0431\u0440\u0430\u043d\u043d\u043e\u0439 \u0441\u0431\u043e\u0440\u043a\u0438 \u0432 launcher_config.json.",
+        "empty_manifest": "\u0423\u043a\u0430\u0436\u0438\u0442\u0435 manifest_url \u0438\u043b\u0438 source_key \u0434\u043b\u044f \u0432\u044b\u0431\u0440\u0430\u043d\u043d\u043e\u0439 \u0441\u0431\u043e\u0440\u043a\u0438 \u0432 launcher_config.json.",
         "versions_failed": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0432\u0435\u0440\u0441\u0438\u0438 Minecraft: {error}",
         "sync_failed": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u0432\u0435\u0440\u0438\u0442\u044c \u0444\u0430\u0439\u043b\u044b: {error}",
+        "build_config_failed": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u043a\u043e\u043d\u0444\u0438\u0433 \u0441\u0431\u043e\u0440\u043a\u0438: {error}",
         "download_failed": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043a\u0430\u0447\u0430\u0442\u044c \u0444\u0430\u0439\u043b\u044b: {error}",
         "launch_failed": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u043f\u0443\u0441\u0442\u0438\u0442\u044c Minecraft: {error}",
         "hash_failed": "\u0425\u044d\u0448 \u0441\u043a\u0430\u0447\u0430\u043d\u043d\u043e\u0433\u043e \u0444\u0430\u0439\u043b\u0430 \u043d\u0435 \u0441\u043e\u0432\u043f\u0430\u043b: {file}",
@@ -184,6 +188,33 @@ def get_config_launch_options(config: dict[str, object]) -> dict[str, object]:
     return launch_options if isinstance(launch_options, dict) else {}
 
 
+def resolve_build_config(build: dict[str, object]) -> dict[str, object]:
+    source_key = str(build.get("source_key", "")).strip()
+    if not source_key:
+        return dict(build)
+
+    response = requests.get(normalize_source_key(source_key), timeout=30)
+    response.raise_for_status()
+    remote_config = response.json()
+
+    if not isinstance(remote_config, dict):
+        raise RuntimeError("Remote build config must be a JSON object.")
+
+    resolved_build = dict(build)
+    for key in ("id", "name", "minecraft_version", "manifest_url", "server", "port"):
+        value = remote_config.get(key)
+        if isinstance(value, str):
+            resolved_build[key] = value
+
+    return resolved_build
+
+
+def normalize_source_key(source_key: str) -> str:
+    if source_key.startswith(("http://", "https://")):
+        return source_key
+    return f"http://{source_key.strip('/')}/mslauncher/build.json"
+
+
 class VersionsWorker(QThread):
     versions_loaded = pyqtSignal(list)
     error_occurred = pyqtSignal(str)
@@ -195,6 +226,21 @@ class VersionsWorker(QThread):
     def run(self) -> None:
         try:
             self.versions_loaded.emit(self.engine.get_all_versions())
+        except Exception as exc:
+            self.error_occurred.emit(str(exc))
+
+
+class BuildConfigWorker(QThread):
+    build_loaded = pyqtSignal(dict)
+    error_occurred = pyqtSignal(str)
+
+    def __init__(self, build: dict[str, object]) -> None:
+        super().__init__()
+        self.build = build
+
+    def run(self) -> None:
+        try:
+            self.build_loaded.emit(resolve_build_config(self.build))
         except Exception as exc:
             self.error_occurred.emit(str(exc))
 
@@ -465,9 +511,11 @@ class MSLauncherWindow(QMainWindow):
         self.download_worker: DownloadWorker | None = None
         self.launch_worker: LaunchWorker | None = None
         self.versions_worker: VersionsWorker | None = None
+        self.build_config_worker: BuildConfigWorker | None = None
         self.selected_username = ""
         self.selected_version = ""
         self.selected_manifest_url = ""
+        self.selected_launch_options: dict[str, object] = {}
 
         self._build_ui()
         self._connect_signals()
@@ -723,7 +771,6 @@ class MSLauncherWindow(QMainWindow):
 
     def check_mods_and_play(self) -> None:
         username = self.username_input.text().strip()
-        version = self.version_combo.currentText().strip()
         build = self.get_selected_build()
 
         if not username:
@@ -732,20 +779,43 @@ class MSLauncherWindow(QMainWindow):
         if build is None:
             self.show_error(self.translate("empty_build"))
             return
-        if not version:
-            self.show_error(self.translate("empty_version"))
-            return
-        manifest_url = str(build.get("manifest_url", "")).strip()
-        if not manifest_url:
-            self.show_error(self.translate("empty_manifest"))
-            return
 
         self.selected_username = username
-        self.selected_version = version
-        self.selected_manifest_url = manifest_url
-        self.save_user_preferences()
         self.play_button.setEnabled(False)
         self.progress_bar.setValue(0)
+        self.set_status("status_loading_build")
+
+        self.build_config_worker = BuildConfigWorker(build)
+        self.build_config_worker.build_loaded.connect(self.on_build_config_loaded)
+        self.build_config_worker.error_occurred.connect(self.on_build_config_failed)
+        self.build_config_worker.start()
+
+    def on_build_config_loaded(self, resolved_build: dict) -> None:
+        version = self.version_combo.currentText().strip()
+        configured_version = str(resolved_build.get("minecraft_version", "")).strip()
+        if configured_version:
+            version = configured_version
+            index = self.version_combo.findText(configured_version)
+            if index >= 0:
+                self.version_combo.setCurrentIndex(index)
+
+        if not version:
+            self.show_error(self.translate("empty_version"))
+            self.play_button.setEnabled(True)
+            self.set_status("ready")
+            return
+
+        manifest_url = str(resolved_build.get("manifest_url", "")).strip()
+        if not manifest_url:
+            self.show_error(self.translate("empty_manifest"))
+            self.play_button.setEnabled(True)
+            self.set_status("ready")
+            return
+
+        self.selected_version = version
+        self.selected_manifest_url = manifest_url
+        self.selected_launch_options = self.build_launch_options(resolved_build)
+        self.save_user_preferences()
 
         self.download_worker = DownloadWorker(self.engine, self.selected_manifest_url, self.game_directory)
         self.download_worker.progress_changed.connect(self.progress_bar.setValue)
@@ -755,13 +825,18 @@ class MSLauncherWindow(QMainWindow):
         self.download_worker.finished_successfully.connect(self.launch_game)
         self.download_worker.start()
 
+    def on_build_config_failed(self, error: str) -> None:
+        self.play_button.setEnabled(True)
+        self.show_error(self.translate("build_config_failed", error=error))
+        self.set_status("ready")
+
     def launch_game(self) -> None:
         self.set_status("status_launching")
         self.launch_worker = LaunchWorker(
             self.engine,
             self.selected_version,
             self.selected_username,
-            get_config_launch_options(self.config),
+            self.selected_launch_options,
         )
         self.launch_worker.progress_changed.connect(self.progress_bar.setValue)
         self.launch_worker.status_changed.connect(self.set_status)
@@ -801,6 +876,18 @@ class MSLauncherWindow(QMainWindow):
 
     def show_error(self, message: str) -> None:
         QMessageBox.critical(self, self.translate("error"), message)
+
+    def build_launch_options(self, build: dict[str, object]) -> dict[str, object]:
+        launch_options = dict(get_config_launch_options(self.config))
+        server = str(build.get("server", "")).strip()
+        port = str(build.get("port", "")).strip()
+
+        if server:
+            launch_options["server"] = server
+        if port:
+            launch_options["port"] = port
+
+        return launch_options
 
     def save_user_preferences(self) -> None:
         self.config["default_language"] = self.language

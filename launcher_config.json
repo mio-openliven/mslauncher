@@ -15,6 +15,9 @@
       "id": "main",
       "name": "Main Server",
       "minecraft_version": "",
+      "source_key": "",
+      "server": "",
+      "port": "",
       "manifest_url": ""
     }
   ]
