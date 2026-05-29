@@ -61,3 +61,11 @@ Remote `build.json` can provide `name`, `minecraft_version`, `manifest_url`, `se
 python -m pip install -r requirements.txt
 python gui.py
 ```
+
+## Smoke Test
+
+```powershell
+python tools\smoke_test_sync.py
+```
+
+This starts a local temporary HTTP server and checks the `source_key -> manifest -> sync -> download` flow.
