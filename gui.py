@@ -10,6 +10,8 @@ from PyQt6.QtCore import QThread, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
+    QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -33,6 +35,7 @@ REQUEST_TIMEOUT = 60
 TRANSLATIONS = {
     "EN": {
         "app_title": "MSLauncher",
+        "brand_subtitle": "Minecraft launcher",
         "language": "Language",
         "build": "Build",
         "username": "Nickname",
@@ -63,6 +66,7 @@ TRANSLATIONS = {
     },
     "RU": {
         "app_title": "MSLauncher",
+        "brand_subtitle": "\u041b\u0430\u0443\u043d\u0447\u0435\u0440 Minecraft",
         "language": "\u042f\u0437\u044b\u043a",
         "build": "\u0421\u0431\u043e\u0440\u043a\u0430",
         "username": "\u041d\u0438\u043a\u043d\u0435\u0439\u043c",
@@ -404,16 +408,34 @@ class MSLauncherWindow(QMainWindow):
     def _build_ui(self) -> None:
         central_widget = QWidget(self)
         root_layout = QVBoxLayout(central_widget)
-        root_layout.setSpacing(12)
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        root_layout.setSpacing(0)
 
-        language_layout = QHBoxLayout()
+        hero_frame = QFrame()
+        hero_frame.setObjectName("heroFrame")
+        hero_layout = QVBoxLayout(hero_frame)
+        hero_layout.setContentsMargins(24, 22, 24, 22)
+        hero_layout.addStretch()
+
+        self.title_label = QLabel("MSLauncher")
+        self.title_label.setObjectName("titleLabel")
+        self.subtitle_label = QLabel()
+        self.subtitle_label.setObjectName("subtitleLabel")
+        hero_layout.addWidget(self.title_label)
+        hero_layout.addWidget(self.subtitle_label)
+        hero_layout.addStretch()
+
+        control_frame = QFrame()
+        control_frame.setObjectName("controlFrame")
+        control_layout = QGridLayout(control_frame)
+        control_layout.setContentsMargins(18, 12, 18, 14)
+        control_layout.setHorizontalSpacing(10)
+        control_layout.setVerticalSpacing(6)
+
         self.language_label = QLabel()
         self.language_combo = QComboBox()
         self.language_combo.addItems(["EN", "RU"])
         self.language_combo.setCurrentText(self.language)
-        language_layout.addWidget(self.language_label)
-        language_layout.addWidget(self.language_combo)
-        language_layout.addStretch()
 
         self.username_label = QLabel()
         self.username_input = QLineEdit()
@@ -429,25 +451,40 @@ class MSLauncherWindow(QMainWindow):
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
+        self.progress_bar.setFixedHeight(8)
 
         self.status_label = QLabel()
-        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.status_label.setObjectName("statusLabel")
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
 
         self.play_button = QPushButton()
+        self.play_button.setObjectName("playButton")
+        self.play_button.setMinimumHeight(48)
 
-        root_layout.addLayout(language_layout)
-        root_layout.addWidget(self.username_label)
-        root_layout.addWidget(self.username_input)
-        root_layout.addWidget(self.build_label)
-        root_layout.addWidget(self.build_combo)
-        root_layout.addWidget(self.version_label)
-        root_layout.addWidget(self.version_combo)
-        root_layout.addWidget(self.progress_bar)
-        root_layout.addWidget(self.status_label)
-        root_layout.addWidget(self.play_button)
+        control_layout.addWidget(self.username_label, 0, 0)
+        control_layout.addWidget(self.build_label, 0, 1)
+        control_layout.addWidget(self.version_label, 0, 2)
+        control_layout.addWidget(self.language_label, 0, 3)
+        control_layout.addWidget(self.username_input, 1, 0)
+        control_layout.addWidget(self.build_combo, 1, 1)
+        control_layout.addWidget(self.version_combo, 1, 2)
+        control_layout.addWidget(self.language_combo, 1, 3)
+        control_layout.addWidget(self.play_button, 0, 4, 2, 1)
+        control_layout.addWidget(self.status_label, 2, 0, 1, 4)
+        control_layout.addWidget(self.progress_bar, 2, 4)
+        control_layout.setColumnStretch(0, 2)
+        control_layout.setColumnStretch(1, 2)
+        control_layout.setColumnStretch(2, 2)
+        control_layout.setColumnStretch(3, 1)
+        control_layout.setColumnStretch(4, 2)
+
+        root_layout.addWidget(hero_frame, 1)
+        root_layout.addWidget(control_frame, 0)
 
         self.setCentralWidget(central_widget)
-        self.resize(520, 280)
+        self.setMinimumSize(760, 360)
+        self.resize(900, 460)
+        self.apply_styles()
 
     def _connect_signals(self) -> None:
         self.language_combo.currentTextChanged.connect(self.change_language)
@@ -462,6 +499,7 @@ class MSLauncherWindow(QMainWindow):
 
     def apply_translations(self) -> None:
         self.setWindowTitle(self.translate("app_title"))
+        self.subtitle_label.setText(self.translate("brand_subtitle"))
         self.language_label.setText(self.translate("language"))
         self.build_label.setText(self.translate("build"))
         self.username_label.setText(self.translate("username"))
@@ -476,6 +514,75 @@ class MSLauncherWindow(QMainWindow):
             self.set_status(status_key)
         else:
             self.set_status("ready")
+
+    def apply_styles(self) -> None:
+        self.setStyleSheet(
+            """
+            QMainWindow {
+                background: #1f2a32;
+            }
+            #heroFrame {
+                background: #253642;
+                border: 0;
+            }
+            #controlFrame {
+                background: #6aa84f;
+                border-top: 1px solid #8bc76a;
+            }
+            QLabel {
+                color: #ffffff;
+                font-size: 12px;
+            }
+            #titleLabel {
+                color: #ffffff;
+                font-size: 34px;
+                font-weight: 800;
+            }
+            #subtitleLabel {
+                color: #cdd7df;
+                font-size: 14px;
+            }
+            #statusLabel {
+                color: #eff7eb;
+            }
+            QLineEdit,
+            QComboBox {
+                background: #f5f7f2;
+                color: #1f2a32;
+                border: 1px solid #497a36;
+                border-radius: 2px;
+                padding: 5px 8px;
+                min-height: 24px;
+            }
+            QComboBox::drop-down {
+                border: 0;
+                width: 22px;
+            }
+            QPushButton#playButton {
+                background: #f0c13d;
+                color: #ffffff;
+                border: 0;
+                border-radius: 4px;
+                font-size: 17px;
+                font-weight: 700;
+                padding: 8px 18px;
+            }
+            QPushButton#playButton:disabled {
+                background: #9aa36f;
+                color: #e7eadb;
+            }
+            QProgressBar {
+                background: #497a36;
+                border: 0;
+                border-radius: 3px;
+                text-align: center;
+            }
+            QProgressBar::chunk {
+                background: #f0c13d;
+                border-radius: 3px;
+            }
+            """
+        )
 
     def populate_builds(self) -> None:
         self.build_combo.clear()
