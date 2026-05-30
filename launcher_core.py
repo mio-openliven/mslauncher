@@ -12,6 +12,7 @@ from typing import Callable, Iterable
 from uuid import uuid4
 
 import minecraft_launcher_lib
+import minecraft_launcher_lib.mod_loader
 import requests
 
 
@@ -158,11 +159,7 @@ class MinecraftEngine:
         callback_options = self._build_callback_options(progress_callback)
 
         try:
-            minecraft_launcher_lib.install.install_minecraft_version(
-                version,
-                str(self.minecraft_directory),
-                callback=callback_options,
-            )
+            launch_version = self._install_requested_version(version, callback_options, launch_options)
 
             options = {
                 "username": username.strip() or "Player",
@@ -175,7 +172,7 @@ class MinecraftEngine:
             options.update(self._build_launch_options(launch_options))
 
             command = minecraft_launcher_lib.command.get_minecraft_command(
-                version,
+                launch_version,
                 str(self.minecraft_directory),
                 options,
             )
@@ -194,6 +191,37 @@ class MinecraftEngine:
             return self.monitor_game_process(process)
         except Exception as exc:
             raise RuntimeError(f"Не удалось скачать или запустить Minecraft {version}: {exc}") from exc
+
+    def _install_requested_version(
+        self,
+        version: str,
+        callback_options: dict[str, Callable[..., None]],
+        launch_options: dict[str, object] | None,
+    ) -> str:
+        loader = self._clean_config_text((launch_options or {}).get("loader")).lower()
+        loader_version = self._clean_config_text((launch_options or {}).get("loader_version"))
+
+        if not loader or loader == "vanilla":
+            minecraft_launcher_lib.install.install_minecraft_version(
+                version,
+                str(self.minecraft_directory),
+                callback=callback_options,
+            )
+            return version
+
+        if loader != "fabric":
+            raise RuntimeError(f"Неподдерживаемый загрузчик модов: {loader}")
+
+        fabric_loader = minecraft_launcher_lib.mod_loader.get_mod_loader("fabric")
+        install_loader_version = None if loader_version in ("", "latest") else loader_version
+        java_path = self._clean_config_text((launch_options or {}).get("java_path")) or None
+        return fabric_loader.install(
+            version,
+            str(self.minecraft_directory),
+            loader_version=install_loader_version,
+            callback=callback_options,
+            java=java_path,
+        )
 
     def _build_launch_options(self, launch_options: dict[str, object] | None) -> dict[str, object]:
         if not launch_options:

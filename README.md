@@ -40,6 +40,8 @@ Each build can use either `manifest_url` directly or a `source_key`.
   "id": "main",
   "name": "Main Server",
   "minecraft_version": "1.20.1",
+  "loader": "fabric",
+  "loader_version": "latest",
   "source_key": "https://example.com/mslauncher/build.json",
   "server": "play.example.com",
   "port": "25565",
@@ -53,7 +55,12 @@ If `source_key` is not a full URL, MSLauncher treats it as a host and loads:
 http://HOST/mslauncher/build.json
 ```
 
-Remote `build.json` can provide `name`, `minecraft_version`, `manifest_url`, `server`, and `port`.
+Remote `build.json` can provide `name`, `minecraft_version`, `loader`, `loader_version`, `manifest_url`, `server`, and `port`.
+
+Supported loader values:
+
+- `vanilla`
+- `fabric`
 
 ## Run
 

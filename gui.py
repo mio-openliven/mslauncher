@@ -228,7 +228,7 @@ def resolve_build_config(build: dict[str, object]) -> dict[str, object]:
         raise RuntimeError("Remote build config must be a JSON object.")
 
     resolved_build = dict(build)
-    for key in ("id", "name", "minecraft_version", "manifest_url", "server", "port"):
+    for key in ("id", "name", "minecraft_version", "loader", "loader_version", "manifest_url", "server", "port"):
         value = remote_config.get(key)
         if isinstance(value, str):
             resolved_build[key] = value
@@ -1135,9 +1135,15 @@ class MSLauncherWindow(QMainWindow):
 
     def build_launch_options(self, build: dict[str, object]) -> dict[str, object]:
         launch_options = dict(get_config_launch_options(self.config))
+        loader = str(build.get("loader", "")).strip()
+        loader_version = str(build.get("loader_version", "")).strip()
         server = str(build.get("server", "")).strip()
         port = str(build.get("port", "")).strip()
 
+        if loader:
+            launch_options["loader"] = loader
+        if loader_version:
+            launch_options["loader_version"] = loader_version
         if server:
             launch_options["server"] = server
         if port:
