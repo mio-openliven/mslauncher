@@ -6,7 +6,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from profile_manager import LauncherProfileManager
+from profile_manager import MANAGED_MARKER, LauncherProfileManager
 
 
 def main() -> None:
@@ -29,6 +29,8 @@ def main() -> None:
             assert (profile.directory / "config").is_dir()
             assert (profile.directory / "resourcepacks").is_dir()
             assert (profile.directory / "saves").is_dir()
+            assert (profile.directory / MANAGED_MARKER).is_file()
+            assert manager.is_managed_profile(profile.directory)
 
     print("profile smoke test: OK")
 

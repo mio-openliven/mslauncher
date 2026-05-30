@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import random
+import shutil
 import sys
 from pathlib import Path
 
@@ -318,34 +319,48 @@ class DownloadWorker(QThread):
         self.game_directory = Path(game_directory)
 
     def run(self) -> None:
+        staging_path = self.game_directory / ".mslauncher-staging"
         try:
             self.status_changed.emit("status_syncing")
-            files = self.engine.sync_files(self.manifest_url, self.game_directory)
+            sync_plan = self.engine.sync_files(self.manifest_url, self.game_directory)
 
-            if not files:
-                self.progress_changed.emit(100)
-                self.status_changed.emit("status_no_downloads")
-                self.finished_successfully.emit()
+            if sync_plan.warning:
+                self.error_occurred.emit("sync_failed", sync_plan.warning)
                 return
 
-            self.status_changed.emit("status_downloading")
             try:
-                self._download_files(files)
+                if sync_plan.files_to_download:
+                    self.status_changed.emit("status_downloading")
+                    staged_files = self._download_files(sync_plan.files_to_download, staging_path)
+                    self._replace_target_files(staged_files)
+
+                self.engine.remove_unknown_mods(self.game_directory, sync_plan.unknown_mods)
             except Exception as exc:
                 self.error_occurred.emit("download_failed", str(exc))
                 return
+            finally:
+                self._cleanup_staging(staging_path)
 
             self.progress_changed.emit(100)
-            self.status_changed.emit("status_download_complete")
+            if sync_plan.files_to_download:
+                self.status_changed.emit("status_download_complete")
+            else:
+                self.status_changed.emit("status_no_downloads")
             self.finished_successfully.emit()
         except requests.RequestException as exc:
             self.error_occurred.emit("download_failed", str(exc))
         except Exception as exc:
             self.error_occurred.emit("sync_failed", str(exc))
 
-    def _download_files(self, files: list[dict[str, str | int]]) -> None:
+    def _download_files(
+        self,
+        files: list[dict[str, str | int]],
+        staging_path: Path,
+    ) -> list[tuple[Path, Path]]:
+        self._cleanup_staging(staging_path)
         total_bytes = sum(int(file.get("size", 0)) for file in files)
         completed_bytes = 0
+        staged_files: list[tuple[Path, Path]] = []
 
         for file_info in files:
             relative_path = self._safe_relative_path(file_info)
@@ -355,22 +370,28 @@ class DownloadWorker(QThread):
 
             self.status_detail_changed.emit("status_downloading_file", relative_path)
             target_path = self.game_directory / relative_path
+            staged_path = staging_path / relative_path
             self._download_file_with_retry(
                 url=url,
-                target_path=target_path,
+                staged_path=staged_path,
                 expected_hash=expected_hash,
+                expected_size=expected_size,
                 relative_path=relative_path,
                 completed_bytes=completed_bytes,
                 total_bytes=total_bytes,
             )
+            staged_files.append((staged_path, target_path))
             completed_bytes += expected_size
             self.progress_changed.emit(self._calculate_progress(completed_bytes, total_bytes))
+
+        return staged_files
 
     def _download_file_with_retry(
         self,
         url: str,
-        target_path: Path,
+        staged_path: Path,
         expected_hash: str,
+        expected_size: int,
         relative_path: str,
         completed_bytes: int,
         total_bytes: int,
@@ -378,7 +399,7 @@ class DownloadWorker(QThread):
         last_error: Exception | None = None
 
         for attempt in range(1, DOWNLOAD_RETRIES + 1):
-            part_path = target_path.with_name(f"{target_path.name}.part")
+            part_path = staged_path.with_name(f"{staged_path.name}.part")
 
             try:
                 self._download_to_part_file(
@@ -387,12 +408,14 @@ class DownloadWorker(QThread):
                     completed_bytes=completed_bytes,
                     total_bytes=total_bytes,
                 )
-                self._verify_downloaded_file(part_path, expected_hash, relative_path)
-                self._replace_target_file(part_path, target_path)
+                self._verify_downloaded_file(part_path, expected_hash, expected_size, relative_path)
+                staged_path.parent.mkdir(parents=True, exist_ok=True)
+                part_path.replace(staged_path)
                 return
             except Exception as exc:
                 last_error = exc
                 part_path.unlink(missing_ok=True)
+                staged_path.unlink(missing_ok=True)
                 if attempt < DOWNLOAD_RETRIES:
                     self.msleep(500 * attempt)
 
@@ -422,13 +445,29 @@ class DownloadWorker(QThread):
                         self._calculate_progress(completed_bytes + current_file_bytes, total_bytes)
                     )
 
-    def _verify_downloaded_file(self, part_path: Path, expected_hash: str, relative_path: str) -> None:
+    def _verify_downloaded_file(
+        self,
+        part_path: Path,
+        expected_hash: str,
+        expected_size: int,
+        relative_path: str,
+    ) -> None:
+        actual_size = part_path.stat().st_size
+        if actual_size != expected_size:
+            raise RuntimeError(f"Size mismatch for {relative_path}: expected {expected_size}, got {actual_size}")
         if expected_hash and self._calculate_sha256(part_path) != expected_hash:
             raise RuntimeError(f"Checksum mismatch for {relative_path}")
 
-    def _replace_target_file(self, part_path: Path, target_path: Path) -> None:
-        target_path.parent.mkdir(parents=True, exist_ok=True)
-        part_path.replace(target_path)
+    def _replace_target_files(self, staged_files: list[tuple[Path, Path]]) -> None:
+        for staged_path, target_path in staged_files:
+            if not staged_path.is_file():
+                raise RuntimeError(f"Staged file is missing: {staged_path.name}")
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            staged_path.replace(target_path)
+
+    def _cleanup_staging(self, staging_path: Path) -> None:
+        if staging_path.exists():
+            shutil.rmtree(staging_path, ignore_errors=True)
 
     def _safe_relative_path(self, file_info: dict[str, str | int]) -> str:
         return normalize_manifest_path(file_info.get("path", ""))

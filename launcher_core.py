@@ -6,6 +6,7 @@ import os
 import subprocess
 import threading
 from collections import deque
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable
 from uuid import uuid4
@@ -17,9 +18,18 @@ import requests
 from crash_advisor import advise_crash
 from java_diagnostics import JavaDiagnosticError, diagnose_launch_environment
 from manifest_validator import ManifestValidationError, validate_manifest
+from profile_manager import MANAGED_MARKER
 
 
 ProgressCallback = Callable[[str, int, int], None]
+
+
+@dataclass(frozen=True)
+class SyncPlan:
+    files_to_download: list[dict[str, str | int]]
+    unknown_mods: list[str]
+    managed_profile: bool
+    warning: str = ""
 
 
 class MinecraftEngine:
@@ -97,8 +107,8 @@ class MinecraftEngine:
         self,
         manifest_url: str,
         game_directory: str | os.PathLike[str],
-    ) -> list[dict[str, str | int]]:
-        """Compare local files with a remote manifest and return files to download."""
+    ) -> SyncPlan:
+        """Compare local files with a remote manifest and return a safe sync plan."""
         game_path = Path(game_directory)
 
         try:
@@ -128,8 +138,16 @@ class MinecraftEngine:
             if not local_file.is_file() or self._calculate_sha256(local_file) != expected_hash:
                 files_to_download.append(item)
 
-        self._remove_unknown_mods(game_path, expected_files)
-        return files_to_download
+        unknown_mods = self._find_unknown_mods(game_path, expected_files)
+        managed_profile = self._is_managed_profile(game_path)
+        warning = ""
+        if unknown_mods and not managed_profile:
+            warning = (
+                "Extra mods were found, but this folder is not marked as managed by MSLauncher. "
+                "No files will be deleted."
+            )
+
+        return SyncPlan(files_to_download, unknown_mods, managed_profile, warning)
 
     def _normalize_manifest_path(self, raw_path: object) -> str:
         relative_path = str(raw_path).replace("\\", "/").strip("/")
@@ -302,29 +320,58 @@ class MinecraftEngine:
     def _detect_crash_reason(self, log_lines: Iterable[str], exit_code: int, language: str = "EN") -> str:
         return advise_crash(log_lines, exit_code, language)
 
-    def _remove_unknown_mods(
+    def remove_unknown_mods(
+        self,
+        game_path: str | os.PathLike[str],
+        unknown_mods: list[str],
+    ) -> None:
+        resolved_game_path = Path(game_path)
+        if not unknown_mods:
+            return
+        if not self._is_managed_profile(resolved_game_path):
+            raise RuntimeError(
+                "Extra mods were not deleted because this folder is not marked as managed by MSLauncher."
+            )
+
+        for relative_path in unknown_mods:
+            normalized_path = relative_path.replace("\\", "/").strip("/")
+            path_parts = Path(normalized_path).parts
+            if not normalized_path.startswith("mods/") or ".." in path_parts:
+                raise RuntimeError(f"Unsafe extra mod path: {relative_path}")
+
+            local_file = resolved_game_path / normalized_path
+            if local_file.is_file():
+                try:
+                    local_file.unlink()
+                except OSError as exc:
+                    raise RuntimeError(f"Could not delete extra mod {normalized_path}: {exc}") from exc
+
+    def _find_unknown_mods(
         self,
         game_path: Path,
         expected_files: dict[str, dict[str, str | int]],
-    ) -> None:
+    ) -> list[str]:
         mods_path = game_path / "mods"
         if not mods_path.exists():
-            return
+            return []
 
         expected_mods = {
             path for path in expected_files if path == "mods" or path.startswith("mods/")
         }
 
+        unknown_mods: list[str] = []
         for local_file in mods_path.rglob("*"):
             if not local_file.is_file():
                 continue
 
             relative_path = local_file.relative_to(game_path).as_posix()
             if relative_path not in expected_mods:
-                try:
-                    local_file.unlink()
-                except OSError as exc:
-                    raise RuntimeError(f"Не удалось удалить лишний мод {relative_path}: {exc}") from exc
+                unknown_mods.append(relative_path)
+
+        return unknown_mods
+
+    def _is_managed_profile(self, game_path: Path) -> bool:
+        return (game_path / MANAGED_MARKER).is_file()
 
     def _calculate_sha256(self, file_path: Path) -> str:
         digest = hashlib.sha256()

@@ -15,6 +15,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from generate_manifest import generate_manifest
 from gui import DownloadWorker
 from launcher_core import MinecraftEngine
+from profile_manager import MANAGED_MARKER
 from remote_config import resolve_build_config
 
 
@@ -43,6 +44,7 @@ def main() -> None:
         write_text(server_path / "resourcepacks" / "pack.zip", "pack data")
         write_text(client_path / "mods" / "cheat.jar", "bad mod")
         write_text(client_path / "mods" / "good.jar", "old mod")
+        (client_path / MANAGED_MARKER).touch()
 
         server, base_url = run_server(server_path)
 
@@ -65,13 +67,17 @@ def main() -> None:
 
             build = resolve_build_config({"id": "main", "source_key": f"{base_url}/mslauncher/build.json"})
             engine = MinecraftEngine(client_path)
-            files_to_download = engine.sync_files(str(build["manifest_url"]), client_path)
+            sync_plan = engine.sync_files(str(build["manifest_url"]), client_path)
 
-            if (client_path / "mods" / "cheat.jar").exists():
-                raise AssertionError("Extra mod was not removed.")
+            if not (client_path / "mods" / "cheat.jar").exists():
+                raise AssertionError("Extra mod was removed before downloads completed.")
 
             worker = DownloadWorker(engine, str(build["manifest_url"]), client_path)
-            worker._download_files(files_to_download)
+            staging_path = client_path / ".mslauncher-staging"
+            staged_files = worker._download_files(sync_plan.files_to_download, staging_path)
+            worker._replace_target_files(staged_files)
+            worker._cleanup_staging(staging_path)
+            engine.remove_unknown_mods(client_path, sync_plan.unknown_mods)
 
             expected_files = [
                 client_path / "mods" / "good.jar",
@@ -85,6 +91,8 @@ def main() -> None:
 
             if (client_path / "mods" / "good.jar").read_text(encoding="utf-8") != "good mod":
                 raise AssertionError("Outdated mod was not replaced.")
+            if (client_path / "mods" / "cheat.jar").exists():
+                raise AssertionError("Extra mod was not removed after successful sync.")
 
             print("sync smoke test: OK")
         finally:

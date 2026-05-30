@@ -10,6 +10,7 @@ PROFILE_SERVER = "server"
 PROFILE_PERSONAL = "personal"
 PROFILE_OTHER = "other"
 PROFILE_IDS = (PROFILE_SERVER, PROFILE_PERSONAL, PROFILE_OTHER)
+MANAGED_MARKER = ".mslauncher-managed"
 
 
 @dataclass(frozen=True)
@@ -37,8 +38,12 @@ class LauncherProfileManager:
 
     def ensure_profile(self, profile: LauncherProfile) -> None:
         profile.directory.mkdir(parents=True, exist_ok=True)
+        (profile.directory / MANAGED_MARKER).touch(exist_ok=True)
         for folder_name in ("mods", "config", "resourcepacks", "saves"):
             (profile.directory / folder_name).mkdir(parents=True, exist_ok=True)
+
+    def is_managed_profile(self, profile_directory: str | Path) -> bool:
+        return (Path(profile_directory) / MANAGED_MARKER).is_file()
 
     def normalize_profile_id(self, profile_id: str | None) -> str:
         normalized_id = str(profile_id or "").strip().lower()
