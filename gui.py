@@ -63,6 +63,8 @@ TRANSLATIONS = {
         "settings_body": "Build config, sync status and crash reports will appear here.",
         "open_profile": "Open profile folder",
         "open_game": "Open profiles root",
+        "open_crash_reports": "Open crash reports",
+        "crash_panel_title": "Minecraft crashed",
         "loader": "Loader",
         "memory_min": "Min RAM",
         "memory_max": "Max RAM",
@@ -122,6 +124,8 @@ TRANSLATIONS = {
         "settings_body": "\u0417\u0434\u0435\u0441\u044c \u0431\u0443\u0434\u0443\u0442 \u043a\u043e\u043d\u0444\u0438\u0433 \u0441\u0431\u043e\u0440\u043a\u0438, \u0441\u0442\u0430\u0442\u0443\u0441 \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u0438 \u0438 \u043e\u0442\u0447\u0435\u0442\u044b \u043e\u0448\u0438\u0431\u043e\u043a.",
         "open_profile": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u043f\u0430\u043f\u043a\u0443 \u043f\u0440\u043e\u0444\u0438\u043b\u044f",
         "open_game": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u043a\u043e\u0440\u0435\u043d\u044c \u043f\u0440\u043e\u0444\u0438\u043b\u0435\u0439",
+        "open_crash_reports": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c crash-reports",
+        "crash_panel_title": "Minecraft \u0432\u044b\u043b\u0435\u0442\u0435\u043b",
         "loader": "\u0417\u0430\u0433\u0440\u0443\u0437\u0447\u0438\u043a",
         "memory_min": "\u041c\u0438\u043d. RAM",
         "memory_max": "\u041c\u0430\u043a\u0441. RAM",
@@ -637,6 +641,9 @@ class MSLauncherWindow(QMainWindow):
         self.selected_version = ""
         self.selected_manifest_url = ""
         self.selected_launch_options: dict[str, object] = {}
+        self.last_crash_reason = ""
+        self.last_crash_report_path: Path | None = None
+        self.info_panel_mode = "settings"
         self.brand_subtitle_key = random.choice(self.get_brand_subtitle_keys())
         self.action_phrase_key = "play_idle"
 
@@ -714,8 +721,11 @@ class MSLauncherWindow(QMainWindow):
         self.open_profile_button.setObjectName("panelButton")
         self.open_game_button = QPushButton()
         self.open_game_button.setObjectName("panelButton")
+        self.open_crash_reports_button = QPushButton()
+        self.open_crash_reports_button.setObjectName("panelButton")
         info_layout.addWidget(self.open_profile_button)
         info_layout.addWidget(self.open_game_button)
+        info_layout.addWidget(self.open_crash_reports_button)
 
         self.loader_setting_label = QLabel()
         self.loader_setting_combo = QComboBox()
@@ -842,6 +852,7 @@ class MSLauncherWindow(QMainWindow):
         self.play_button.clicked.connect(self.check_mods_and_play)
         self.open_profile_button.clicked.connect(self.open_current_profile_folder)
         self.open_game_button.clicked.connect(self.open_profiles_root_folder)
+        self.open_crash_reports_button.clicked.connect(self.open_crash_reports_folder)
         self.java_browse_button.clicked.connect(self.browse_java_path)
         self.loader_setting_combo.currentTextChanged.connect(self.save_user_preferences)
         self.memory_min_input.editingFinished.connect(self.save_user_preferences)
@@ -859,10 +870,10 @@ class MSLauncherWindow(QMainWindow):
         self.title_label.setText(self.translate("brand_title"))
         self.subtitle_label.setText(self.translate(self.brand_subtitle_key))
         self.credit_label.setText(self.translate("brand_credit"))
-        self.info_title_label.setText(self.translate("settings_title"))
-        self.info_body_label.setText(self.translate("settings_body"))
+        self.refresh_info_panel()
         self.open_profile_button.setText(self.translate("open_profile"))
         self.open_game_button.setText(self.translate("open_game"))
+        self.open_crash_reports_button.setText(self.translate("open_crash_reports"))
         self.loader_setting_label.setText(self.translate("loader"))
         self.memory_min_label.setText(self.translate("memory_min"))
         self.memory_max_label.setText(self.translate("memory_max"))
@@ -1240,9 +1251,24 @@ class MSLauncherWindow(QMainWindow):
 
     def toggle_info_panel(self) -> None:
         should_show = not self.info_panel.isVisible()
+        if should_show and self.info_panel_mode != "crash":
+            self.info_panel_mode = "settings"
+            self.refresh_info_panel()
         self.info_panel.setVisible(should_show)
         for button in self.social_buttons:
             button.setVisible(should_show)
+
+    def refresh_info_panel(self) -> None:
+        if self.info_panel_mode == "crash" and self.last_crash_reason:
+            self.info_title_label.setText(self.translate("crash_panel_title"))
+            self.info_body_label.setText(self.last_crash_reason)
+            self.open_crash_reports_button.show()
+            return
+
+        self.info_panel_mode = "settings"
+        self.info_title_label.setText(self.translate("settings_title"))
+        self.info_body_label.setText(self.translate("settings_body"))
+        self.open_crash_reports_button.hide()
 
     def open_current_profile_folder(self) -> None:
         profile = self.profile_manager.get_profile(self.get_selected_profile_id())
@@ -1251,6 +1277,13 @@ class MSLauncherWindow(QMainWindow):
     def open_profiles_root_folder(self) -> None:
         self.profile_manager.base_directory.mkdir(parents=True, exist_ok=True)
         self.open_folder(self.profile_manager.base_directory)
+
+    def open_crash_reports_folder(self) -> None:
+        profile = self.profile_manager.get_profile(self.get_selected_profile_id())
+        crash_reports_path = profile.directory / "crash-reports"
+        if not crash_reports_path.exists():
+            crash_reports_path = profile.directory
+        self.open_folder(crash_reports_path)
 
     def open_folder(self, folder_path: Path) -> None:
         try:
@@ -1281,8 +1314,25 @@ class MSLauncherWindow(QMainWindow):
         self.play_button.setEnabled(True)
         self.action_phrase_key = "play_idle"
         self.play_button.setText(self.translate(self.action_phrase_key))
-        QMessageBox.critical(self, self.translate("crash_title"), crash_reason)
+        self.last_crash_reason = crash_reason
+        self.last_crash_report_path = self.write_launcher_crash_report(crash_reason)
+        self.info_panel_mode = "crash"
+        self.refresh_info_panel()
+        self.info_panel.show()
+        for button in self.social_buttons:
+            button.show()
         self.set_status("ready")
+
+    def write_launcher_crash_report(self, crash_reason: str) -> Path | None:
+        profile = self.profile_manager.get_profile(self.get_selected_profile_id())
+        reports_path = profile.directory / "crash-reports"
+        try:
+            reports_path.mkdir(parents=True, exist_ok=True)
+            report_path = reports_path / "mslauncher-last-crash.txt"
+            report_path.write_text(crash_reason, encoding="utf-8")
+            return report_path
+        except OSError:
+            return None
 
     def on_game_closed(self) -> None:
         self.play_button.setEnabled(True)
