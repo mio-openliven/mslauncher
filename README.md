@@ -85,13 +85,46 @@ Required Java versions:
 
 On a clean Windows install, Java may not exist yet. Install a compatible Java version or set the full path to `java.exe` in launcher settings.
 
-## Admin Manifest
+## How Admin Updates A Modpack
 
 ```powershell
-python generate_manifest.py --base-dir . --base-url https://raw.githubusercontent.com/OWNER/REPO/main
+python generate_manifest.py --base-dir server_pack --base-url https://example.com/mslauncher --minecraft-version 1.20.1 --loader fabric --server play.example.com --port 25565
 ```
 
-The generated `manifest.json` should be available through a raw URL and configured in `launcher_config.json`.
+Use the `server_pack` folder as the admin workspace:
+
+```text
+server_pack\
+  mods\
+  config\
+  resourcepacks\
+  manifest.json
+  build.json
+  README.txt
+```
+
+Simple workflow:
+
+1. Put mod `.jar` files into `server_pack\mods`.
+2. Put configs into `server_pack\config`.
+3. Put resource packs, models, textures, and similar content into `server_pack\resourcepacks`.
+4. Run the command above.
+5. Upload the whole `server_pack` content to hosting/server.
+6. In `launcher_config.json`, set `source_key` to the public `build.json` URL or to the host name if `build.json` is at `/mslauncher/build.json`.
+
+Public hosting should look like this:
+
+```text
+https://example.com/mslauncher/build.json
+https://example.com/mslauncher/manifest.json
+https://example.com/mslauncher/mods/...
+https://example.com/mslauncher/config/...
+https://example.com/mslauncher/resourcepacks/...
+```
+
+MSLauncher does not guess which mods are correct. It downloads `manifest.json`, compares local files by SHA-256, downloads missing/changed files, and removes extra mods only in managed server profiles after successful sync.
+
+If `--base-url` is empty, `manifest.json` will be generated with empty file URLs. That is useful for local inspection, but players cannot download files until a real HTTPS base URL is set.
 
 ## Remote Build Config
 
@@ -156,6 +189,7 @@ dist\MSLauncher\MSLauncher.exe
 python tools\smoke_test_sync.py
 python tools\smoke_test_safe_sync.py
 python tools\smoke_test_profiles.py
+python tools\smoke_test_generate_manifest.py
 python tools\smoke_test_settings.py
 python tools\smoke_test_java_diagnostics.py
 python tools\smoke_test_remote_config.py
@@ -167,7 +201,7 @@ python tools\smoke_test_launch_worker_lifecycle.py
 python tools\smoke_test_app_paths.py
 ```
 
-The sync smoke test starts a local temporary HTTP server in explicit test mode and checks the `source_key -> manifest -> sync -> download` flow. The safe sync smoke test checks staging, managed markers, and no data loss on failed downloads. The profile smoke test checks isolated launcher folders. The settings smoke test checks loader, RAM, and Java path validation. The Java diagnostics smoke test checks Minecraft/Fabric Java requirements. The remote config smoke test checks invalid JSON, HTTP errors, and bad remote build fields. The manifest validator smoke test checks unsafe paths, hashes, URLs, and sizes. The URL security smoke test checks HTTPS-only production policy. The crash advisor smoke test checks player-friendly crash hints. The app paths smoke test checks source and packaged path resolution.
+The sync smoke test starts a local temporary HTTP server in explicit test mode and checks the `source_key -> manifest -> sync -> download` flow. The safe sync smoke test checks staging, managed markers, and no data loss on failed downloads. The profile smoke test checks isolated launcher folders. The generate manifest smoke test checks admin manifest/build generation and URL encoding. The settings smoke test checks loader, RAM, and Java path validation. The Java diagnostics smoke test checks Minecraft/Fabric Java requirements. The remote config smoke test checks invalid JSON, HTTP errors, and bad remote build fields. The manifest validator smoke test checks unsafe paths, hashes, URLs, and sizes. The URL security smoke test checks HTTPS-only production policy. The crash advisor smoke test checks player-friendly crash hints. The app paths smoke test checks source and packaged path resolution.
 
 ## Release Checklist
 
