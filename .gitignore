@@ -8,6 +8,7 @@ env/
 .vscode/
 *.log
 _reference/
+data/
 build/
 dist/
 *.spec

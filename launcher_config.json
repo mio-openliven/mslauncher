@@ -1,6 +1,8 @@
 {
   "manifest_url": "",
   "game_directory": "",
+  "profiles_directory": "",
+  "default_profile": "server",
   "default_language": "RU",
   "default_username": "",
   "default_build": "main",

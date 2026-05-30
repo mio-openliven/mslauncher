@@ -6,11 +6,29 @@ MSLauncher is a compact Minecraft launcher and modpack synchronizer.
 
 - `gui.py` - PyQt6 launcher UI, language switch, build selector, async workers.
 - `launcher_core.py` - Minecraft version loading, Mojang install/launch, mod sync, crash log analysis.
+- `profile_manager.py` - isolated launcher profiles for server, personal, and other mod sets.
 - `generate_manifest.py` - admin tool for generating `manifest.json` from `mods`, `config`, and `resourcepacks`.
 - `launcher_config.json` - local launcher configuration: builds, manifest URLs, default language, nickname.
 - `requirements.txt` - Python dependencies.
 
 ## Launch Config
+
+MSLauncher keeps mod sets isolated by profile. By default they are created under:
+
+```text
+data\instances\server
+data\instances\personal
+data\instances\other
+```
+
+`server` is the only profile that runs server modpack sync. `personal` and `other` launch without server sync, so the launcher still works as a regular Minecraft launcher when no manifest is configured.
+
+You can override the root profile folder:
+
+```json
+"profiles_directory": "D:\\Games\\MSLauncher\\instances",
+"default_profile": "server"
+```
 
 `launcher_config.json` supports basic Java launch settings:
 
@@ -85,6 +103,7 @@ dist\MSLauncher\MSLauncher.exe
 
 ```powershell
 python tools\smoke_test_sync.py
+python tools\smoke_test_profiles.py
 ```
 
-This starts a local temporary HTTP server and checks the `source_key -> manifest -> sync -> download` flow.
+The sync smoke test starts a local temporary HTTP server and checks the `source_key -> manifest -> sync -> download` flow. The profile smoke test checks isolated launcher folders.
