@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import re
 import subprocess
 import threading
 from collections import deque
@@ -15,6 +14,7 @@ import minecraft_launcher_lib
 import minecraft_launcher_lib.mod_loader
 import requests
 
+from crash_advisor import advise_crash
 from java_diagnostics import JavaDiagnosticError, diagnose_launch_environment
 from manifest_validator import ManifestValidationError, validate_manifest
 
@@ -299,143 +299,7 @@ class MinecraftEngine:
                 self._last_log_lines.append(clean_line)
 
     def _detect_crash_reason(self, log_lines: Iterable[str], exit_code: int) -> str:
-        lines = list(log_lines)
-        log_text = "\n".join(lines)
-        lower_log = log_text.lower()
-
-        checks = [
-            (
-                ("missing mandatory dependencies", "mod is missing mandatory dependencies"),
-                "Forge обнаружил отсутствующую обязательную зависимость мода.",
-            ),
-            (
-                ("requires version", "depends on", "requires any version of"),
-                "Fabric сообщил об отсутствующей или несовместимой зависимости мода.",
-            ),
-            (
-                ("modloadingexception", "failed to load mod", "loading errors encountered"),
-                "Игра вылетела на этапе загрузки модов. Обычно причина в несовместимом моде или неверной версии загрузчика.",
-            ),
-            (
-                ("noclassdeffounderror", "classnotfoundexception", "nosuchmethoderror", "nosuchfielderror"),
-                "Игра вылетела из-за отсутствующего Java-класса. Чаще всего это значит, что мод несовместим с этой версией Minecraft или не хватает зависимости.",
-            ),
-            (
-                ("mixin", "spongepowered", "mixintransformererror", "mixin apply failed", "mixin prepare failed"),
-                "Игра вылетела из-за ошибки Mixin/SpongePowered. Обычно это конфликт модов или мод не подходит под выбранную версию загрузчика.",
-            ),
-            (
-                ("incompatible mods found", "mod resolution encountered"),
-                "Загрузчик нашел несовместимые моды в сборке.",
-            ),
-            (
-                ("duplicate mods", "duplicate mod"),
-                "В папке mods найдены дубликаты модов. Оставьте только одну версию каждого мода.",
-            ),
-            (
-                ("forge", "fml", "mod file"),
-                "Forge сообщил о проблеме с модами или обязательными зависимостями. Проверьте список модов и версию Forge.",
-            ),
-            (
-                ("unsupportedclassversionerror",),
-                "Игра или один из модов требует другую версию Java. Установите Java, подходящую для выбранной версии Minecraft.",
-            ),
-            (
-                ("outofmemoryerror", "java heap space"),
-                "Minecraft не хватило оперативной памяти. Увеличьте выделенную память в настройках лаунчера.",
-            ),
-        ]
-
-        for needles, message in checks:
-            if any(needle in lower_log for needle in needles):
-                detail = self._extract_relevant_line(lines, needles)
-                context = self._extract_crash_context(lines)
-                return self._format_crash_message(message, detail, context)
-
-        return (
-            f"Игра завершилась с кодом {exit_code}. Точная причина не распознана, "
-            "но последние строки лога сохранены для диагностики."
-        )
-
-    def _extract_relevant_line(self, log_lines: Iterable[str], needles: tuple[str, ...]) -> str:
-        for line in reversed(list(log_lines)):
-            lower_line = line.lower()
-            if any(needle in lower_line for needle in needles):
-                return line[-500:]
-        return "нет отдельной строки ошибки"
-
-    def _extract_crash_context(self, log_lines: Iterable[str]) -> dict[str, list[str]]:
-        context = {
-            "mods": [],
-            "mod_ids": [],
-            "dependencies": [],
-        }
-
-        for line in reversed(list(log_lines)):
-            self._append_unique(context["mods"], self._find_mod_files(line), limit=4)
-            self._append_unique(context["mod_ids"], self._find_mod_ids(line), limit=4)
-            self._append_unique(context["dependencies"], self._find_dependencies(line), limit=4)
-
-        return context
-
-    def _find_mod_files(self, line: str) -> list[str]:
-        matches = re.findall(r"[\w.+\-\[\]\(\)/\\]+\.jar", line, flags=re.IGNORECASE)
-        return [Path(match.strip()).name for match in matches]
-
-    def _find_mod_ids(self, line: str) -> list[str]:
-        patterns = [
-            r"mod ['\"]([a-z0-9_.-]+)['\"]",
-            r"modid[:= ]+['\"]?([a-z0-9_.-]+)",
-            r"for mod ([a-z0-9_.-]+)",
-            r"failed to load mod ([a-z0-9_.-]+)",
-        ]
-        found: list[str] = []
-        lower_line = line.lower()
-
-        for pattern in patterns:
-            found.extend(re.findall(pattern, lower_line, flags=re.IGNORECASE))
-
-        return found
-
-    def _find_dependencies(self, line: str) -> list[str]:
-        patterns = [
-            r"requires (?:any version of|version [^ ]+ of) ['\"]?([a-z0-9_.-]+)",
-            r"depends on ['\"]?([a-z0-9_.-]+)",
-            r"missing (?:mandatory )?dependencies?:?\s*([a-z0-9_.-]+)",
-        ]
-        found: list[str] = []
-        lower_line = line.lower()
-
-        for pattern in patterns:
-            found.extend(re.findall(pattern, lower_line, flags=re.IGNORECASE))
-
-        return found
-
-    def _append_unique(self, target: list[str], values: Iterable[str], limit: int) -> None:
-        for value in values:
-            clean_value = value.strip(" '\".,;:()[]")
-            if clean_value and clean_value not in target:
-                target.append(clean_value)
-            if len(target) >= limit:
-                return
-
-    def _format_crash_message(
-        self,
-        message: str,
-        detail: str,
-        context: dict[str, list[str]],
-    ) -> str:
-        parts = [message]
-
-        if context["mods"]:
-            parts.append(f"Возможный проблемный файл: {', '.join(context['mods'])}")
-        if context["mod_ids"]:
-            parts.append(f"Возможный mod id: {', '.join(context['mod_ids'])}")
-        if context["dependencies"]:
-            parts.append(f"Возможная отсутствующая зависимость: {', '.join(context['dependencies'])}")
-
-        parts.append(f"Техническая строка: {detail}")
-        return "\n\n".join(parts)
+        return advise_crash(log_lines, exit_code)
 
     def _remove_unknown_mods(
         self,
