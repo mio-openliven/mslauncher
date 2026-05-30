@@ -7,8 +7,8 @@ import sys
 from pathlib import Path
 
 import requests
-from PyQt6.QtCore import QTimer, QThread, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QPainter, QPixmap
+from PyQt6.QtCore import QSize, QTimer, QThread, Qt, pyqtSignal
+from PyQt6.QtGui import QColor, QCursor, QIcon, QPainter, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -33,6 +33,7 @@ CHUNK_SIZE = 1024 * 1024
 DOWNLOAD_RETRIES = 3
 REQUEST_TIMEOUT = 60
 BACKGROUND_DIR = Path(__file__).resolve().parent / "assets" / "backgrounds"
+ICON_DIR = Path(__file__).resolve().parent / "assets" / "icons"
 BACKGROUND_FILES = (
     "bg_01.jpg",
     "bg_02.jpg",
@@ -51,6 +52,8 @@ TRANSLATIONS = {
         "brand_subtitle_crew": "Built for the crew",
         "brand_subtitle_places": "Everything in its place",
         "brand_subtitle_session": "A clean start for the session",
+        "settings_title": "Launcher Panel",
+        "settings_body": "Build config, sync status and crash reports will appear here.",
         "language": "Language",
         "build": "Build",
         "username": "Nickname",
@@ -88,6 +91,8 @@ TRANSLATIONS = {
         "brand_subtitle_crew": "\u0421\u043e\u0431\u0440\u0430\u043d\u043e \u0434\u043b\u044f \u0441\u0432\u043e\u0435\u0439 \u043a\u043e\u043c\u0430\u043d\u0434\u044b",
         "brand_subtitle_places": "\u0412\u0441\u0435 \u043d\u0430 \u0441\u0432\u043e\u0438\u0445 \u043c\u0435\u0441\u0442\u0430\u0445",
         "brand_subtitle_session": "\u0427\u0438\u0441\u0442\u044b\u0439 \u0441\u0442\u0430\u0440\u0442 \u0434\u043b\u044f \u0441\u0435\u0441\u0441\u0438\u0438",
+        "settings_title": "\u041f\u0430\u043d\u0435\u043b\u044c \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430",
+        "settings_body": "\u0417\u0434\u0435\u0441\u044c \u0431\u0443\u0434\u0443\u0442 \u043a\u043e\u043d\u0444\u0438\u0433 \u0441\u0431\u043e\u0440\u043a\u0438, \u0441\u0442\u0430\u0442\u0443\u0441 \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u0438 \u0438 \u043e\u0442\u0447\u0435\u0442\u044b \u043e\u0448\u0438\u0431\u043e\u043a.",
         "language": "\u042f\u0437\u044b\u043a",
         "build": "\u0421\u0431\u043e\u0440\u043a\u0430",
         "username": "\u041d\u0438\u043a\u043d\u0435\u0439\u043c",
@@ -469,14 +474,6 @@ class ParallaxFrame(QFrame):
         return QPixmap(str(random.choice(available_files)))
 
     def mouseMoveEvent(self, event) -> None:
-        if self.width() <= 0 or self.height() <= 0:
-            return
-
-        position = event.position()
-        relative_x = (position.x() / self.width()) - 0.5
-        relative_y = (position.y() / self.height()) - 0.5
-        self._target_offset_x = relative_x * 58
-        self._target_offset_y = relative_y * 36
         super().mouseMoveEvent(event)
 
     def leaveEvent(self, event) -> None:
@@ -485,6 +482,17 @@ class ParallaxFrame(QFrame):
         super().leaveEvent(event)
 
     def _tick(self) -> None:
+        if self.window().isActiveWindow():
+            local_position = self.mapFromGlobal(QCursor.pos())
+            bounded_x = min(max(local_position.x(), 0), max(1, self.width()))
+            bounded_y = min(max(local_position.y(), 0), max(1, self.height()))
+            relative_x = (bounded_x / max(1, self.width())) - 0.5
+            relative_y = (bounded_y / max(1, self.height())) - 0.5
+            curve_x = relative_x + (relative_y * relative_y * 0.42 if relative_x >= 0 else -relative_y * relative_y * 0.42)
+            curve_y = relative_y - relative_x * relative_y * 0.55
+            self._target_offset_x = curve_x * 70
+            self._target_offset_y = curve_y * 42
+
         self._current_offset_x += (self._target_offset_x - self._current_offset_x) * 0.08
         self._current_offset_y += (self._target_offset_y - self._current_offset_y) * 0.08
         self.update()
@@ -560,6 +568,25 @@ class MSLauncherWindow(QMainWindow):
         hero_layout.setContentsMargins(34, 28, 34, 30)
         hero_layout.addStretch()
 
+        hero_content_layout = QHBoxLayout()
+        hero_content_layout.setSpacing(22)
+
+        self.sidebar_frame = QFrame()
+        self.sidebar_frame.setObjectName("sidebarFrame")
+        sidebar_layout = QVBoxLayout(self.sidebar_frame)
+        sidebar_layout.setContentsMargins(10, 14, 10, 14)
+        sidebar_layout.setSpacing(11)
+
+        self.settings_button = self.create_side_button("settings")
+        self.settings_button.clicked.connect(self.toggle_info_panel)
+        sidebar_layout.addWidget(self.settings_button)
+
+        for icon_name in ("discord", "tiktok", "telegram", "youtube", "instagram", "link"):
+            button = self.create_side_button(icon_name)
+            sidebar_layout.addWidget(button)
+
+        sidebar_layout.addStretch()
+
         brand_panel = QFrame()
         brand_panel.setObjectName("brandPanel")
         brand_layout = QVBoxLayout(brand_panel)
@@ -577,7 +604,29 @@ class MSLauncherWindow(QMainWindow):
         brand_layout.addSpacing(12)
         brand_layout.addWidget(self.version_badge_label)
         brand_panel.setMaximumWidth(560)
-        hero_layout.addWidget(brand_panel)
+
+        self.info_panel = QFrame()
+        self.info_panel.setObjectName("infoPanel")
+        info_layout = QVBoxLayout(self.info_panel)
+        info_layout.setContentsMargins(22, 18, 22, 18)
+        info_layout.setSpacing(10)
+        self.info_title_label = QLabel()
+        self.info_title_label.setObjectName("infoTitle")
+        self.info_body_label = QLabel()
+        self.info_body_label.setObjectName("infoBody")
+        self.info_body_label.setWordWrap(True)
+        info_layout.addWidget(self.info_title_label)
+        info_layout.addWidget(self.info_body_label)
+        info_layout.addStretch()
+        self.info_panel.setMaximumWidth(320)
+        self.info_panel.hide()
+
+        hero_content_layout.addWidget(self.sidebar_frame)
+        hero_content_layout.addWidget(brand_panel)
+        hero_content_layout.addWidget(self.info_panel)
+        hero_content_layout.addStretch()
+
+        hero_layout.addLayout(hero_content_layout)
         hero_layout.addStretch()
 
         control_frame = QFrame()
@@ -641,6 +690,17 @@ class MSLauncherWindow(QMainWindow):
         self.resize(900, 460)
         self.apply_styles()
 
+    def create_side_button(self, icon_name: str) -> QPushButton:
+        button = QPushButton()
+        button.setObjectName("sideButton")
+        icon_path = ICON_DIR / f"{icon_name}.svg"
+        if icon_path.is_file():
+            button.setIcon(QIcon(str(icon_path)))
+            button.setIconSize(QSize(21, 21))
+        else:
+            button.setText(icon_name[:2].upper())
+        return button
+
     def _connect_signals(self) -> None:
         self.language_combo.currentTextChanged.connect(self.change_language)
         self.build_combo.currentIndexChanged.connect(self.on_build_changed)
@@ -656,6 +716,8 @@ class MSLauncherWindow(QMainWindow):
         self.setWindowTitle(self.translate("app_title"))
         self.title_label.setText(self.translate("brand_title"))
         self.subtitle_label.setText(self.translate(self.brand_subtitle_key))
+        self.info_title_label.setText(self.translate("settings_title"))
+        self.info_body_label.setText(self.translate("settings_body"))
         self.language_label.setText(self.translate("language"))
         self.build_label.setText(self.translate("build"))
         self.username_label.setText(self.translate("username"))
@@ -686,9 +748,21 @@ class MSLauncherWindow(QMainWindow):
                 border: 1px solid rgba(255, 255, 255, 26);
                 border-radius: 8px;
             }
+            #sidebarFrame {
+                background: rgba(10, 14, 14, 172);
+                border: 1px solid rgba(255, 255, 255, 18);
+                border-radius: 8px;
+                min-width: 54px;
+                max-width: 54px;
+            }
+            #infoPanel {
+                background: rgba(14, 18, 18, 188);
+                border: 1px solid rgba(255, 255, 255, 22);
+                border-radius: 8px;
+            }
             #controlFrame {
                 background: #111917;
-                border-top: 1px solid #1ee06f;
+                border-top: 1px solid #263a31;
             }
             QLabel {
                 color: #dceee4;
@@ -708,8 +782,36 @@ class MSLauncherWindow(QMainWindow):
                 font-size: 12px;
                 font-weight: 700;
             }
+            #infoTitle {
+                color: #ffffff;
+                font-size: 18px;
+                font-weight: 800;
+            }
+            #infoBody {
+                color: #b5c8bd;
+                font-size: 13px;
+            }
             #statusLabel {
                 color: #b9d4c4;
+            }
+            QPushButton#sideButton {
+                background: rgba(255, 255, 255, 18);
+                color: #dceee4;
+                border: 1px solid rgba(255, 255, 255, 16);
+                border-radius: 8px;
+                min-width: 34px;
+                min-height: 34px;
+                max-width: 34px;
+                max-height: 34px;
+                font-size: 10px;
+                font-weight: 800;
+            }
+            QPushButton#sideButton:hover {
+                background: rgba(36, 223, 119, 80);
+                color: #ffffff;
+                border: 1px solid rgba(36, 223, 119, 130);
+                padding-left: 1px;
+                padding-top: 1px;
             }
             QLineEdit,
             QComboBox {
@@ -905,6 +1007,9 @@ class MSLauncherWindow(QMainWindow):
         self.play_button.setEnabled(True)
         self.show_error(self.translate(error_key, error=error))
         self.set_status("ready")
+
+    def toggle_info_panel(self) -> None:
+        self.info_panel.setVisible(not self.info_panel.isVisible())
 
     def on_launch_failed(self, error: str) -> None:
         self.play_button.setEnabled(True)
