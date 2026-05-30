@@ -29,6 +29,7 @@ from PyQt6.QtWidgets import (
 
 from launcher_core import MinecraftEngine
 from profile_manager import LauncherProfile, LauncherProfileManager, PROFILE_IDS, PROFILE_SERVER
+from remote_config import resolve_build_config
 from settings_validator import LaunchSettingsError, validate_launch_settings
 
 
@@ -260,33 +261,6 @@ def get_profile_base_directory(config: dict[str, object]) -> str:
     if profiles_directory:
         return profiles_directory
     return get_config_text(config, "game_directory").strip()
-
-
-def resolve_build_config(build: dict[str, object]) -> dict[str, object]:
-    source_key = str(build.get("source_key", "")).strip()
-    if not source_key:
-        return dict(build)
-
-    response = requests.get(normalize_source_key(source_key), timeout=30)
-    response.raise_for_status()
-    remote_config = response.json()
-
-    if not isinstance(remote_config, dict):
-        raise RuntimeError("Remote build config must be a JSON object.")
-
-    resolved_build = dict(build)
-    for key in ("id", "name", "minecraft_version", "loader", "loader_version", "manifest_url", "server", "port"):
-        value = remote_config.get(key)
-        if isinstance(value, str):
-            resolved_build[key] = value
-
-    return resolved_build
-
-
-def normalize_source_key(source_key: str) -> str:
-    if source_key.startswith(("http://", "https://")):
-        return source_key
-    return f"http://{source_key.strip('/')}/mslauncher/build.json"
 
 
 class VersionsWorker(QThread):

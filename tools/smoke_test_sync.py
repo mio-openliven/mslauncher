@@ -13,8 +13,9 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from generate_manifest import generate_manifest
-from gui import DownloadWorker, resolve_build_config
+from gui import DownloadWorker
 from launcher_core import MinecraftEngine
+from remote_config import resolve_build_config
 
 
 def write_text(path: Path, text: str) -> None:
