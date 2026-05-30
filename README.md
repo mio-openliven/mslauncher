@@ -37,9 +37,12 @@ You can override the root profile folder:
   "memory_min": "512M",
   "memory_max": "2G",
   "java_path": "",
+  "loader": "vanilla",
   "jvm_args": []
 }
 ```
+
+The in-app settings panel can change the loader, RAM, Java path, and open the current profile folder.
 
 ## Admin Manifest
 

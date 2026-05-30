@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import random
 import sys
 from pathlib import Path
@@ -21,6 +22,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QProgressBar,
+    QFileDialog,
     QVBoxLayout,
     QWidget,
 )
@@ -56,6 +58,13 @@ TRANSLATIONS = {
         "brand_subtitle_session": "A clean start for the session",
         "settings_title": "Launcher Panel",
         "settings_body": "Build config, sync status and crash reports will appear here.",
+        "open_profile": "Open profile folder",
+        "open_game": "Open profiles root",
+        "loader": "Loader",
+        "memory_min": "Min RAM",
+        "memory_max": "Max RAM",
+        "java_path": "Java path",
+        "java_browse": "Browse",
         "language": "Language",
         "profile": "Mods",
         "profile_server": "Server",
@@ -107,6 +116,13 @@ TRANSLATIONS = {
         "brand_subtitle_session": "\u0427\u0438\u0441\u0442\u044b\u0439 \u0441\u0442\u0430\u0440\u0442 \u0434\u043b\u044f \u0441\u0435\u0441\u0441\u0438\u0438",
         "settings_title": "\u041f\u0430\u043d\u0435\u043b\u044c \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430",
         "settings_body": "\u0417\u0434\u0435\u0441\u044c \u0431\u0443\u0434\u0443\u0442 \u043a\u043e\u043d\u0444\u0438\u0433 \u0441\u0431\u043e\u0440\u043a\u0438, \u0441\u0442\u0430\u0442\u0443\u0441 \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u0438 \u0438 \u043e\u0442\u0447\u0435\u0442\u044b \u043e\u0448\u0438\u0431\u043e\u043a.",
+        "open_profile": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u043f\u0430\u043f\u043a\u0443 \u043f\u0440\u043e\u0444\u0438\u043b\u044f",
+        "open_game": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u043a\u043e\u0440\u0435\u043d\u044c \u043f\u0440\u043e\u0444\u0438\u043b\u0435\u0439",
+        "loader": "\u0417\u0430\u0433\u0440\u0443\u0437\u0447\u0438\u043a",
+        "memory_min": "\u041c\u0438\u043d. RAM",
+        "memory_max": "\u041c\u0430\u043a\u0441. RAM",
+        "java_path": "\u041f\u0443\u0442\u044c Java",
+        "java_browse": "\u041e\u0431\u0437\u043e\u0440",
         "language": "\u042f\u0437\u044b\u043a",
         "profile": "\u041c\u043e\u0434\u044b",
         "profile_server": "\u0421\u0435\u0440\u0432\u0435\u0440",
@@ -718,6 +734,41 @@ class MSLauncherWindow(QMainWindow):
         self.info_body_label.setWordWrap(True)
         info_layout.addWidget(self.info_title_label)
         info_layout.addWidget(self.info_body_label)
+
+        self.open_profile_button = QPushButton()
+        self.open_profile_button.setObjectName("panelButton")
+        self.open_game_button = QPushButton()
+        self.open_game_button.setObjectName("panelButton")
+        info_layout.addWidget(self.open_profile_button)
+        info_layout.addWidget(self.open_game_button)
+
+        self.loader_setting_label = QLabel()
+        self.loader_setting_combo = QComboBox()
+        self.loader_setting_combo.addItems(["vanilla", "fabric"])
+        self.memory_min_label = QLabel()
+        self.memory_min_input = QLineEdit()
+        self.memory_max_label = QLabel()
+        self.memory_max_input = QLineEdit()
+        self.java_path_label = QLabel()
+        self.java_path_input = QLineEdit()
+        self.java_browse_button = QPushButton()
+        self.java_browse_button.setObjectName("panelButton")
+
+        launch_options = get_config_launch_options(self.config)
+        self.loader_setting_combo.setCurrentText(str(launch_options.get("loader", "vanilla")))
+        self.memory_min_input.setText(str(launch_options.get("memory_min", "512M")))
+        self.memory_max_input.setText(str(launch_options.get("memory_max", "2G")))
+        self.java_path_input.setText(str(launch_options.get("java_path", "")))
+
+        info_layout.addWidget(self.loader_setting_label)
+        info_layout.addWidget(self.loader_setting_combo)
+        info_layout.addWidget(self.memory_min_label)
+        info_layout.addWidget(self.memory_min_input)
+        info_layout.addWidget(self.memory_max_label)
+        info_layout.addWidget(self.memory_max_input)
+        info_layout.addWidget(self.java_path_label)
+        info_layout.addWidget(self.java_path_input)
+        info_layout.addWidget(self.java_browse_button)
         info_layout.addStretch()
         self.info_panel.setMaximumWidth(320)
         self.info_panel.hide()
@@ -814,6 +865,13 @@ class MSLauncherWindow(QMainWindow):
         self.profile_combo.currentIndexChanged.connect(self.on_profile_changed)
         self.build_combo.currentIndexChanged.connect(self.on_build_changed)
         self.play_button.clicked.connect(self.check_mods_and_play)
+        self.open_profile_button.clicked.connect(self.open_current_profile_folder)
+        self.open_game_button.clicked.connect(self.open_profiles_root_folder)
+        self.java_browse_button.clicked.connect(self.browse_java_path)
+        self.loader_setting_combo.currentTextChanged.connect(self.save_user_preferences)
+        self.memory_min_input.editingFinished.connect(self.save_user_preferences)
+        self.memory_max_input.editingFinished.connect(self.save_user_preferences)
+        self.java_path_input.editingFinished.connect(self.save_user_preferences)
 
     def change_language(self, language: str) -> None:
         if language in TRANSLATIONS:
@@ -828,6 +886,13 @@ class MSLauncherWindow(QMainWindow):
         self.credit_label.setText(self.translate("brand_credit"))
         self.info_title_label.setText(self.translate("settings_title"))
         self.info_body_label.setText(self.translate("settings_body"))
+        self.open_profile_button.setText(self.translate("open_profile"))
+        self.open_game_button.setText(self.translate("open_game"))
+        self.loader_setting_label.setText(self.translate("loader"))
+        self.memory_min_label.setText(self.translate("memory_min"))
+        self.memory_max_label.setText(self.translate("memory_max"))
+        self.java_path_label.setText(self.translate("java_path"))
+        self.java_browse_button.setText(self.translate("java_browse"))
         self.language_label.setText(self.translate("language"))
         self.profile_label.setText(self.translate("profile"))
         self.refresh_profile_labels()
@@ -924,6 +989,21 @@ class MSLauncherWindow(QMainWindow):
                 border: 1px solid rgba(36, 223, 119, 130);
                 padding-left: 1px;
                 padding-top: 1px;
+            }
+            QPushButton#panelButton {
+                background: rgba(255, 255, 255, 18);
+                color: #dceee4;
+                border: 1px solid rgba(255, 255, 255, 24);
+                border-radius: 6px;
+                min-height: 26px;
+                padding: 5px 9px;
+                font-size: 12px;
+                font-weight: 700;
+                text-align: left;
+            }
+            QPushButton#panelButton:hover {
+                background: rgba(117, 152, 134, 58);
+                border: 1px solid rgba(191, 223, 206, 110);
             }
             QLineEdit,
             QComboBox {
@@ -1181,6 +1261,32 @@ class MSLauncherWindow(QMainWindow):
         for button in self.social_buttons:
             button.setVisible(should_show)
 
+    def open_current_profile_folder(self) -> None:
+        profile = self.profile_manager.get_profile(self.get_selected_profile_id())
+        self.open_folder(profile.directory)
+
+    def open_profiles_root_folder(self) -> None:
+        self.profile_manager.base_directory.mkdir(parents=True, exist_ok=True)
+        self.open_folder(self.profile_manager.base_directory)
+
+    def open_folder(self, folder_path: Path) -> None:
+        try:
+            folder_path.mkdir(parents=True, exist_ok=True)
+            os.startfile(str(folder_path))
+        except OSError as exc:
+            self.show_error(str(exc))
+
+    def browse_java_path(self) -> None:
+        selected_path, _ = QFileDialog.getOpenFileName(
+            self,
+            self.translate("java_path"),
+            self.java_path_input.text().strip() or str(Path.home()),
+            "Java (*.exe);;All files (*)",
+        )
+        if selected_path:
+            self.java_path_input.setText(selected_path)
+            self.save_user_preferences()
+
     def on_launch_failed(self, error: str) -> None:
         self.play_button.setEnabled(True)
         self.action_phrase_key = "play_idle"
@@ -1233,6 +1339,13 @@ class MSLauncherWindow(QMainWindow):
         return launch_options
 
     def save_user_preferences(self) -> None:
+        launch_options = dict(get_config_launch_options(self.config))
+        launch_options["loader"] = self.loader_setting_combo.currentText().strip() or "vanilla"
+        launch_options["memory_min"] = self.memory_min_input.text().strip() or "512M"
+        launch_options["memory_max"] = self.memory_max_input.text().strip() or "2G"
+        launch_options["java_path"] = self.java_path_input.text().strip()
+
+        self.config["launch"] = launch_options
         self.config["default_language"] = self.language
         self.config["default_username"] = self.username_input.text().strip()
         self.config["default_profile"] = self.get_selected_profile_id()
