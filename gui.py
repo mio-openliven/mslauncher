@@ -47,7 +47,8 @@ BACKGROUND_FILES = (
 TRANSLATIONS = {
     "EN": {
         "app_title": "MSLauncher",
-        "brand_title": "Nukem Team Launcher",
+        "brand_title": "MSLauncher 1.9.0",
+        "brand_credit": "Software by Nukem coders",
         "brand_subtitle_project": "Project entry point",
         "brand_subtitle_crew": "Built for the crew",
         "brand_subtitle_places": "Everything in its place",
@@ -92,7 +93,8 @@ TRANSLATIONS = {
     },
     "RU": {
         "app_title": "MSLauncher",
-        "brand_title": "\u041b\u0430\u0443\u043d\u0447\u0435\u0440 \u043a\u043e\u043c\u0430\u043d\u0434\u044b \u041d\u044e\u043a\u0435\u043c\u0430",
+        "brand_title": "MSLauncher 1.9.0",
+        "brand_credit": "\u0421\u043e\u0444\u0442 \u043e\u0442 \u043a\u043e\u0434\u0435\u0440\u043e\u0432 \u041d\u044e\u043a\u0435\u043c\u0430",
         "brand_subtitle_project": "\u0422\u043e\u0447\u043a\u0430 \u0432\u0445\u043e\u0434\u0430 \u0432 \u043f\u0440\u043e\u0435\u043a\u0442",
         "brand_subtitle_crew": "\u0421\u043e\u0431\u0440\u0430\u043d\u043e \u0434\u043b\u044f \u0441\u0432\u043e\u0435\u0439 \u043a\u043e\u043c\u0430\u043d\u0434\u044b",
         "brand_subtitle_places": "\u0412\u0441\u0435 \u043d\u0430 \u0441\u0432\u043e\u0438\u0445 \u043c\u0435\u0441\u0442\u0430\u0445",
@@ -553,10 +555,10 @@ class ParallaxFrame(QFrame):
                 randomizer.random(),
                 randomizer.random(),
                 randomizer.uniform(0.18, 0.75),
-                randomizer.randint(1, 3),
-                randomizer.randint(26, 68),
+                randomizer.choice((1, 1, 1, 1, 2, 3)),
+                randomizer.randint(16, 54),
             )
-            for _ in range(34)
+            for _ in range(102)
         ]
 
     def _paint_particles(self, painter: QPainter) -> None:
@@ -599,6 +601,7 @@ class MSLauncherWindow(QMainWindow):
         self.selected_manifest_url = ""
         self.selected_launch_options: dict[str, object] = {}
         self.brand_subtitle_key = random.choice(self.get_brand_subtitle_keys())
+        self.brand_bottom_phrase_key = random.choice(self.get_brand_subtitle_keys())
         self.action_phrase_key = "play_idle"
 
         self._build_ui()
@@ -640,20 +643,24 @@ class MSLauncherWindow(QMainWindow):
         brand_panel = QFrame()
         brand_panel.setObjectName("brandPanel")
         brand_layout = QVBoxLayout(brand_panel)
-        brand_layout.setContentsMargins(26, 22, 26, 22)
-        brand_layout.setSpacing(8)
+        brand_layout.setContentsMargins(24, 18, 24, 18)
+        brand_layout.setSpacing(6)
 
         self.title_label = QLabel()
         self.title_label.setObjectName("titleLabel")
+        self.credit_label = QLabel()
+        self.credit_label.setObjectName("creditLabel")
         self.subtitle_label = QLabel()
         self.subtitle_label.setObjectName("subtitleLabel")
-        self.version_badge_label = QLabel("MSLauncher 0.1")
-        self.version_badge_label.setObjectName("versionBadge")
+        self.bottom_phrase_label = QLabel()
+        self.bottom_phrase_label.setObjectName("bottomPhraseLabel")
         brand_layout.addWidget(self.title_label)
         brand_layout.addWidget(self.subtitle_label)
+        brand_layout.addWidget(self.credit_label)
         brand_layout.addSpacing(12)
-        brand_layout.addWidget(self.version_badge_label)
-        brand_panel.setMaximumWidth(560)
+        brand_layout.addWidget(self.bottom_phrase_label)
+        brand_panel.setMaximumWidth(500)
+        brand_panel.setMaximumHeight(205)
 
         self.info_panel = QFrame()
         self.info_panel.setObjectName("infoPanel")
@@ -766,6 +773,8 @@ class MSLauncherWindow(QMainWindow):
         self.setWindowTitle(self.translate("app_title"))
         self.title_label.setText(self.translate("brand_title"))
         self.subtitle_label.setText(self.translate(self.brand_subtitle_key))
+        self.credit_label.setText(self.translate("brand_credit"))
+        self.bottom_phrase_label.setText(self.translate(self.brand_bottom_phrase_key))
         self.info_title_label.setText(self.translate("settings_title"))
         self.info_body_label.setText(self.translate("settings_body"))
         self.language_label.setText(self.translate("language"))
@@ -820,17 +829,21 @@ class MSLauncherWindow(QMainWindow):
             }
             #titleLabel {
                 color: #ffffff;
-                font-size: 32px;
+                font-size: 30px;
                 font-weight: 800;
             }
             #subtitleLabel {
-                color: #b5c8bd;
-                font-size: 14px;
+                color: #b8c9bf;
+                font-size: 12px;
             }
-            #versionBadge {
-                color: #dfffe9;
+            #creditLabel {
+                color: #e5f2ea;
                 font-size: 12px;
                 font-weight: 700;
+            }
+            #bottomPhraseLabel {
+                color: #9eb0a5;
+                font-size: 12px;
             }
             #infoTitle {
                 color: #ffffff;
