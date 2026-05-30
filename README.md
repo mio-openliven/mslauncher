@@ -108,6 +108,7 @@ dist\MSLauncher\MSLauncher.exe
 python tools\smoke_test_sync.py
 python tools\smoke_test_profiles.py
 python tools\smoke_test_settings.py
+python tools\smoke_test_java_diagnostics.py
 ```
 
-The sync smoke test starts a local temporary HTTP server and checks the `source_key -> manifest -> sync -> download` flow. The profile smoke test checks isolated launcher folders. The settings smoke test checks loader, RAM, and Java path validation.
+The sync smoke test starts a local temporary HTTP server and checks the `source_key -> manifest -> sync -> download` flow. The profile smoke test checks isolated launcher folders. The settings smoke test checks loader, RAM, and Java path validation. The Java diagnostics smoke test checks Minecraft/Fabric Java requirements.

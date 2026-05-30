@@ -15,6 +15,8 @@ import minecraft_launcher_lib
 import minecraft_launcher_lib.mod_loader
 import requests
 
+from java_diagnostics import JavaDiagnosticError, diagnose_launch_environment
+
 
 ProgressCallback = Callable[[str, int, int], None]
 
@@ -200,6 +202,12 @@ class MinecraftEngine:
     ) -> str:
         loader = self._clean_config_text((launch_options or {}).get("loader")).lower()
         loader_version = self._clean_config_text((launch_options or {}).get("loader_version"))
+        java_path = self._clean_config_text((launch_options or {}).get("java_path"))
+
+        try:
+            diagnose_launch_environment(version, loader or "vanilla", java_path)
+        except JavaDiagnosticError as exc:
+            raise RuntimeError(str(exc)) from exc
 
         if not loader or loader == "vanilla":
             minecraft_launcher_lib.install.install_minecraft_version(
@@ -214,13 +222,12 @@ class MinecraftEngine:
 
         fabric_loader = minecraft_launcher_lib.mod_loader.get_mod_loader("fabric")
         install_loader_version = None if loader_version in ("", "latest") else loader_version
-        java_path = self._clean_config_text((launch_options or {}).get("java_path")) or None
         return fabric_loader.install(
             version,
             str(self.minecraft_directory),
             loader_version=install_loader_version,
             callback=callback_options,
-            java=java_path,
+            java=java_path or None,
         )
 
     def _build_launch_options(self, launch_options: dict[str, object] | None) -> dict[str, object]:
