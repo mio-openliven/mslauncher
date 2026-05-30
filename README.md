@@ -162,7 +162,20 @@ python tools\smoke_test_remote_config.py
 python tools\smoke_test_manifest_validator.py
 python tools\smoke_test_url_security.py
 python tools\smoke_test_crash_advisor.py
+python tools\smoke_test_crash_logs.py
+python tools\smoke_test_launch_worker_lifecycle.py
 python tools\smoke_test_app_paths.py
 ```
 
 The sync smoke test starts a local temporary HTTP server in explicit test mode and checks the `source_key -> manifest -> sync -> download` flow. The safe sync smoke test checks staging, managed markers, and no data loss on failed downloads. The profile smoke test checks isolated launcher folders. The settings smoke test checks loader, RAM, and Java path validation. The Java diagnostics smoke test checks Minecraft/Fabric Java requirements. The remote config smoke test checks invalid JSON, HTTP errors, and bad remote build fields. The manifest validator smoke test checks unsafe paths, hashes, URLs, and sizes. The URL security smoke test checks HTTPS-only production policy. The crash advisor smoke test checks player-friendly crash hints. The app paths smoke test checks source and packaged path resolution.
+
+## Release Checklist
+
+- Build the exe with `.\build_exe.ps1`.
+- Launch on a clean Windows VM from a read-only/install-like folder.
+- Verify Java auto-detection and the missing-Java error message.
+- Verify successful server sync.
+- Verify failed network sync leaves existing files untouched.
+- Verify hash mismatch leaves existing files untouched.
+- Verify Fabric launch for the target Minecraft version.
+- Verify crash report visibility and the Open crash reports button after a forced crash.

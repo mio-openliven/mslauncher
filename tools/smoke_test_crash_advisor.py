@@ -26,7 +26,7 @@ def main() -> None:
         1,
         "EN",
     )
-    assert_contains(missing_dependency, ("dependency", "fabric-api", "coolmod-1.20.1.jar", "what to try"))
+    assert_contains(missing_dependency, ("dependency", "fabric-api", "coolmod-1.20.1.jar", "what to try", "what to send admin"))
 
     missing_dependency_ru = advise_crash(
         [
@@ -66,8 +66,8 @@ def main() -> None:
     )
     assert_contains(duplicate_mods, ("duplicate", "fabric-api-1.jar", "fabric-api-2.jar"))
 
-    unknown = advise_crash(["Something unexpected happened"], 1, "EN")
-    assert_contains(unknown, ("not recognized", "latest.log"))
+    unknown = advise_crash(["Something unexpected happened"], 1, "EN", "C:/Temp/latest.log")
+    assert_contains(unknown, ("not recognized", "latest.log", "send latest.log", "C:\\Temp\\latest.log"))
 
     unknown_ru = advise_crash(["Something unexpected happened"], 1, "RU")
     assert_contains(unknown_ru, ("\u043d\u0435\u043e\u0436\u0438\u0434\u0430\u043d\u043d\u043e", "latest.log"))

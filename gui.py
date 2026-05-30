@@ -6,6 +6,8 @@ import os
 import random
 import shutil
 import sys
+import threading
+import traceback
 from pathlib import Path
 
 import requests
@@ -121,6 +123,11 @@ TRANSLATIONS = {
         "settings_failed": "Check launcher settings: {error}",
         "config_repaired": "Config was damaged. Backup saved here: {path}. Default settings were loaded.",
         "config_save_failed": "Could not save launcher settings: {error}",
+        "close_game_prompt": "Minecraft is still running. What should MSLauncher do?",
+        "leave_game_running": "Leave game running",
+        "close_game": "Close game",
+        "cancel_close": "Cancel",
+        "launch_report_saved": "Technical report saved here: {path}",
         "hash_failed": "Downloaded file checksum mismatch: {file}",
         "crash_title": "Minecraft crashed",
     },
@@ -184,6 +191,11 @@ TRANSLATIONS = {
         "settings_failed": "\u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430: {error}",
         "config_repaired": "\u041a\u043e\u043d\u0444\u0438\u0433 \u0431\u044b\u043b \u043f\u043e\u0432\u0440\u0435\u0436\u0434\u0435\u043d. Backup \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d \u0437\u0434\u0435\u0441\u044c: {path}. \u0417\u0430\u0433\u0440\u0443\u0436\u0435\u043d\u044b \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u043f\u043e \u0443\u043c\u043e\u043b\u0447\u0430\u043d\u0438\u044e.",
         "config_save_failed": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430: {error}",
+        "close_game_prompt": "Minecraft \u0432\u0441\u0435 \u0435\u0449\u0435 \u0437\u0430\u043f\u0443\u0449\u0435\u043d. \u0427\u0442\u043e \u0441\u0434\u0435\u043b\u0430\u0442\u044c MSLauncher?",
+        "leave_game_running": "\u041e\u0441\u0442\u0430\u0432\u0438\u0442\u044c \u0438\u0433\u0440\u0443",
+        "close_game": "\u0417\u0430\u043a\u0440\u044b\u0442\u044c \u0438\u0433\u0440\u0443",
+        "cancel_close": "\u041e\u0442\u043c\u0435\u043d\u0430",
+        "launch_report_saved": "\u0422\u0435\u0445\u043d\u0438\u0447\u0435\u0441\u043a\u0438\u0439 report \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d \u0437\u0434\u0435\u0441\u044c: {path}",
         "hash_failed": "\u0425\u044d\u0448 \u0441\u043a\u0430\u0447\u0430\u043d\u043d\u043e\u0433\u043e \u0444\u0430\u0439\u043b\u0430 \u043d\u0435 \u0441\u043e\u0432\u043f\u0430\u043b: {file}",
         "crash_title": "Minecraft \u0432\u044b\u043b\u0435\u0442\u0435\u043b",
     },
@@ -527,7 +539,7 @@ class LaunchWorker(QThread):
     progress_changed = pyqtSignal(int)
     status_changed = pyqtSignal(str)
     crash_detected = pyqtSignal(str)
-    error_occurred = pyqtSignal(str)
+    error_occurred = pyqtSignal(str, str)
     finished_successfully = pyqtSignal()
 
     def __init__(
@@ -542,6 +554,8 @@ class LaunchWorker(QThread):
         self.version = version
         self.username = username
         self.launch_options = launch_options or {}
+        self.detach_event = threading.Event()
+        self.launch_options["detach_event"] = self.detach_event
 
     def run(self) -> None:
         try:
@@ -557,12 +571,18 @@ class LaunchWorker(QThread):
             else:
                 self.finished_successfully.emit()
         except Exception as exc:
-            self.error_occurred.emit(str(exc))
+            self.error_occurred.emit(str(exc), traceback.format_exc())
 
     def _on_minecraft_progress(self, status: str, progress: int, maximum: int) -> None:
         self.status_changed.emit("status_game_installing")
         if maximum > 0:
             self.progress_changed.emit(min(100, int(progress * 100 / maximum)))
+
+    def request_detach(self) -> None:
+        self.detach_event.set()
+
+    def request_terminate_game(self) -> None:
+        self.engine.terminate_game_process()
 
 
 class ParallaxFrame(QFrame):
@@ -1379,11 +1399,15 @@ class MSLauncherWindow(QMainWindow):
             self.java_path_input.setText(selected_path)
             self.save_user_preferences()
 
-    def on_launch_failed(self, error: str) -> None:
+    def on_launch_failed(self, error: str, technical_report: str = "") -> None:
         self.play_button.setEnabled(True)
         self.action_phrase_key = "play_idle"
         self.play_button.setText(self.translate(self.action_phrase_key))
-        self.show_error(self.translate("launch_failed", error=error))
+        report_path = self.write_launcher_crash_report(technical_report or error, "mslauncher-launch-error.txt")
+        message = self.translate("launch_failed", error=error)
+        if report_path is not None:
+            message = f"{message}\n\n{self.translate('launch_report_saved', path=report_path)}"
+        self.show_error(message)
         self.set_status("ready")
 
     def on_game_crashed(self, crash_reason: str) -> None:
@@ -1391,7 +1415,7 @@ class MSLauncherWindow(QMainWindow):
         self.action_phrase_key = "play_idle"
         self.play_button.setText(self.translate(self.action_phrase_key))
         self.last_crash_reason = crash_reason
-        self.last_crash_report_path = self.write_launcher_crash_report(crash_reason)
+        self.last_crash_report_path = self.write_launcher_crash_report(crash_reason, "mslauncher-last-crash.txt")
         self.info_panel_mode = "crash"
         self.refresh_info_panel()
         self.info_panel.show()
@@ -1399,12 +1423,12 @@ class MSLauncherWindow(QMainWindow):
             button.show()
         self.set_status("ready")
 
-    def write_launcher_crash_report(self, crash_reason: str) -> Path | None:
+    def write_launcher_crash_report(self, crash_reason: str, file_name: str) -> Path | None:
         profile = self.profile_manager.get_profile(self.get_selected_profile_id())
         reports_path = profile.directory / "crash-reports"
         try:
             reports_path.mkdir(parents=True, exist_ok=True)
-            report_path = reports_path / "mslauncher-last-crash.txt"
+            report_path = reports_path / file_name
             report_path.write_text(crash_reason, encoding="utf-8")
             return report_path
         except OSError:
@@ -1492,8 +1516,56 @@ class MSLauncherWindow(QMainWindow):
             self.show_error(self.translate("config_repaired", path=backup_path))
 
     def closeEvent(self, event) -> None:
+        if self.launch_worker is not None and self.launch_worker.isRunning() and self.engine.is_game_process_running():
+            choice = self.ask_game_close_choice()
+            if choice == "cancel":
+                event.ignore()
+                return
+            if choice == "terminate":
+                self.launch_worker.request_terminate_game()
+                self.launch_worker.wait(7000)
+            else:
+                self.launch_worker.request_detach()
+                self.launch_worker.wait(3000)
+
         self.save_user_preferences()
+        if not self.wait_for_worker_shutdown(self.download_worker):
+            event.ignore()
+            return
+        if not self.wait_for_worker_shutdown(self.build_config_worker):
+            event.ignore()
+            return
+        if not self.wait_for_worker_shutdown(self.versions_worker):
+            event.ignore()
+            return
+        if not self.wait_for_worker_shutdown(self.launch_worker):
+            event.ignore()
+            return
         super().closeEvent(event)
+
+    def ask_game_close_choice(self) -> str:
+        dialog = QMessageBox(self)
+        dialog.setIcon(QMessageBox.Icon.Question)
+        dialog.setWindowTitle(self.translate("app_title"))
+        dialog.setText(self.translate("close_game_prompt"))
+        leave_button = dialog.addButton(self.translate("leave_game_running"), QMessageBox.ButtonRole.AcceptRole)
+        close_button = dialog.addButton(self.translate("close_game"), QMessageBox.ButtonRole.DestructiveRole)
+        cancel_button = dialog.addButton(self.translate("cancel_close"), QMessageBox.ButtonRole.RejectRole)
+        dialog.exec()
+
+        clicked_button = dialog.clickedButton()
+        if clicked_button is close_button:
+            return "terminate"
+        if clicked_button is cancel_button:
+            return "cancel"
+        if clicked_button is leave_button:
+            return "detach"
+        return "cancel"
+
+    def wait_for_worker_shutdown(self, worker: QThread | None) -> bool:
+        if worker is not None and worker.isRunning():
+            return worker.wait(3000)
+        return True
 
     def translate(self, key: str, **kwargs: object) -> str:
         text = TRANSLATIONS.get(self.language, TRANSLATIONS["EN"]).get(key, key)

@@ -25,6 +25,7 @@ class CrashAdvice:
     mods: tuple[str, ...]
     mod_ids: tuple[str, ...]
     dependencies: tuple[str, ...]
+    source_path: Path | None = None
 
     def to_user_message(self, language: str = "EN") -> str:
         translation = get_crash_translation(self.rule_id, language)
@@ -33,7 +34,7 @@ class CrashAdvice:
         actions = tuple(translation.get("actions", self.actions))
         labels = get_crash_labels(language)
 
-        parts = [title, explanation]
+        parts = [f"{labels['what_happened']}: {title}", explanation]
 
         if self.mods:
             parts.append(f"{labels['mods']}: {', '.join(self.mods)}")
@@ -44,6 +45,11 @@ class CrashAdvice:
 
         if actions:
             parts.append(labels["actions"] + ":\n" + "\n".join(f"- {action}" for action in actions))
+
+        send_lines = [labels["send_log"]]
+        if self.source_path is not None:
+            send_lines.append(f"{labels['source']}: {self.source_path}")
+        parts.append(labels["send_admin"] + ":\n" + "\n".join(f"- {line}" for line in send_lines))
 
         parts.append(f"{labels['detail']}: {self.detail}")
         return "\n\n".join(parts)
@@ -117,7 +123,7 @@ CRASH_TRANSLATIONS: dict[str, dict[str, dict[str, object]]] = {
             "title": "\u0418\u0433\u0440\u0430 \u043d\u0435\u043e\u0436\u0438\u0434\u0430\u043d\u043d\u043e \u0437\u0430\u043a\u0440\u044b\u043b\u0430\u0441\u044c.",
             "explanation": "\u0422\u043e\u0447\u043d\u0430\u044f \u043f\u0440\u0438\u0447\u0438\u043d\u0430 \u043f\u043e \u043f\u043e\u0441\u043b\u0435\u0434\u043d\u0438\u043c \u0441\u0442\u0440\u043e\u043a\u0430\u043c \u043b\u043e\u0433\u0430 \u043d\u0435 \u0440\u0430\u0441\u043f\u043e\u0437\u043d\u0430\u043d\u0430.",
             "actions": (
-                "\u041e\u0442\u043a\u0440\u043e\u0439\u0442\u0435 \u043f\u0430\u043f\u043a\u0443 \u043f\u0440\u043e\u0444\u0438\u043b\u044f \u0438 \u043f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 latest.log \u0438\u043b\u0438 crash-reports.",
+                "\u041e\u0442\u043a\u0440\u043e\u0439\u0442\u0435 \u043f\u0430\u043f\u043a\u0443 crash-reports \u0438\u043b\u0438 logs/latest.log.",
                 "\u0415\u0441\u043b\u0438 \u043c\u043e\u0434 \u0434\u043e\u0431\u0430\u0432\u0438\u043b\u0438 \u043d\u0435\u0434\u0430\u0432\u043d\u043e, \u0432\u0440\u0435\u043c\u0435\u043d\u043d\u043e \u0443\u0431\u0435\u0440\u0438\u0442\u0435 \u0435\u0433\u043e.",
                 "\u0415\u0441\u043b\u0438 \u044d\u0442\u043e \u0441\u0435\u0440\u0432\u0435\u0440\u043d\u0430\u044f \u0441\u0431\u043e\u0440\u043a\u0430, \u0437\u0430\u043f\u0443\u0441\u0442\u0438\u0442\u0435 \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u044e \u043c\u043e\u0434\u043e\u0432 \u0437\u0430\u043d\u043e\u0432\u043e.",
             ),
@@ -132,6 +138,10 @@ CRASH_LABELS = {
         "mod_ids": "Possible mod id",
         "dependencies": "Possible missing dependency",
         "actions": "What to try",
+        "what_happened": "What happened",
+        "send_admin": "What to send admin",
+        "send_log": "Send latest.log or the newest crash report from crash-reports.",
+        "source": "Detected report/log",
         "detail": "Technical line",
     },
     "RU": {
@@ -139,6 +149,10 @@ CRASH_LABELS = {
         "mod_ids": "\u0412\u043e\u0437\u043c\u043e\u0436\u043d\u044b\u0439 mod id",
         "dependencies": "\u0412\u043e\u0437\u043c\u043e\u0436\u043d\u0430\u044f \u043e\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u044e\u0449\u0430\u044f \u0437\u0430\u0432\u0438\u0441\u0438\u043c\u043e\u0441\u0442\u044c",
         "actions": "\u0427\u0442\u043e \u043f\u043e\u043f\u0440\u043e\u0431\u043e\u0432\u0430\u0442\u044c",
+        "what_happened": "\u0427\u0442\u043e \u0441\u043b\u0443\u0447\u0438\u043b\u043e\u0441\u044c",
+        "send_admin": "\u0427\u0442\u043e \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u0430\u0434\u043c\u0438\u043d\u0443",
+        "send_log": "\u041e\u0442\u043f\u0440\u0430\u0432\u044c\u0442\u0435 latest.log \u0438\u043b\u0438 \u0441\u0430\u043c\u044b\u0439 \u0441\u0432\u0435\u0436\u0438\u0439 crash report \u0438\u0437 crash-reports.",
+        "source": "\u041d\u0430\u0439\u0434\u0435\u043d\u043d\u044b\u0439 report/log",
         "detail": "\u0422\u0435\u0445\u043d\u0438\u0447\u0435\u0441\u043a\u0430\u044f \u0441\u0442\u0440\u043e\u043a\u0430",
     },
 }
@@ -233,17 +247,26 @@ def get_crash_labels(language: str) -> dict[str, str]:
     return CRASH_LABELS.get(language.upper(), CRASH_LABELS["EN"])
 
 
-def advise_crash(log_lines: Iterable[str], exit_code: int, language: str = "EN") -> str:
-    return analyze_crash(log_lines, exit_code).to_user_message(language)
+def advise_crash(
+    log_lines: Iterable[str],
+    exit_code: int,
+    language: str = "EN",
+    source_path: str | Path | None = None,
+) -> str:
+    return analyze_crash(log_lines, exit_code, source_path).to_user_message(language)
 
 
-def analyze_crash(log_lines: Iterable[str], exit_code: int) -> CrashAdvice:
+def analyze_crash(
+    log_lines: Iterable[str],
+    exit_code: int,
+    source_path: str | Path | None = None,
+) -> CrashAdvice:
     lines = list(log_lines)
     lower_log = "\n".join(lines).lower()
 
     for rule in CRASH_RULES:
         if any(needle in lower_log for needle in rule.needles):
-            return build_advice(rule, lines)
+            return build_advice(rule, lines, source_path)
 
     return CrashAdvice(
         rule_id="unknown",
@@ -258,10 +281,11 @@ def analyze_crash(log_lines: Iterable[str], exit_code: int) -> CrashAdvice:
         mods=(),
         mod_ids=(),
         dependencies=(),
+        source_path=Path(source_path) if source_path else None,
     )
 
 
-def build_advice(rule: CrashAdviceRule, log_lines: list[str]) -> CrashAdvice:
+def build_advice(rule: CrashAdviceRule, log_lines: list[str], source_path: str | Path | None = None) -> CrashAdvice:
     context = extract_crash_context(log_lines)
     return CrashAdvice(
         rule_id=rule.rule_id,
@@ -272,6 +296,7 @@ def build_advice(rule: CrashAdviceRule, log_lines: list[str]) -> CrashAdvice:
         mods=tuple(context["mods"]),
         mod_ids=tuple(context["mod_ids"]),
         dependencies=tuple(context["dependencies"]),
+        source_path=Path(source_path) if source_path else None,
     )
 
 

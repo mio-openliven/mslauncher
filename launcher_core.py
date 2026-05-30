@@ -5,6 +5,7 @@ import json
 import os
 import subprocess
 import threading
+import time
 from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,6 +24,8 @@ from url_policy import URLPolicyError, normalize_https_url
 
 
 ProgressCallback = Callable[[str, int, int], None]
+MAX_LOG_LINES = 300
+MAX_CRASH_LOG_BYTES = 512 * 1024
 
 
 @dataclass(frozen=True)
@@ -33,6 +36,12 @@ class SyncPlan:
     warning: str = ""
 
 
+@dataclass(frozen=True)
+class CrashLogSource:
+    path: Path | None
+    lines: list[str]
+
+
 class MinecraftEngine:
     """Core Minecraft installer/launcher logic for MSLauncher."""
 
@@ -40,7 +49,9 @@ class MinecraftEngine:
         self.minecraft_directory = Path(
             minecraft_directory or minecraft_launcher_lib.utils.get_minecraft_directory()
         )
-        self._last_log_lines: deque[str] = deque(maxlen=50)
+        self._last_log_lines: deque[str] = deque(maxlen=MAX_LOG_LINES)
+        self._current_process: subprocess.Popen[str] | None = None
+        self._process_lock = threading.Lock()
 
     def get_all_versions(self) -> list[dict[str, str]]:
         """Return all release versions available from Mojang."""
@@ -77,7 +88,12 @@ class MinecraftEngine:
         """Download missing vanilla assets if needed, launch Minecraft, and return crash text."""
         return self._download_and_launch_sync(version, username, progress_callback, launch_options)
 
-    def monitor_game_process(self, process: subprocess.Popen[str], language: str = "EN") -> str | None:
+    def monitor_game_process(
+        self,
+        process: subprocess.Popen[str],
+        language: str = "EN",
+        detach_event: threading.Event | None = None,
+    ) -> str | None:
         """Read game logs in real time and return a human-readable crash reason."""
         self._last_log_lines.clear()
 
@@ -95,14 +111,25 @@ class MinecraftEngine:
         stdout_thread.start()
         stderr_thread.start()
 
-        exit_code = process.wait()
+        while True:
+            if detach_event is not None and detach_event.is_set():
+                self._close_process_pipes(process)
+                return None
+
+            exit_code = process.poll()
+            if exit_code is not None:
+                break
+            time.sleep(0.2)
+
         stdout_thread.join(timeout=2)
         stderr_thread.join(timeout=2)
 
         if exit_code == 0:
             return None
 
-        return self._detect_crash_reason(self._last_log_lines, exit_code, language)
+        crash_source = self._collect_crash_log_source()
+        log_lines = crash_source.lines or list(self._last_log_lines)
+        return self._detect_crash_reason(log_lines, exit_code, language, crash_source.path)
 
     def sync_files(
         self,
@@ -214,9 +241,19 @@ class MinecraftEngine:
                 errors="replace",
                 bufsize=1,
             )
+            with self._process_lock:
+                self._current_process = process
 
             language = self._clean_config_text(effective_launch_options.get("language")) or "EN"
-            return self.monitor_game_process(process, language)
+            detach_event = effective_launch_options.get("detach_event")
+            if not isinstance(detach_event, threading.Event):
+                detach_event = None
+            try:
+                return self.monitor_game_process(process, language, detach_event)
+            finally:
+                with self._process_lock:
+                    if self._current_process is process:
+                        self._current_process = None
         except RuntimeError:
             raise
         except Exception as exc:
@@ -327,13 +364,81 @@ class MinecraftEngine:
         if stream is None:
             return
 
-        for line in stream:
-            clean_line = line.rstrip()
-            if clean_line:
-                self._last_log_lines.append(clean_line)
+        try:
+            for line in stream:
+                clean_line = line.rstrip()
+                if clean_line:
+                    self._last_log_lines.append(clean_line)
+        except (OSError, ValueError):
+            return
 
-    def _detect_crash_reason(self, log_lines: Iterable[str], exit_code: int, language: str = "EN") -> str:
-        return advise_crash(log_lines, exit_code, language)
+    def _detect_crash_reason(
+        self,
+        log_lines: Iterable[str],
+        exit_code: int,
+        language: str = "EN",
+        source_path: Path | None = None,
+    ) -> str:
+        return advise_crash(log_lines, exit_code, language, source_path)
+
+    def _collect_crash_log_source(self) -> CrashLogSource:
+        crash_report = self._find_latest_crash_report()
+        if crash_report is not None:
+            return CrashLogSource(crash_report, self._read_log_tail(crash_report))
+
+        latest_log = self.minecraft_directory / "logs" / "latest.log"
+        if latest_log.is_file():
+            return CrashLogSource(latest_log, self._read_log_tail(latest_log))
+
+        return CrashLogSource(None, [])
+
+    def _find_latest_crash_report(self) -> Path | None:
+        crash_reports_path = self.minecraft_directory / "crash-reports"
+        if not crash_reports_path.is_dir():
+            return None
+
+        reports = [path for path in crash_reports_path.glob("*.txt") if path.is_file()]
+        if not reports:
+            return None
+        return max(reports, key=lambda path: path.stat().st_mtime)
+
+    def _read_log_tail(self, log_path: Path, max_bytes: int = MAX_CRASH_LOG_BYTES) -> list[str]:
+        try:
+            file_size = log_path.stat().st_size
+            with log_path.open("rb") as file:
+                if file_size > max_bytes:
+                    file.seek(-max_bytes, os.SEEK_END)
+                data = file.read(max_bytes)
+        except OSError:
+            return []
+
+        text = data.decode("utf-8", errors="replace")
+        return [line.rstrip() for line in text.splitlines() if line.rstrip()][-MAX_LOG_LINES:]
+
+    def _close_process_pipes(self, process: subprocess.Popen[str]) -> None:
+        for stream in (process.stdout, process.stderr):
+            if stream is not None:
+                try:
+                    stream.close()
+                except OSError:
+                    pass
+
+    def is_game_process_running(self) -> bool:
+        with self._process_lock:
+            return self._current_process is not None and self._current_process.poll() is None
+
+    def terminate_game_process(self, timeout: float = 5.0) -> None:
+        with self._process_lock:
+            process = self._current_process
+        if process is None or process.poll() is not None:
+            return
+
+        process.terminate()
+        try:
+            process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=timeout)
 
     def remove_unknown_mods(
         self,
