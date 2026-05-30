@@ -44,6 +44,24 @@ You can override the root profile folder:
 
 The in-app settings panel can change the loader, RAM, Java path, and open the current profile folder.
 
+## Java Requirements
+
+MSLauncher checks Java before trying to start Minecraft. If `java_path` is empty, the launcher tries to find Java automatically from `PATH` and common Windows install folders:
+
+- `C:\Program Files\Eclipse Adoptium`
+- `C:\Program Files\Java`
+- `C:\Program Files\Microsoft\jdk-*`
+- `C:\Program Files (x86)\Java`
+
+Required Java versions:
+
+- Minecraft `1.20.5+` needs Java `21+`.
+- Minecraft `1.18` through `1.20.4` needs Java `17+`.
+- Minecraft `1.17.x` needs Java `16+`.
+- Older Minecraft versions need Java `8+`.
+
+On a clean Windows install, Java may not exist yet. Install a compatible Java version or set the full path to `java.exe` in launcher settings.
+
 ## Admin Manifest
 
 ```powershell

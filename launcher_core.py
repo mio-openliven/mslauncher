@@ -183,9 +183,10 @@ class MinecraftEngine:
         self.minecraft_directory.mkdir(parents=True, exist_ok=True)
 
         callback_options = self._build_callback_options(progress_callback)
+        effective_launch_options = dict(launch_options or {})
 
         try:
-            launch_version = self._install_requested_version(version, callback_options, launch_options)
+            launch_version = self._install_requested_version(version, callback_options, effective_launch_options)
 
             options = {
                 "username": username.strip() or "Player",
@@ -195,7 +196,7 @@ class MinecraftEngine:
                 "launcherName": "MSLauncher",
                 "launcherVersion": "0.1.0",
             }
-            options.update(self._build_launch_options(launch_options))
+            options.update(self._build_launch_options(effective_launch_options))
 
             command = minecraft_launcher_lib.command.get_minecraft_command(
                 launch_version,
@@ -214,8 +215,10 @@ class MinecraftEngine:
                 bufsize=1,
             )
 
-            language = self._clean_config_text((launch_options or {}).get("language")) or "EN"
+            language = self._clean_config_text(effective_launch_options.get("language")) or "EN"
             return self.monitor_game_process(process, language)
+        except RuntimeError:
+            raise
         except Exception as exc:
             raise RuntimeError(f"Не удалось скачать или запустить Minecraft {version}: {exc}") from exc
 
@@ -230,9 +233,11 @@ class MinecraftEngine:
         java_path = self._clean_config_text((launch_options or {}).get("java_path"))
 
         try:
-            diagnose_launch_environment(version, loader or "vanilla", java_path)
+            selected_java_path = diagnose_launch_environment(version, loader or "vanilla", java_path)
         except JavaDiagnosticError as exc:
             raise RuntimeError(str(exc)) from exc
+        if launch_options is not None:
+            launch_options["java_path"] = selected_java_path
 
         if not loader or loader == "vanilla":
             minecraft_launcher_lib.install.install_minecraft_version(
@@ -252,7 +257,7 @@ class MinecraftEngine:
             str(self.minecraft_directory),
             loader_version=install_loader_version,
             callback=callback_options,
-            java=java_path or None,
+            java=selected_java_path,
         )
 
     def _build_launch_options(self, launch_options: dict[str, object] | None) -> dict[str, object]:
