@@ -28,7 +28,14 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from app_paths import ensure_user_config, get_asset_path
+from app_paths import (
+    backup_broken_config,
+    copy_default_config,
+    ensure_user_config,
+    get_asset_path,
+    get_default_profiles_directory,
+    get_last_config_backup_path,
+)
 from launcher_core import MinecraftEngine
 from manifest_validator import normalize_download_url, normalize_manifest_path
 from profile_manager import LauncherProfile, LauncherProfileManager, PROFILE_IDS, PROFILE_SERVER
@@ -37,6 +44,7 @@ from settings_validator import LaunchSettingsError, validate_launch_settings
 
 
 CONFIG_FILE = ensure_user_config()
+CONFIG_LOAD_WARNING = ""
 CHUNK_SIZE = 1024 * 1024
 DOWNLOAD_RETRIES = 3
 REQUEST_TIMEOUT = 60
@@ -111,6 +119,8 @@ TRANSLATIONS = {
         "download_failed": "Could not download files: {error}",
         "launch_failed": "Could not launch Minecraft: {error}",
         "settings_failed": "Check launcher settings: {error}",
+        "config_repaired": "Config was damaged. Backup saved here: {path}. Default settings were loaded.",
+        "config_save_failed": "Could not save launcher settings: {error}",
         "hash_failed": "Downloaded file checksum mismatch: {file}",
         "crash_title": "Minecraft crashed",
     },
@@ -172,6 +182,8 @@ TRANSLATIONS = {
         "download_failed": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043a\u0430\u0447\u0430\u0442\u044c \u0444\u0430\u0439\u043b\u044b: {error}",
         "launch_failed": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u043f\u0443\u0441\u0442\u0438\u0442\u044c Minecraft: {error}",
         "settings_failed": "\u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430: {error}",
+        "config_repaired": "\u041a\u043e\u043d\u0444\u0438\u0433 \u0431\u044b\u043b \u043f\u043e\u0432\u0440\u0435\u0436\u0434\u0435\u043d. Backup \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d \u0437\u0434\u0435\u0441\u044c: {path}. \u0417\u0430\u0433\u0440\u0443\u0436\u0435\u043d\u044b \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u043f\u043e \u0443\u043c\u043e\u043b\u0447\u0430\u043d\u0438\u044e.",
+        "config_save_failed": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430: {error}",
         "hash_failed": "\u0425\u044d\u0448 \u0441\u043a\u0430\u0447\u0430\u043d\u043d\u043e\u0433\u043e \u0444\u0430\u0439\u043b\u0430 \u043d\u0435 \u0441\u043e\u0432\u043f\u0430\u043b: {file}",
         "crash_title": "Minecraft \u0432\u044b\u043b\u0435\u0442\u0435\u043b",
     },
@@ -179,6 +191,8 @@ TRANSLATIONS = {
 
 
 def load_launcher_config(config_path: str | Path = CONFIG_FILE) -> dict[str, object]:
+    global CONFIG_LOAD_WARNING
+
     default_config: dict[str, object] = {
         "manifest_url": "",
         "game_directory": "",
@@ -198,7 +212,13 @@ def load_launcher_config(config_path: str | Path = CONFIG_FILE) -> dict[str, obj
     try:
         with path.open("r", encoding="utf-8") as file:
             loaded_config = json.load(file)
-    except (OSError, json.JSONDecodeError):
+    except json.JSONDecodeError:
+        backup_path = backup_broken_config(path)
+        copy_default_config(path)
+        CONFIG_LOAD_WARNING = str(backup_path)
+        return default_config
+    except OSError as exc:
+        CONFIG_LOAD_WARNING = str(exc)
         return default_config
 
     if not isinstance(loaded_config, dict):
@@ -230,6 +250,7 @@ def load_launcher_config(config_path: str | Path = CONFIG_FILE) -> dict[str, obj
 
 def save_launcher_config(config: dict[str, object], config_path: str | Path = CONFIG_FILE) -> None:
     path = Path(config_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as file:
         json.dump(config, file, ensure_ascii=False, indent=2)
 
@@ -267,7 +288,10 @@ def get_profile_base_directory(config: dict[str, object]) -> str:
     profiles_directory = get_config_text(config, "profiles_directory").strip()
     if profiles_directory:
         return profiles_directory
-    return get_config_text(config, "game_directory").strip()
+    legacy_game_directory = get_config_text(config, "game_directory").strip()
+    if legacy_game_directory:
+        return legacy_game_directory
+    return str(get_default_profiles_directory())
 
 
 class VersionsWorker(QThread):
@@ -701,6 +725,7 @@ class MSLauncherWindow(QMainWindow):
         self._build_ui()
         self._connect_signals()
         self.apply_translations()
+        self.show_config_repair_warning_if_needed()
         self.load_versions()
 
     def _build_ui(self) -> None:
@@ -1406,6 +1431,11 @@ class MSLauncherWindow(QMainWindow):
         self.status_label.setProperty("status_detail", detail)
         self.status_label.setText(self.translate(key, file=detail))
 
+    def set_status_text(self, text: str) -> None:
+        self.status_label.setProperty("status_key", None)
+        self.status_label.setProperty("status_detail", None)
+        self.status_label.setText(text)
+
     def show_error(self, message: str) -> None:
         QMessageBox.critical(self, self.translate("error"), message)
 
@@ -1438,8 +1468,8 @@ class MSLauncherWindow(QMainWindow):
     def save_user_preferences(self) -> None:
         try:
             self.config["launch"] = self.get_current_launch_settings()
-        except LaunchSettingsError:
-            pass
+        except LaunchSettingsError as exc:
+            self.set_status_text(self.translate("settings_failed", error=exc))
 
         self.config["default_language"] = self.language
         self.config["default_username"] = self.username_input.text().strip()
@@ -1450,8 +1480,16 @@ class MSLauncherWindow(QMainWindow):
 
         try:
             save_launcher_config(self.config)
-        except OSError:
-            pass
+        except OSError as exc:
+            message = self.translate("config_save_failed", error=exc)
+            self.set_status_text(message)
+            if self.isVisible():
+                self.show_error(message)
+
+    def show_config_repair_warning_if_needed(self) -> None:
+        backup_path = CONFIG_LOAD_WARNING or get_last_config_backup_path()
+        if backup_path:
+            self.show_error(self.translate("config_repaired", path=backup_path))
 
     def closeEvent(self, event) -> None:
         self.save_user_preferences()

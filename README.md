@@ -8,20 +8,43 @@ MSLauncher is a compact Minecraft launcher and modpack synchronizer.
 - `launcher_core.py` - Minecraft version loading, Mojang install/launch, mod sync, crash log analysis.
 - `profile_manager.py` - isolated launcher profiles for server, personal, and other mod sets.
 - `generate_manifest.py` - admin tool for generating `manifest.json` from `mods`, `config`, and `resourcepacks`.
-- `launcher_config.json` - local launcher configuration: builds, manifest URLs, default language, nickname.
+- `launcher_config.json` - default launcher configuration template: builds, manifest URLs, default language, nickname.
 - `requirements.txt` - Python dependencies.
 
 ## Launch Config
 
-MSLauncher keeps mod sets isolated by profile. By default they are created under:
+MSLauncher keeps user data outside the install folder by default. On Windows, runtime data is stored under:
 
 ```text
-data\instances\server
-data\instances\personal
-data\instances\other
+%APPDATA%\MSLauncher
+```
+
+Default profile folders:
+
+```text
+%APPDATA%\MSLauncher\instances\server
+%APPDATA%\MSLauncher\instances\personal
+%APPDATA%\MSLauncher\instances\other
 ```
 
 `server` is the only profile that runs server modpack sync. `personal` and `other` launch without server sync, so the launcher still works as a regular Minecraft launcher when no manifest is configured.
+
+Crash reports are written into the active profile folder:
+
+```text
+%APPDATA%\MSLauncher\instances\<profile>\crash-reports
+```
+
+To enable portable mode, create an empty `.portable` file next to `MSLauncher.exe`. In portable mode, config and profiles are stored next to the executable:
+
+```text
+MSLauncher.exe
+.portable
+launcher_config.json
+instances\
+```
+
+Assets are still read from the app bundle, not from user data.
 
 You can override the root profile folder:
 
