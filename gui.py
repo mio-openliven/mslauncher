@@ -47,7 +47,10 @@ TRANSLATIONS = {
     "EN": {
         "app_title": "MSLauncher",
         "brand_title": "Nukem Team Launcher",
-        "brand_subtitle": "Built for professional play",
+        "brand_subtitle_project": "Project entry point",
+        "brand_subtitle_crew": "Built for the crew",
+        "brand_subtitle_places": "Everything in its place",
+        "brand_subtitle_session": "A clean start for the session",
         "language": "Language",
         "build": "Build",
         "username": "Nickname",
@@ -81,7 +84,10 @@ TRANSLATIONS = {
     "RU": {
         "app_title": "MSLauncher",
         "brand_title": "\u041b\u0430\u0443\u043d\u0447\u0435\u0440 \u043a\u043e\u043c\u0430\u043d\u0434\u044b \u041d\u044e\u043a\u0435\u043c\u0430",
-        "brand_subtitle": "\u0414\u043b\u044f \u0442\u0435\u0445, \u043a\u0442\u043e \u0438\u0433\u0440\u0430\u0435\u0442 \u043d\u0430 \u0443\u0440\u043e\u0432\u043d\u0435",
+        "brand_subtitle_project": "\u0422\u043e\u0447\u043a\u0430 \u0432\u0445\u043e\u0434\u0430 \u0432 \u043f\u0440\u043e\u0435\u043a\u0442",
+        "brand_subtitle_crew": "\u0421\u043e\u0431\u0440\u0430\u043d\u043e \u0434\u043b\u044f \u0441\u0432\u043e\u0435\u0439 \u043a\u043e\u043c\u0430\u043d\u0434\u044b",
+        "brand_subtitle_places": "\u0412\u0441\u0435 \u043d\u0430 \u0441\u0432\u043e\u0438\u0445 \u043c\u0435\u0441\u0442\u0430\u0445",
+        "brand_subtitle_session": "\u0427\u0438\u0441\u0442\u044b\u0439 \u0441\u0442\u0430\u0440\u0442 \u0434\u043b\u044f \u0441\u0435\u0441\u0441\u0438\u0438",
         "language": "\u042f\u0437\u044b\u043a",
         "build": "\u0421\u0431\u043e\u0440\u043a\u0430",
         "username": "\u041d\u0438\u043a\u043d\u0435\u0439\u043c",
@@ -450,7 +456,7 @@ class ParallaxFrame(QFrame):
         self._current_offset_y = 0.0
         self._target_offset_x = 0.0
         self._target_offset_y = 0.0
-        self._mist_offset = 0
+        self._ambient_offset = 0
         self._pixmap = self._load_background()
         self._animation_timer = QTimer(self)
         self._animation_timer.setInterval(16)
@@ -482,7 +488,7 @@ class ParallaxFrame(QFrame):
     def _tick(self) -> None:
         self._current_offset_x += (self._target_offset_x - self._current_offset_x) * 0.08
         self._current_offset_y += (self._target_offset_y - self._current_offset_y) * 0.08
-        self._mist_offset = (self._mist_offset + 1) % 240
+        self._ambient_offset = (self._ambient_offset + 1) % 480
         self.update()
 
     def paintEvent(self, event) -> None:
@@ -493,10 +499,9 @@ class ParallaxFrame(QFrame):
         else:
             painter.fillRect(self.rect(), QColor("#253642"))
 
-        painter.fillRect(self.rect(), QColor(12, 18, 24, 112))
-        painter.fillRect(self.rect(), QColor(36, 54, 66, 76))
-        self._paint_mist(painter)
-        self._paint_vignette(painter)
+        painter.fillRect(self.rect(), QColor(8, 12, 16, 96))
+        self._paint_soft_light(painter)
+        self._paint_soft_vignette(painter)
         super().paintEvent(event)
 
     def _paint_cover_pixmap(self, painter: QPainter) -> None:
@@ -512,26 +517,37 @@ class ParallaxFrame(QFrame):
         y = int((self.height() - scaled.height()) / 2 - self._current_offset_y)
         painter.drawPixmap(x, y, scaled)
 
-    def _paint_mist(self, painter: QPainter) -> None:
+    def _paint_soft_light(self, painter: QPainter) -> None:
         painter.save()
         painter.setPen(Qt.PenStyle.NoPen)
-        mist_color = QColor(235, 245, 255, 18)
-        painter.setBrush(mist_color)
         width = max(1, self.width())
         height = max(1, self.height())
 
-        for index in range(4):
-            x = ((index * 260 + self._mist_offset) % (width + 260)) - 180
-            y = int(height * (0.18 + index * 0.13))
-            painter.drawEllipse(x, y, 360, 84)
+        painter.setBrush(QColor(255, 255, 255, 12))
+        painter.drawEllipse(
+            int(width * 0.52 + self._ambient_offset * 0.05),
+            int(height * 0.06),
+            int(width * 0.62),
+            int(height * 0.5),
+        )
+
+        painter.setBrush(QColor(143, 184, 178, 16))
+        painter.drawEllipse(
+            int(-width * 0.18 - self._ambient_offset * 0.03),
+            int(height * 0.34),
+            int(width * 0.68),
+            int(height * 0.52),
+        )
 
         painter.restore()
 
-    def _paint_vignette(self, painter: QPainter) -> None:
-        painter.fillRect(0, 0, self.width(), 26, QColor(0, 0, 0, 45))
-        painter.fillRect(0, self.height() - 60, self.width(), 60, QColor(0, 0, 0, 70))
-        painter.fillRect(0, 0, 42, self.height(), QColor(0, 0, 0, 42))
-        painter.fillRect(self.width() - 42, 0, 42, self.height(), QColor(0, 0, 0, 42))
+    def _paint_soft_vignette(self, painter: QPainter) -> None:
+        width = self.width()
+        height = self.height()
+        painter.fillRect(0, 0, width, int(height * 0.08), QColor(0, 0, 0, 24))
+        painter.fillRect(0, int(height * 0.72), width, int(height * 0.28), QColor(0, 0, 0, 58))
+        painter.fillRect(0, 0, int(width * 0.08), height, QColor(0, 0, 0, 22))
+        painter.fillRect(int(width * 0.88), 0, int(width * 0.12), height, QColor(0, 0, 0, 24))
 
 
 class MSLauncherWindow(QMainWindow):
@@ -552,6 +568,7 @@ class MSLauncherWindow(QMainWindow):
         self.selected_version = ""
         self.selected_manifest_url = ""
         self.selected_launch_options: dict[str, object] = {}
+        self.brand_subtitle_key = random.choice(self.get_brand_subtitle_keys())
 
         self._build_ui()
         self._connect_signals()
@@ -653,7 +670,7 @@ class MSLauncherWindow(QMainWindow):
     def apply_translations(self) -> None:
         self.setWindowTitle(self.translate("app_title"))
         self.title_label.setText(self.translate("brand_title"))
-        self.subtitle_label.setText(self.translate("brand_subtitle"))
+        self.subtitle_label.setText(self.translate(self.brand_subtitle_key))
         self.language_label.setText(self.translate("language"))
         self.build_label.setText(self.translate("build"))
         self.username_label.setText(self.translate("username"))
@@ -944,9 +961,19 @@ class MSLauncherWindow(QMainWindow):
 
     def translate(self, key: str, **kwargs: object) -> str:
         text = TRANSLATIONS.get(self.language, TRANSLATIONS["EN"]).get(key, key)
+        if isinstance(text, list):
+            return str(text[0]) if text else key
         if kwargs:
             return text.format(**kwargs)
         return text
+
+    def get_brand_subtitle_keys(self) -> list[str]:
+        return [
+            "brand_subtitle_project",
+            "brand_subtitle_crew",
+            "brand_subtitle_places",
+            "brand_subtitle_session",
+        ]
 
 
 def main() -> None:
