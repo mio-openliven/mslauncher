@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from app_paths import get_default_profiles_directory
+
 
 PROFILE_SERVER = "server"
 PROFILE_PERSONAL = "personal"
@@ -43,4 +45,4 @@ class LauncherProfileManager:
         return normalized_id if normalized_id in PROFILE_IDS else PROFILE_SERVER
 
     def _default_base_directory(self) -> Path:
-        return Path(__file__).resolve().parent / "data" / "instances"
+        return get_default_profiles_directory()

@@ -27,6 +27,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from app_paths import ensure_user_config, get_asset_path
 from launcher_core import MinecraftEngine
 from manifest_validator import normalize_download_url, normalize_manifest_path
 from profile_manager import LauncherProfile, LauncherProfileManager, PROFILE_IDS, PROFILE_SERVER
@@ -34,12 +35,12 @@ from remote_config import resolve_build_config
 from settings_validator import LaunchSettingsError, validate_launch_settings
 
 
-CONFIG_FILE = "launcher_config.json"
+CONFIG_FILE = ensure_user_config()
 CHUNK_SIZE = 1024 * 1024
 DOWNLOAD_RETRIES = 3
 REQUEST_TIMEOUT = 60
-BACKGROUND_DIR = Path(__file__).resolve().parent / "assets" / "backgrounds"
-ICON_DIR = Path(__file__).resolve().parent / "assets" / "icons"
+BACKGROUND_DIR = get_asset_path("backgrounds")
+ICON_DIR = get_asset_path("icons")
 BACKGROUND_FILES = (
     "bg_01.jpg",
     "bg_02.jpg",

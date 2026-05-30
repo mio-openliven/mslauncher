@@ -112,6 +112,7 @@ python tools\smoke_test_java_diagnostics.py
 python tools\smoke_test_remote_config.py
 python tools\smoke_test_manifest_validator.py
 python tools\smoke_test_crash_advisor.py
+python tools\smoke_test_app_paths.py
 ```
 
-The sync smoke test starts a local temporary HTTP server and checks the `source_key -> manifest -> sync -> download` flow. The profile smoke test checks isolated launcher folders. The settings smoke test checks loader, RAM, and Java path validation. The Java diagnostics smoke test checks Minecraft/Fabric Java requirements. The remote config smoke test checks invalid JSON, HTTP errors, and bad remote build fields. The manifest validator smoke test checks unsafe paths, hashes, URLs, and sizes. The crash advisor smoke test checks player-friendly crash hints.
+The sync smoke test starts a local temporary HTTP server and checks the `source_key -> manifest -> sync -> download` flow. The profile smoke test checks isolated launcher folders. The settings smoke test checks loader, RAM, and Java path validation. The Java diagnostics smoke test checks Minecraft/Fabric Java requirements. The remote config smoke test checks invalid JSON, HTTP errors, and bad remote build fields. The manifest validator smoke test checks unsafe paths, hashes, URLs, and sizes. The crash advisor smoke test checks player-friendly crash hints. The app paths smoke test checks source and packaged path resolution.
