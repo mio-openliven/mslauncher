@@ -66,7 +66,7 @@ class MinecraftEngine:
         """Download missing vanilla assets if needed, launch Minecraft, and return crash text."""
         return self._download_and_launch_sync(version, username, progress_callback, launch_options)
 
-    def monitor_game_process(self, process: subprocess.Popen[str]) -> str | None:
+    def monitor_game_process(self, process: subprocess.Popen[str], language: str = "EN") -> str | None:
         """Read game logs in real time and return a human-readable crash reason."""
         self._last_log_lines.clear()
 
@@ -91,7 +91,7 @@ class MinecraftEngine:
         if exit_code == 0:
             return None
 
-        return self._detect_crash_reason(self._last_log_lines, exit_code)
+        return self._detect_crash_reason(self._last_log_lines, exit_code, language)
 
     def sync_files(
         self,
@@ -186,7 +186,8 @@ class MinecraftEngine:
                 bufsize=1,
             )
 
-            return self.monitor_game_process(process)
+            language = self._clean_config_text((launch_options or {}).get("language")) or "EN"
+            return self.monitor_game_process(process, language)
         except Exception as exc:
             raise RuntimeError(f"Не удалось скачать или запустить Minecraft {version}: {exc}") from exc
 
@@ -298,8 +299,8 @@ class MinecraftEngine:
             if clean_line:
                 self._last_log_lines.append(clean_line)
 
-    def _detect_crash_reason(self, log_lines: Iterable[str], exit_code: int) -> str:
-        return advise_crash(log_lines, exit_code)
+    def _detect_crash_reason(self, log_lines: Iterable[str], exit_code: int, language: str = "EN") -> str:
+        return advise_crash(log_lines, exit_code, language)
 
     def _remove_unknown_mods(
         self,

@@ -1192,6 +1192,7 @@ class MSLauncherWindow(QMainWindow):
             self.set_status("ready")
             return
 
+        self.selected_launch_options["language"] = self.language
         self.save_user_preferences()
 
         if not self.selected_profile.server_sync_enabled or not manifest_url:
