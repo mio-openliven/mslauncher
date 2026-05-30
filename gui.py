@@ -545,8 +545,10 @@ class ParallaxFrame(QFrame):
         height = self.height()
         painter.fillRect(0, 0, width, int(height * 0.12), QColor(0, 12, 8, 64))
         painter.fillRect(0, int(height * 0.7), width, int(height * 0.3), QColor(0, 0, 0, 82))
-        painter.fillRect(0, 0, int(width * 0.1), height, QColor(0, 0, 0, 54))
-        painter.fillRect(int(width * 0.86), 0, int(width * 0.14), height, QColor(0, 0, 0, 58))
+        for index in range(10):
+            alpha = max(0, 44 - index * 4)
+            painter.fillRect(index * 7, 0, 7, height, QColor(0, 0, 0, alpha))
+            painter.fillRect(width - (index + 1) * 9, 0, 9, height, QColor(0, 0, 0, max(0, 42 - index * 4)))
 
     def _create_particles(self) -> list[tuple[float, float, float, int, int]]:
         randomizer = random.Random(42)
@@ -601,7 +603,6 @@ class MSLauncherWindow(QMainWindow):
         self.selected_manifest_url = ""
         self.selected_launch_options: dict[str, object] = {}
         self.brand_subtitle_key = random.choice(self.get_brand_subtitle_keys())
-        self.brand_bottom_phrase_key = random.choice(self.get_brand_subtitle_keys())
         self.action_phrase_key = "play_idle"
 
         self._build_ui()
@@ -634,6 +635,21 @@ class MSLauncherWindow(QMainWindow):
         self.settings_button.clicked.connect(self.toggle_info_panel)
         sidebar_layout.addWidget(self.settings_button)
 
+        self.info_panel = QFrame()
+        self.info_panel.setObjectName("infoPanel")
+        info_layout = QVBoxLayout(self.info_panel)
+        info_layout.setContentsMargins(10, 10, 10, 10)
+        info_layout.setSpacing(6)
+        self.info_title_label = QLabel()
+        self.info_title_label.setObjectName("infoTitle")
+        self.info_body_label = QLabel()
+        self.info_body_label.setObjectName("infoBody")
+        self.info_body_label.setWordWrap(True)
+        info_layout.addWidget(self.info_title_label)
+        info_layout.addWidget(self.info_body_label)
+        self.info_panel.hide()
+        sidebar_layout.addWidget(self.info_panel)
+
         for icon_name in ("discord", "tiktok", "telegram", "youtube", "instagram", "link"):
             button = self.create_side_button(icon_name)
             sidebar_layout.addWidget(button)
@@ -643,8 +659,8 @@ class MSLauncherWindow(QMainWindow):
         brand_panel = QFrame()
         brand_panel.setObjectName("brandPanel")
         brand_layout = QVBoxLayout(brand_panel)
-        brand_layout.setContentsMargins(24, 18, 24, 18)
-        brand_layout.setSpacing(6)
+        brand_layout.setContentsMargins(24, 16, 24, 16)
+        brand_layout.setSpacing(5)
 
         self.title_label = QLabel()
         self.title_label.setObjectName("titleLabel")
@@ -652,35 +668,14 @@ class MSLauncherWindow(QMainWindow):
         self.credit_label.setObjectName("creditLabel")
         self.subtitle_label = QLabel()
         self.subtitle_label.setObjectName("subtitleLabel")
-        self.bottom_phrase_label = QLabel()
-        self.bottom_phrase_label.setObjectName("bottomPhraseLabel")
         brand_layout.addWidget(self.title_label)
         brand_layout.addWidget(self.subtitle_label)
         brand_layout.addWidget(self.credit_label)
-        brand_layout.addSpacing(12)
-        brand_layout.addWidget(self.bottom_phrase_label)
         brand_panel.setMaximumWidth(500)
-        brand_panel.setMaximumHeight(205)
-
-        self.info_panel = QFrame()
-        self.info_panel.setObjectName("infoPanel")
-        info_layout = QVBoxLayout(self.info_panel)
-        info_layout.setContentsMargins(22, 18, 22, 18)
-        info_layout.setSpacing(10)
-        self.info_title_label = QLabel()
-        self.info_title_label.setObjectName("infoTitle")
-        self.info_body_label = QLabel()
-        self.info_body_label.setObjectName("infoBody")
-        self.info_body_label.setWordWrap(True)
-        info_layout.addWidget(self.info_title_label)
-        info_layout.addWidget(self.info_body_label)
-        info_layout.addStretch()
-        self.info_panel.setMaximumWidth(320)
-        self.info_panel.hide()
+        brand_panel.setMaximumHeight(142)
 
         hero_content_layout.addWidget(self.sidebar_frame)
         hero_content_layout.addWidget(brand_panel)
-        hero_content_layout.addWidget(self.info_panel)
         hero_content_layout.addStretch()
 
         hero_layout.addLayout(hero_content_layout)
@@ -774,7 +769,6 @@ class MSLauncherWindow(QMainWindow):
         self.title_label.setText(self.translate("brand_title"))
         self.subtitle_label.setText(self.translate(self.brand_subtitle_key))
         self.credit_label.setText(self.translate("brand_credit"))
-        self.bottom_phrase_label.setText(self.translate(self.brand_bottom_phrase_key))
         self.info_title_label.setText(self.translate("settings_title"))
         self.info_body_label.setText(self.translate("settings_body"))
         self.language_label.setText(self.translate("language"))
@@ -808,15 +802,15 @@ class MSLauncherWindow(QMainWindow):
                 border-radius: 8px;
             }
             #sidebarFrame {
-                background: rgba(10, 14, 14, 172);
-                border: 1px solid rgba(255, 255, 255, 18);
+                background: rgba(8, 12, 12, 138);
+                border: 1px solid rgba(255, 255, 255, 12);
                 border-radius: 8px;
                 min-width: 54px;
-                max-width: 54px;
+                max-width: 176px;
             }
             #infoPanel {
-                background: rgba(14, 18, 18, 188);
-                border: 1px solid rgba(255, 255, 255, 22);
+                background: rgba(14, 18, 18, 132);
+                border: 1px solid rgba(255, 255, 255, 14);
                 border-radius: 8px;
             }
             #controlFrame {
@@ -841,18 +835,14 @@ class MSLauncherWindow(QMainWindow):
                 font-size: 12px;
                 font-weight: 700;
             }
-            #bottomPhraseLabel {
-                color: #9eb0a5;
-                font-size: 12px;
-            }
             #infoTitle {
                 color: #ffffff;
-                font-size: 18px;
+                font-size: 12px;
                 font-weight: 800;
             }
             #infoBody {
                 color: #b5c8bd;
-                font-size: 13px;
+                font-size: 11px;
             }
             #statusLabel {
                 color: #b9d4c4;
