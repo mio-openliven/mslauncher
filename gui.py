@@ -28,6 +28,7 @@ from PyQt6.QtWidgets import (
 )
 
 from launcher_core import MinecraftEngine
+from manifest_validator import normalize_download_url, normalize_manifest_path
 from profile_manager import LauncherProfile, LauncherProfileManager, PROFILE_IDS, PROFILE_SERVER
 from remote_config import resolve_build_config
 from settings_validator import LaunchSettingsError, validate_launch_settings
@@ -343,12 +344,9 @@ class DownloadWorker(QThread):
 
         for file_info in files:
             relative_path = self._safe_relative_path(file_info)
-            url = str(file_info.get("url", "")).strip()
+            url = self._safe_download_url(file_info, relative_path)
             expected_hash = str(file_info.get("sha256", "")).lower().strip()
             expected_size = int(file_info.get("size", 0))
-
-            if not url:
-                raise RuntimeError(f"Missing download URL for {relative_path}")
 
             self.status_detail_changed.emit("status_downloading_file", relative_path)
             target_path = self.game_directory / relative_path
@@ -428,10 +426,10 @@ class DownloadWorker(QThread):
         part_path.replace(target_path)
 
     def _safe_relative_path(self, file_info: dict[str, str | int]) -> str:
-        relative_path = str(file_info.get("path", "")).replace("\\", "/").strip("/")
-        if not relative_path or ".." in Path(relative_path).parts:
-            raise RuntimeError(f"Unsafe manifest path: {relative_path}")
-        return relative_path
+        return normalize_manifest_path(file_info.get("path", ""))
+
+    def _safe_download_url(self, file_info: dict[str, str | int], relative_path: str) -> str:
+        return normalize_download_url(file_info.get("url", ""), relative_path)
 
     def _calculate_sha256(self, file_path: Path) -> str:
         digest = hashlib.sha256()

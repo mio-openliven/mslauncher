@@ -16,6 +16,7 @@ import minecraft_launcher_lib.mod_loader
 import requests
 
 from java_diagnostics import JavaDiagnosticError, diagnose_launch_environment
+from manifest_validator import ManifestValidationError, validate_manifest
 
 
 ProgressCallback = Callable[[str, int, int], None]
@@ -109,22 +110,17 @@ class MinecraftEngine:
         except json.JSONDecodeError as exc:
             raise RuntimeError(f"Манифест сборки содержит некорректный JSON: {exc}") from exc
 
-        manifest_files = manifest.get("files", [])
-        if not isinstance(manifest_files, list):
-            raise RuntimeError("Манифест сборки поврежден: поле 'files' должно быть списком.")
+        try:
+            manifest_files = validate_manifest(manifest)
+        except ManifestValidationError as exc:
+            raise RuntimeError(f"Манифест сборки поврежден: {exc}") from exc
 
         expected_files: dict[str, dict[str, str | int]] = {}
         files_to_download: list[dict[str, str | int]] = []
 
         for item in manifest_files:
-            if not isinstance(item, dict):
-                continue
-
-            relative_path = self._normalize_manifest_path(item.get("path", ""))
+            relative_path = str(item["path"])
             expected_hash = str(item.get("sha256", "")).lower()
-
-            if not relative_path or not expected_hash:
-                continue
 
             expected_files[relative_path] = item
             local_file = game_path / relative_path
