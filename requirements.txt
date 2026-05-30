@@ -1,3 +1,4 @@
 minecraft-launcher-lib
 PyQt6
 requests
+pyinstaller

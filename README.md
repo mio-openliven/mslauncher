@@ -69,6 +69,18 @@ python -m pip install -r requirements.txt
 python gui.py
 ```
 
+## Build EXE
+
+```powershell
+.\build_exe.ps1
+```
+
+Output:
+
+```text
+dist\MSLauncher\MSLauncher.exe
+```
+
 ## Smoke Test
 
 ```powershell
