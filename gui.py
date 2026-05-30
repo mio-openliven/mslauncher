@@ -29,6 +29,7 @@ from PyQt6.QtWidgets import (
 
 from launcher_core import MinecraftEngine
 from profile_manager import LauncherProfile, LauncherProfileManager, PROFILE_IDS, PROFILE_SERVER
+from settings_validator import LaunchSettingsError, validate_launch_settings
 
 
 CONFIG_FILE = "launcher_config.json"
@@ -103,6 +104,7 @@ TRANSLATIONS = {
         "build_config_failed": "Could not load build config: {error}",
         "download_failed": "Could not download files: {error}",
         "launch_failed": "Could not launch Minecraft: {error}",
+        "settings_failed": "Check launcher settings: {error}",
         "hash_failed": "Downloaded file checksum mismatch: {file}",
         "crash_title": "Minecraft crashed",
     },
@@ -161,6 +163,7 @@ TRANSLATIONS = {
         "build_config_failed": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u043a\u043e\u043d\u0444\u0438\u0433 \u0441\u0431\u043e\u0440\u043a\u0438: {error}",
         "download_failed": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043a\u0430\u0447\u0430\u0442\u044c \u0444\u0430\u0439\u043b\u044b: {error}",
         "launch_failed": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u043f\u0443\u0441\u0442\u0438\u0442\u044c Minecraft: {error}",
+        "settings_failed": "\u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430: {error}",
         "hash_failed": "\u0425\u044d\u0448 \u0441\u043a\u0430\u0447\u0430\u043d\u043d\u043e\u0433\u043e \u0444\u0430\u0439\u043b\u0430 \u043d\u0435 \u0441\u043e\u0432\u043f\u0430\u043b: {file}",
         "crash_title": "Minecraft \u0432\u044b\u043b\u0435\u0442\u0435\u043b",
     },
@@ -1209,7 +1212,14 @@ class MSLauncherWindow(QMainWindow):
         manifest_url = str(resolved_build.get("manifest_url", "")).strip()
         self.selected_version = version
         self.selected_manifest_url = manifest_url
-        self.selected_launch_options = self.build_launch_options(resolved_build)
+        try:
+            self.selected_launch_options = self.build_launch_options(resolved_build)
+        except LaunchSettingsError as exc:
+            self.reset_play_button()
+            self.show_error(self.translate("settings_failed", error=str(exc)))
+            self.set_status("ready")
+            return
+
         self.save_user_preferences()
 
         if not self.selected_profile.server_sync_enabled or not manifest_url:
@@ -1307,6 +1317,11 @@ class MSLauncherWindow(QMainWindow):
         self.play_button.setText(self.translate(self.action_phrase_key))
         self.set_status("status_game_closed")
 
+    def reset_play_button(self) -> None:
+        self.play_button.setEnabled(True)
+        self.action_phrase_key = "play_idle"
+        self.play_button.setText(self.translate(self.action_phrase_key))
+
     def set_status(self, key: str) -> None:
         self.status_label.setProperty("status_key", key)
         self.status_label.setProperty("status_detail", None)
@@ -1321,7 +1336,7 @@ class MSLauncherWindow(QMainWindow):
         QMessageBox.critical(self, self.translate("error"), message)
 
     def build_launch_options(self, build: dict[str, object]) -> dict[str, object]:
-        launch_options = dict(get_config_launch_options(self.config))
+        launch_options = self.get_current_launch_settings()
         loader = str(build.get("loader", "")).strip()
         loader_version = str(build.get("loader_version", "")).strip()
         server = str(build.get("server", "")).strip()
@@ -1338,14 +1353,20 @@ class MSLauncherWindow(QMainWindow):
 
         return launch_options
 
-    def save_user_preferences(self) -> None:
+    def get_current_launch_settings(self) -> dict[str, object]:
         launch_options = dict(get_config_launch_options(self.config))
         launch_options["loader"] = self.loader_setting_combo.currentText().strip() or "vanilla"
         launch_options["memory_min"] = self.memory_min_input.text().strip() or "512M"
         launch_options["memory_max"] = self.memory_max_input.text().strip() or "2G"
         launch_options["java_path"] = self.java_path_input.text().strip()
+        return validate_launch_settings(launch_options)
 
-        self.config["launch"] = launch_options
+    def save_user_preferences(self) -> None:
+        try:
+            self.config["launch"] = self.get_current_launch_settings()
+        except LaunchSettingsError:
+            pass
+
         self.config["default_language"] = self.language
         self.config["default_username"] = self.username_input.text().strip()
         self.config["default_profile"] = self.get_selected_profile_id()

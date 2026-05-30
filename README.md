@@ -107,6 +107,7 @@ dist\MSLauncher\MSLauncher.exe
 ```powershell
 python tools\smoke_test_sync.py
 python tools\smoke_test_profiles.py
+python tools\smoke_test_settings.py
 ```
 
-The sync smoke test starts a local temporary HTTP server and checks the `source_key -> manifest -> sync -> download` flow. The profile smoke test checks isolated launcher folders.
+The sync smoke test starts a local temporary HTTP server and checks the `source_key -> manifest -> sync -> download` flow. The profile smoke test checks isolated launcher folders. The settings smoke test checks loader, RAM, and Java path validation.
