@@ -558,9 +558,9 @@ class ParallaxFrame(QFrame):
                 randomizer.random(),
                 randomizer.uniform(0.18, 0.75),
                 randomizer.choice((1, 1, 1, 1, 2, 3)),
-                randomizer.randint(16, 54),
+                randomizer.randint(18, 62),
             )
-            for _ in range(102)
+            for _ in range(204)
         ]
 
     def _paint_particles(self, painter: QPainter) -> None:
@@ -568,16 +568,30 @@ class ParallaxFrame(QFrame):
         painter.setPen(Qt.PenStyle.NoPen)
         width = max(1, self.width())
         height = max(1, self.height())
+        cursor_position = self.mapFromGlobal(QCursor.pos())
+        cursor_x = min(max(cursor_position.x(), 0), width)
+        cursor_y = min(max(cursor_position.y(), 0), height)
 
         for index, (base_x, base_y, speed, size, alpha) in enumerate(self._particles):
-            drift = (self._particle_phase * speed + index * 19) % 180
-            fade = abs(90 - drift) / 90
-            particle_alpha = int(alpha * (1 - fade * 0.72))
+            drift_cycle = 315
+            drift = (self._particle_phase * speed + index * 19) % drift_cycle
+            fade = abs((drift_cycle / 2) - drift) / (drift_cycle / 2)
+            particle_alpha = int(min(92, alpha * 1.15 * (1 - fade * 0.56)))
             if particle_alpha <= 4:
                 continue
 
             x = int((base_x * width + drift * 0.22 + self._current_offset_x * 0.22) % width)
             y = int((base_y * height - drift * 0.16 + self._current_offset_y * 0.16) % height)
+            distance_x = x - cursor_x
+            distance_y = y - cursor_y
+            distance_squared = distance_x * distance_x + distance_y * distance_y
+            repel_radius = 150
+            if 0 < distance_squared < repel_radius * repel_radius:
+                distance = distance_squared ** 0.5
+                force = (1 - distance / repel_radius) ** 2
+                x += int((distance_x / distance) * force * 56)
+                y += int((distance_y / distance) * force * 56)
+
             painter.setBrush(QColor(225, 238, 230, particle_alpha))
             painter.drawEllipse(x, y, size, size)
 
@@ -635,23 +649,11 @@ class MSLauncherWindow(QMainWindow):
         self.settings_button.clicked.connect(self.toggle_info_panel)
         sidebar_layout.addWidget(self.settings_button)
 
-        self.info_panel = QFrame()
-        self.info_panel.setObjectName("infoPanel")
-        info_layout = QVBoxLayout(self.info_panel)
-        info_layout.setContentsMargins(10, 10, 10, 10)
-        info_layout.setSpacing(6)
-        self.info_title_label = QLabel()
-        self.info_title_label.setObjectName("infoTitle")
-        self.info_body_label = QLabel()
-        self.info_body_label.setObjectName("infoBody")
-        self.info_body_label.setWordWrap(True)
-        info_layout.addWidget(self.info_title_label)
-        info_layout.addWidget(self.info_body_label)
-        self.info_panel.hide()
-        sidebar_layout.addWidget(self.info_panel)
-
+        self.social_buttons: list[QPushButton] = []
         for icon_name in ("discord", "tiktok", "telegram", "youtube", "instagram", "link"):
             button = self.create_side_button(icon_name)
+            button.hide()
+            self.social_buttons.append(button)
             sidebar_layout.addWidget(button)
 
         sidebar_layout.addStretch()
@@ -674,8 +676,25 @@ class MSLauncherWindow(QMainWindow):
         brand_panel.setMaximumWidth(500)
         brand_panel.setMaximumHeight(142)
 
+        self.info_panel = QFrame()
+        self.info_panel.setObjectName("infoPanel")
+        info_layout = QVBoxLayout(self.info_panel)
+        info_layout.setContentsMargins(22, 18, 22, 18)
+        info_layout.setSpacing(10)
+        self.info_title_label = QLabel()
+        self.info_title_label.setObjectName("infoTitle")
+        self.info_body_label = QLabel()
+        self.info_body_label.setObjectName("infoBody")
+        self.info_body_label.setWordWrap(True)
+        info_layout.addWidget(self.info_title_label)
+        info_layout.addWidget(self.info_body_label)
+        info_layout.addStretch()
+        self.info_panel.setMaximumWidth(320)
+        self.info_panel.hide()
+
         hero_content_layout.addWidget(self.sidebar_frame)
         hero_content_layout.addWidget(brand_panel)
+        hero_content_layout.addWidget(self.info_panel)
         hero_content_layout.addStretch()
 
         hero_layout.addLayout(hero_content_layout)
@@ -806,11 +825,11 @@ class MSLauncherWindow(QMainWindow):
                 border: 1px solid rgba(255, 255, 255, 12);
                 border-radius: 8px;
                 min-width: 54px;
-                max-width: 176px;
+                max-width: 54px;
             }
             #infoPanel {
-                background: rgba(14, 18, 18, 132);
-                border: 1px solid rgba(255, 255, 255, 14);
+                background: rgba(14, 18, 18, 188);
+                border: 1px solid rgba(255, 255, 255, 22);
                 border-radius: 8px;
             }
             #controlFrame {
@@ -837,12 +856,12 @@ class MSLauncherWindow(QMainWindow):
             }
             #infoTitle {
                 color: #ffffff;
-                font-size: 12px;
+                font-size: 18px;
                 font-weight: 800;
             }
             #infoBody {
                 color: #b5c8bd;
-                font-size: 11px;
+                font-size: 13px;
             }
             #statusLabel {
                 color: #b9d4c4;
@@ -884,9 +903,9 @@ class MSLauncherWindow(QMainWindow):
                 width: 22px;
             }
             QPushButton#playButton {
-                background: rgba(21, 214, 102, 46);
-                color: #28f279;
-                border: 1px solid rgba(40, 242, 121, 120);
+                background: rgba(214, 230, 220, 22);
+                color: #dceee4;
+                border: 1px solid rgba(220, 238, 228, 70);
                 border-radius: 18px;
                 font-size: 13px;
                 font-weight: 700;
@@ -894,14 +913,14 @@ class MSLauncherWindow(QMainWindow):
                 padding: 8px 20px;
             }
             QPushButton#playButton:hover {
-                background: rgba(31, 238, 122, 72);
-                color: #eafff1;
-                border: 1px solid rgba(40, 242, 121, 190);
+                background: rgba(117, 152, 134, 58);
+                color: #ffffff;
+                border: 1px solid rgba(191, 223, 206, 130);
             }
             QPushButton#playButton:disabled {
-                background: rgba(31, 238, 122, 32);
-                color: #93dbae;
-                border: 1px solid rgba(40, 242, 121, 80);
+                background: rgba(117, 152, 134, 28);
+                color: #aab9b1;
+                border: 1px solid rgba(191, 223, 206, 58);
             }
             QProgressBar {
                 background: #25382e;
@@ -910,7 +929,7 @@ class MSLauncherWindow(QMainWindow):
                 text-align: center;
             }
             QProgressBar::chunk {
-                background: #16d96a;
+                background: #86b89d;
                 border-radius: 3px;
             }
             """
@@ -1076,7 +1095,10 @@ class MSLauncherWindow(QMainWindow):
         self.set_status("ready")
 
     def toggle_info_panel(self) -> None:
-        self.info_panel.setVisible(not self.info_panel.isVisible())
+        should_show = not self.info_panel.isVisible()
+        self.info_panel.setVisible(should_show)
+        for button in self.social_buttons:
+            button.setVisible(should_show)
 
     def on_launch_failed(self, error: str) -> None:
         self.play_button.setEnabled(True)
