@@ -115,6 +115,7 @@ TRANSLATIONS = {
         "empty_version": "Select a Minecraft version.",
         "empty_build": "Select a build.",
         "empty_manifest": "Set manifest_url or source_key for the selected build in launcher_config.json.",
+        "server_manifest_required": "Server profile needs a manifest_url or source_key before launch.",
         "versions_failed": "Could not load Minecraft versions: {error}",
         "sync_failed": "Could not sync files: {error}",
         "build_config_failed": "Could not load build config: {error}",
@@ -183,6 +184,7 @@ TRANSLATIONS = {
         "empty_version": "\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0432\u0435\u0440\u0441\u0438\u044e Minecraft.",
         "empty_build": "\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0441\u0431\u043e\u0440\u043a\u0443.",
         "empty_manifest": "\u0423\u043a\u0430\u0436\u0438\u0442\u0435 manifest_url \u0438\u043b\u0438 source_key \u0434\u043b\u044f \u0432\u044b\u0431\u0440\u0430\u043d\u043d\u043e\u0439 \u0441\u0431\u043e\u0440\u043a\u0438 \u0432 launcher_config.json.",
+        "server_manifest_required": "\u0414\u043b\u044f \u0441\u0435\u0440\u0432\u0435\u0440\u043d\u043e\u0433\u043e \u043f\u0440\u043e\u0444\u0438\u043b\u044f \u043d\u0443\u0436\u0435\u043d manifest_url \u0438\u043b\u0438 source_key \u043f\u0435\u0440\u0435\u0434 \u0437\u0430\u043f\u0443\u0441\u043a\u043e\u043c.",
         "versions_failed": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0432\u0435\u0440\u0441\u0438\u0438 Minecraft: {error}",
         "sync_failed": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u0432\u0435\u0440\u0438\u0442\u044c \u0444\u0430\u0439\u043b\u044b: {error}",
         "build_config_failed": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u043a\u043e\u043d\u0444\u0438\u0433 \u0441\u0431\u043e\u0440\u043a\u0438: {error}",
@@ -304,6 +306,10 @@ def get_profile_base_directory(config: dict[str, object]) -> str:
     if legacy_game_directory:
         return legacy_game_directory
     return str(get_default_profiles_directory())
+
+
+def requires_server_manifest(profile: LauncherProfile, manifest_url: str) -> bool:
+    return profile.server_sync_enabled and not manifest_url.strip()
 
 
 class VersionsWorker(QThread):
@@ -1291,6 +1297,12 @@ class MSLauncherWindow(QMainWindow):
         manifest_url = str(resolved_build.get("manifest_url", "")).strip()
         self.selected_version = version
         self.selected_manifest_url = manifest_url
+        if requires_server_manifest(self.selected_profile, manifest_url):
+            self.reset_play_button()
+            self.show_error(self.translate("server_manifest_required"))
+            self.set_status("ready")
+            return
+
         try:
             self.selected_launch_options = self.build_launch_options(resolved_build)
         except LaunchSettingsError as exc:
@@ -1302,7 +1314,7 @@ class MSLauncherWindow(QMainWindow):
         self.selected_launch_options["language"] = self.language
         self.save_user_preferences()
 
-        if not self.selected_profile.server_sync_enabled or not manifest_url:
+        if not self.selected_profile.server_sync_enabled:
             self.set_status("status_skipping_sync")
             self.progress_bar.setValue(0)
             self.launch_game()
