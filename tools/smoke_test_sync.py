@@ -65,14 +65,17 @@ def main() -> None:
                 ),
             )
 
-            build = resolve_build_config({"id": "main", "source_key": f"{base_url}/mslauncher/build.json"})
+            build = resolve_build_config(
+                {"id": "main", "source_key": f"{base_url}/mslauncher/build.json"},
+                allow_insecure_local=True,
+            )
             engine = MinecraftEngine(client_path)
-            sync_plan = engine.sync_files(str(build["manifest_url"]), client_path)
+            sync_plan = engine.sync_files(str(build["manifest_url"]), client_path, allow_insecure_local=True)
 
             if not (client_path / "mods" / "cheat.jar").exists():
                 raise AssertionError("Extra mod was removed before downloads completed.")
 
-            worker = DownloadWorker(engine, str(build["manifest_url"]), client_path)
+            worker = DownloadWorker(engine, str(build["manifest_url"]), client_path, allow_insecure_local=True)
             staging_path = client_path / ".mslauncher-staging"
             staged_files = worker._download_files(sync_plan.files_to_download, staging_path)
             worker._replace_target_files(staged_files)

@@ -19,6 +19,7 @@ from crash_advisor import advise_crash
 from java_diagnostics import JavaDiagnosticError, diagnose_launch_environment
 from manifest_validator import ManifestValidationError, validate_manifest
 from profile_manager import MANAGED_MARKER
+from url_policy import URLPolicyError, normalize_https_url
 
 
 ProgressCallback = Callable[[str, int, int], None]
@@ -107,21 +108,30 @@ class MinecraftEngine:
         self,
         manifest_url: str,
         game_directory: str | os.PathLike[str],
+        *,
+        allow_insecure_local: bool = False,
     ) -> SyncPlan:
         """Compare local files with a remote manifest and return a safe sync plan."""
         game_path = Path(game_directory)
 
         try:
-            response = requests.get(manifest_url, timeout=30)
+            safe_manifest_url = normalize_https_url(
+                manifest_url,
+                "manifest_url",
+                allow_insecure_local=allow_insecure_local,
+            )
+            response = requests.get(safe_manifest_url, timeout=30)
             response.raise_for_status()
             manifest = response.json()
+        except URLPolicyError as exc:
+            raise RuntimeError(str(exc)) from exc
         except requests.RequestException as exc:
             raise RuntimeError(f"Не удалось скачать манифест сборки: {exc}") from exc
         except json.JSONDecodeError as exc:
             raise RuntimeError(f"Манифест сборки содержит некорректный JSON: {exc}") from exc
 
         try:
-            manifest_files = validate_manifest(manifest)
+            manifest_files = validate_manifest(manifest, allow_insecure_local=allow_insecure_local)
         except ManifestValidationError as exc:
             raise RuntimeError(f"Манифест сборки поврежден: {exc}") from exc
 

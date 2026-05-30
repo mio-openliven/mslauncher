@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from urllib.parse import urlparse
+
+from url_policy import URLPolicyError, normalize_https_url
 
 
 ALLOWED_ROOTS = ("mods", "config", "resourcepacks")
@@ -13,7 +14,7 @@ class ManifestValidationError(RuntimeError):
     pass
 
 
-def validate_manifest(manifest: object) -> list[dict[str, str | int]]:
+def validate_manifest(manifest: object, *, allow_insecure_local: bool = False) -> list[dict[str, str | int]]:
     if not isinstance(manifest, dict):
         raise ManifestValidationError("Manifest must be a JSON object.")
 
@@ -34,7 +35,11 @@ def validate_manifest(manifest: object) -> list[dict[str, str | int]]:
         seen_paths.add(relative_path)
 
         expected_hash = normalize_sha256(item.get("sha256", ""), relative_path)
-        download_url = normalize_download_url(item.get("url", ""), relative_path)
+        download_url = normalize_download_url(
+            item.get("url", ""),
+            relative_path,
+            allow_insecure_local=allow_insecure_local,
+        )
         size = normalize_size(item.get("size", 0), relative_path)
 
         validated_files.append(
@@ -79,15 +84,20 @@ def normalize_sha256(raw_hash: object, relative_path: str) -> str:
     return expected_hash
 
 
-def normalize_download_url(raw_url: object, relative_path: str) -> str:
-    if not isinstance(raw_url, str):
-        raise ManifestValidationError(f"Manifest url must be a string for {relative_path}.")
-
-    download_url = raw_url.strip()
-    parsed_url = urlparse(download_url)
-    if parsed_url.scheme not in ("http", "https") or not parsed_url.netloc:
-        raise ManifestValidationError(f"Manifest url must be http or https for {relative_path}.")
-    return download_url
+def normalize_download_url(
+    raw_url: object,
+    relative_path: str,
+    *,
+    allow_insecure_local: bool = False,
+) -> str:
+    try:
+        return normalize_https_url(
+            raw_url,
+            f"Manifest url for {relative_path}",
+            allow_insecure_local=allow_insecure_local,
+        )
+    except URLPolicyError as exc:
+        raise ManifestValidationError(str(exc)) from exc
 
 
 def normalize_size(raw_size: object, relative_path: str) -> int:

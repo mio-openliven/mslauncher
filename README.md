@@ -73,10 +73,17 @@ Each build can use either `manifest_url` directly or a `source_key`.
 If `source_key` is not a full URL, MSLauncher treats it as a host and loads:
 
 ```text
-http://HOST/mslauncher/build.json
+https://HOST/mslauncher/build.json
 ```
 
 Remote `build.json` can provide `name`, `minecraft_version`, `loader`, `loader_version`, `manifest_url`, `server`, and `port`.
+
+Security rules:
+
+- `source_key`, `manifest_url`, and every manifest file URL must use `https://` in production.
+- `http://` is not supported outside explicit local smoke tests.
+- URLs must not contain username/password or fragments such as `#section`.
+- Production URLs must not point to localhost or private IP addresses.
 
 Supported loader values:
 
@@ -112,8 +119,9 @@ python tools\smoke_test_settings.py
 python tools\smoke_test_java_diagnostics.py
 python tools\smoke_test_remote_config.py
 python tools\smoke_test_manifest_validator.py
+python tools\smoke_test_url_security.py
 python tools\smoke_test_crash_advisor.py
 python tools\smoke_test_app_paths.py
 ```
 
-The sync smoke test starts a local temporary HTTP server and checks the `source_key -> manifest -> sync -> download` flow. The safe sync smoke test checks staging, managed markers, and no data loss on failed downloads. The profile smoke test checks isolated launcher folders. The settings smoke test checks loader, RAM, and Java path validation. The Java diagnostics smoke test checks Minecraft/Fabric Java requirements. The remote config smoke test checks invalid JSON, HTTP errors, and bad remote build fields. The manifest validator smoke test checks unsafe paths, hashes, URLs, and sizes. The crash advisor smoke test checks player-friendly crash hints. The app paths smoke test checks source and packaged path resolution.
+The sync smoke test starts a local temporary HTTP server in explicit test mode and checks the `source_key -> manifest -> sync -> download` flow. The safe sync smoke test checks staging, managed markers, and no data loss on failed downloads. The profile smoke test checks isolated launcher folders. The settings smoke test checks loader, RAM, and Java path validation. The Java diagnostics smoke test checks Minecraft/Fabric Java requirements. The remote config smoke test checks invalid JSON, HTTP errors, and bad remote build fields. The manifest validator smoke test checks unsafe paths, hashes, URLs, and sizes. The URL security smoke test checks HTTPS-only production policy. The crash advisor smoke test checks player-friendly crash hints. The app paths smoke test checks source and packaged path resolution.

@@ -45,10 +45,19 @@ def main() -> None:
     expect_error({"files": [file_item(path="saves/world.dat")]})
     expect_error({"files": [file_item(path="mods/example.jar"), file_item(path="mods/example.jar")]})
     expect_error({"files": [file_item(sha256="bad")]})
+    expect_error({"files": [file_item(url="http://example.com/mod.jar")]})
     expect_error({"files": [file_item(url="ftp://example.com/mod.jar")]})
+    expect_error({"files": [file_item(url="https://user:pass@example.com/mod.jar")]})
+    expect_error({"files": [file_item(url="https://example.com/mod.jar#bad")]})
     expect_error({"files": [file_item(url="")]})
     expect_error({"files": [file_item(size=-1)]})
     expect_error({"files": [file_item(size=True)]})
+
+    local_http = validate_manifest(
+        {"files": [file_item(url="http://127.0.0.1:8000/mods/example.jar")]},
+        allow_insecure_local=True,
+    )
+    assert local_http[0]["url"].startswith("http://127.0.0.1")
 
     print("manifest validator smoke test: OK")
 

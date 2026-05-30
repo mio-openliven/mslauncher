@@ -312,17 +312,24 @@ class DownloadWorker(QThread):
         engine: MinecraftEngine,
         manifest_url: str,
         game_directory: str | Path,
+        *,
+        allow_insecure_local: bool = False,
     ) -> None:
         super().__init__()
         self.engine = engine
         self.manifest_url = manifest_url
         self.game_directory = Path(game_directory)
+        self.allow_insecure_local = allow_insecure_local
 
     def run(self) -> None:
         staging_path = self.game_directory / ".mslauncher-staging"
         try:
             self.status_changed.emit("status_syncing")
-            sync_plan = self.engine.sync_files(self.manifest_url, self.game_directory)
+            sync_plan = self.engine.sync_files(
+                self.manifest_url,
+                self.game_directory,
+                allow_insecure_local=self.allow_insecure_local,
+            )
 
             if sync_plan.warning:
                 self.error_occurred.emit("sync_failed", sync_plan.warning)
@@ -473,7 +480,11 @@ class DownloadWorker(QThread):
         return normalize_manifest_path(file_info.get("path", ""))
 
     def _safe_download_url(self, file_info: dict[str, str | int], relative_path: str) -> str:
-        return normalize_download_url(file_info.get("url", ""), relative_path)
+        return normalize_download_url(
+            file_info.get("url", ""),
+            relative_path,
+            allow_insecure_local=self.allow_insecure_local,
+        )
 
     def _calculate_sha256(self, file_path: Path) -> str:
         digest = hashlib.sha256()

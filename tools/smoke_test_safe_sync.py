@@ -33,7 +33,7 @@ def run_server(directory: Path) -> tuple[ThreadingHTTPServer, str]:
 
 
 def run_successful_commit(engine: MinecraftEngine, worker: DownloadWorker, client_path: Path, manifest_url: str) -> None:
-    sync_plan = engine.sync_files(manifest_url, client_path)
+    sync_plan = engine.sync_files(manifest_url, client_path, allow_insecure_local=True)
     staging_path = client_path / ".mslauncher-staging"
     staged_files = worker._download_files(sync_plan.files_to_download, staging_path)
     worker._replace_target_files(staged_files)
@@ -58,9 +58,18 @@ def main() -> None:
             write_text(server_path / "manifest.json", json.dumps(manifest, ensure_ascii=False))
 
             engine = MinecraftEngine(client_path)
-            worker = DownloadWorker(engine, f"{base_url}/manifest.json", client_path)
+            worker = DownloadWorker(
+                engine,
+                f"{base_url}/manifest.json",
+                client_path,
+                allow_insecure_local=True,
+            )
 
-            unmanaged_plan = engine.sync_files(f"{base_url}/manifest.json", client_path)
+            unmanaged_plan = engine.sync_files(
+                f"{base_url}/manifest.json",
+                client_path,
+                allow_insecure_local=True,
+            )
             if not unmanaged_plan.warning:
                 raise AssertionError("Unmanaged profile did not return a warning for extra mods.")
             try:
@@ -73,7 +82,11 @@ def main() -> None:
                 raise AssertionError("Extra mod was deleted in unmanaged profile.")
 
             (client_path / MANAGED_MARKER).touch()
-            managed_plan = engine.sync_files(f"{base_url}/manifest.json", client_path)
+            managed_plan = engine.sync_files(
+                f"{base_url}/manifest.json",
+                client_path,
+                allow_insecure_local=True,
+            )
             if not (client_path / "mods" / "cheat.jar").is_file():
                 raise AssertionError("Extra mod was removed before successful download.")
 
@@ -83,7 +96,11 @@ def main() -> None:
             bad_manifest["files"] = bad_files
             write_text(server_path / "bad-manifest.json", json.dumps(bad_manifest, ensure_ascii=False))
 
-            bad_plan = engine.sync_files(f"{base_url}/bad-manifest.json", client_path)
+            bad_plan = engine.sync_files(
+                f"{base_url}/bad-manifest.json",
+                client_path,
+                allow_insecure_local=True,
+            )
             staging_path = client_path / ".mslauncher-staging"
             try:
                 worker._download_files(bad_plan.files_to_download, staging_path)

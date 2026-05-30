@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from urllib.parse import urlparse
+from urllib.parse import urljoin
 
 import requests
+
+from url_policy import URLPolicyError, ensure_same_https_origin, normalize_https_url, normalize_source_key_url
 
 
 REMOTE_BUILD_KEYS = (
@@ -21,14 +23,27 @@ class RemoteBuildConfigError(RuntimeError):
     pass
 
 
-def resolve_build_config(build: dict[str, object]) -> dict[str, object]:
+def resolve_build_config(build: dict[str, object], *, allow_insecure_local: bool = False) -> dict[str, object]:
     source_key = str(build.get("source_key", "")).strip()
     if not source_key:
-        return validate_build_config(dict(build))
+        return validate_build_config(dict(build), allow_insecure_local=allow_insecure_local)
 
-    remote_url = normalize_source_key(source_key)
     try:
-        response = requests.get(remote_url, timeout=30)
+        remote_url = normalize_source_key(source_key, allow_insecure_local=allow_insecure_local)
+    except URLPolicyError as exc:
+        raise RemoteBuildConfigError(str(exc)) from exc
+
+    try:
+        response = requests.get(remote_url, timeout=30, allow_redirects=False)
+        if response.is_redirect:
+            redirect_url = urljoin(remote_url, response.headers.get("Location", ""))
+            try:
+                remote_url = ensure_same_https_origin(remote_url, redirect_url, field_name="source_key")
+            except URLPolicyError as exc:
+                raise RemoteBuildConfigError(str(exc)) from exc
+            response = requests.get(remote_url, timeout=30, allow_redirects=False)
+            if response.is_redirect:
+                raise RemoteBuildConfigError("Remote build config redirected more than once.")
         response.raise_for_status()
         remote_config = response.json()
     except requests.Timeout as exc:
@@ -53,10 +68,10 @@ def resolve_build_config(build: dict[str, object]) -> dict[str, object]:
             raise RemoteBuildConfigError(f"Remote field '{key}' must be a string.")
         resolved_build[key] = value.strip()
 
-    return validate_build_config(resolved_build)
+    return validate_build_config(resolved_build, allow_insecure_local=allow_insecure_local)
 
 
-def validate_build_config(build: dict[str, object]) -> dict[str, object]:
+def validate_build_config(build: dict[str, object], *, allow_insecure_local: bool = False) -> dict[str, object]:
     normalized_build = dict(build)
     loader = str(normalized_build.get("loader", "vanilla")).strip().lower() or "vanilla"
     if loader not in ("vanilla", "fabric"):
@@ -67,8 +82,15 @@ def validate_build_config(build: dict[str, object]) -> dict[str, object]:
     normalized_build["loader_version"] = loader_version or "latest"
 
     manifest_url = str(normalized_build.get("manifest_url", "")).strip()
-    if manifest_url and not is_http_url(manifest_url):
-        raise RemoteBuildConfigError("Build manifest_url must be an http or https URL.")
+    if manifest_url:
+        try:
+            manifest_url = normalize_https_url(
+                manifest_url,
+                "Build manifest_url",
+                allow_insecure_local=allow_insecure_local,
+            )
+        except URLPolicyError as exc:
+            raise RemoteBuildConfigError(str(exc)) from exc
     normalized_build["manifest_url"] = manifest_url
 
     source_key = str(normalized_build.get("source_key", "")).strip()
@@ -88,13 +110,8 @@ def validate_build_config(build: dict[str, object]) -> dict[str, object]:
     return normalized_build
 
 
-def normalize_source_key(source_key: str) -> str:
-    stripped_source = source_key.strip()
-    if is_http_url(stripped_source):
-        return stripped_source
-    return f"http://{stripped_source.strip('/')}/mslauncher/build.json"
-
-
-def is_http_url(value: str) -> bool:
-    parsed_url = urlparse(value)
-    return parsed_url.scheme in ("http", "https") and bool(parsed_url.netloc)
+def normalize_source_key(source_key: str, *, allow_insecure_local: bool = False) -> str:
+    try:
+        return normalize_source_key_url(source_key, allow_insecure_local=allow_insecure_local)
+    except URLPolicyError as exc:
+        raise RemoteBuildConfigError(str(exc)) from exc

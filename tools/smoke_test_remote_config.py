@@ -38,11 +38,12 @@ def expect_error(build: dict[str, object]) -> None:
 
 
 def main() -> None:
-    assert normalize_source_key("example.com") == "http://example.com/mslauncher/build.json"
+    assert normalize_source_key("example.com") == "https://example.com/mslauncher/build.json"
     assert normalize_source_key("https://example.com/build.json") == "https://example.com/build.json"
 
     expect_error({"loader": "forge"})
     expect_error({"loader": "vanilla", "manifest_url": "ftp://example.com/manifest.json"})
+    expect_error({"loader": "vanilla", "manifest_url": "http://example.com/manifest.json"})
     expect_error({"loader": "vanilla", "port": "99999"})
 
     with tempfile.TemporaryDirectory() as temp_root:
@@ -68,16 +69,21 @@ def main() -> None:
 
         server, base_url = run_server(server_path)
         try:
-            build = resolve_build_config({"id": "main", "source_key": f"{base_url}/valid.json"})
+            build = resolve_build_config(
+                {"id": "main", "source_key": f"{base_url}/valid.json"},
+                allow_insecure_local=True,
+            )
             assert build["name"] == "Remote"
             assert build["loader"] == "fabric"
             assert build["port"] == "25565"
 
-            expect_error({"id": "main", "source_key": f"{base_url}/missing.json"})
-            expect_error({"id": "main", "source_key": f"{base_url}/bad-json.json"})
-            expect_error({"id": "main", "source_key": f"{base_url}/array.json"})
-            expect_error({"id": "main", "source_key": f"{base_url}/bad-loader.json"})
-            expect_error({"id": "main", "source_key": f"{base_url}/bad-type.json"})
+            for path in ("missing.json", "bad-json.json", "array.json", "bad-loader.json", "bad-type.json"):
+                try:
+                    resolve_build_config({"id": "main", "source_key": f"{base_url}/{path}"}, allow_insecure_local=True)
+                except RemoteBuildConfigError:
+                    pass
+                else:
+                    raise AssertionError(f"Expected RemoteBuildConfigError for {path}")
         finally:
             server.shutdown()
             server.server_close()
