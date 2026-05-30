@@ -456,7 +456,6 @@ class ParallaxFrame(QFrame):
         self._current_offset_y = 0.0
         self._target_offset_x = 0.0
         self._target_offset_y = 0.0
-        self._ambient_offset = 0
         self._pixmap = self._load_background()
         self._animation_timer = QTimer(self)
         self._animation_timer.setInterval(16)
@@ -488,7 +487,6 @@ class ParallaxFrame(QFrame):
     def _tick(self) -> None:
         self._current_offset_x += (self._target_offset_x - self._current_offset_x) * 0.08
         self._current_offset_y += (self._target_offset_y - self._current_offset_y) * 0.08
-        self._ambient_offset = (self._ambient_offset + 1) % 480
         self.update()
 
     def paintEvent(self, event) -> None:
@@ -499,9 +497,8 @@ class ParallaxFrame(QFrame):
         else:
             painter.fillRect(self.rect(), QColor("#253642"))
 
-        painter.fillRect(self.rect(), QColor(8, 12, 16, 96))
-        self._paint_soft_light(painter)
-        self._paint_soft_vignette(painter)
+        painter.fillRect(self.rect(), QColor(5, 9, 12, 122))
+        self._paint_depth_overlay(painter)
         super().paintEvent(event)
 
     def _paint_cover_pixmap(self, painter: QPainter) -> None:
@@ -517,37 +514,13 @@ class ParallaxFrame(QFrame):
         y = int((self.height() - scaled.height()) / 2 - self._current_offset_y)
         painter.drawPixmap(x, y, scaled)
 
-    def _paint_soft_light(self, painter: QPainter) -> None:
-        painter.save()
-        painter.setPen(Qt.PenStyle.NoPen)
-        width = max(1, self.width())
-        height = max(1, self.height())
-
-        painter.setBrush(QColor(255, 255, 255, 12))
-        painter.drawEllipse(
-            int(width * 0.52 + self._ambient_offset * 0.05),
-            int(height * 0.06),
-            int(width * 0.62),
-            int(height * 0.5),
-        )
-
-        painter.setBrush(QColor(143, 184, 178, 16))
-        painter.drawEllipse(
-            int(-width * 0.18 - self._ambient_offset * 0.03),
-            int(height * 0.34),
-            int(width * 0.68),
-            int(height * 0.52),
-        )
-
-        painter.restore()
-
-    def _paint_soft_vignette(self, painter: QPainter) -> None:
+    def _paint_depth_overlay(self, painter: QPainter) -> None:
         width = self.width()
         height = self.height()
-        painter.fillRect(0, 0, width, int(height * 0.08), QColor(0, 0, 0, 24))
-        painter.fillRect(0, int(height * 0.72), width, int(height * 0.28), QColor(0, 0, 0, 58))
-        painter.fillRect(0, 0, int(width * 0.08), height, QColor(0, 0, 0, 22))
-        painter.fillRect(int(width * 0.88), 0, int(width * 0.12), height, QColor(0, 0, 0, 24))
+        painter.fillRect(0, 0, width, int(height * 0.12), QColor(0, 12, 8, 64))
+        painter.fillRect(0, int(height * 0.7), width, int(height * 0.3), QColor(0, 0, 0, 82))
+        painter.fillRect(0, 0, int(width * 0.1), height, QColor(0, 0, 0, 54))
+        painter.fillRect(int(width * 0.86), 0, int(width * 0.14), height, QColor(0, 0, 0, 58))
 
 
 class MSLauncherWindow(QMainWindow):
@@ -584,15 +557,27 @@ class MSLauncherWindow(QMainWindow):
         hero_frame = ParallaxFrame()
         hero_frame.setObjectName("heroFrame")
         hero_layout = QVBoxLayout(hero_frame)
-        hero_layout.setContentsMargins(24, 22, 24, 22)
+        hero_layout.setContentsMargins(34, 28, 34, 30)
         hero_layout.addStretch()
+
+        brand_panel = QFrame()
+        brand_panel.setObjectName("brandPanel")
+        brand_layout = QVBoxLayout(brand_panel)
+        brand_layout.setContentsMargins(26, 22, 26, 22)
+        brand_layout.setSpacing(8)
 
         self.title_label = QLabel()
         self.title_label.setObjectName("titleLabel")
         self.subtitle_label = QLabel()
         self.subtitle_label.setObjectName("subtitleLabel")
-        hero_layout.addWidget(self.title_label)
-        hero_layout.addWidget(self.subtitle_label)
+        self.version_badge_label = QLabel("MSLauncher 0.1")
+        self.version_badge_label.setObjectName("versionBadge")
+        brand_layout.addWidget(self.title_label)
+        brand_layout.addWidget(self.subtitle_label)
+        brand_layout.addSpacing(12)
+        brand_layout.addWidget(self.version_badge_label)
+        brand_panel.setMaximumWidth(560)
+        hero_layout.addWidget(brand_panel)
         hero_layout.addStretch()
 
         control_frame = QFrame()
@@ -690,66 +675,83 @@ class MSLauncherWindow(QMainWindow):
         self.setStyleSheet(
             """
             QMainWindow {
-                background: #1f2a32;
+                background: #07140f;
             }
             #heroFrame {
-                background: #253642;
+                background: #07140f;
                 border: 0;
             }
+            #brandPanel {
+                background: rgba(14, 18, 18, 188);
+                border: 1px solid rgba(255, 255, 255, 26);
+                border-radius: 8px;
+            }
             #controlFrame {
-                background: #6aa84f;
-                border-top: 1px solid #8bc76a;
+                background: #111917;
+                border-top: 1px solid #1ee06f;
             }
             QLabel {
-                color: #ffffff;
+                color: #dceee4;
                 font-size: 12px;
             }
             #titleLabel {
                 color: #ffffff;
-                font-size: 34px;
+                font-size: 32px;
                 font-weight: 800;
             }
             #subtitleLabel {
-                color: #cdd7df;
+                color: #b5c8bd;
                 font-size: 14px;
             }
+            #versionBadge {
+                color: #dfffe9;
+                font-size: 12px;
+                font-weight: 700;
+            }
             #statusLabel {
-                color: #eff7eb;
+                color: #b9d4c4;
             }
             QLineEdit,
             QComboBox {
-                background: #f5f7f2;
-                color: #1f2a32;
-                border: 1px solid #497a36;
-                border-radius: 2px;
+                background: #eaf1ec;
+                color: #111917;
+                border: 1px solid #284b38;
+                border-radius: 4px;
                 padding: 5px 8px;
                 min-height: 24px;
+            }
+            QLineEdit:focus,
+            QComboBox:focus {
+                border: 1px solid #1ee06f;
             }
             QComboBox::drop-down {
                 border: 0;
                 width: 22px;
             }
             QPushButton#playButton {
-                background: #f0c13d;
+                background: #16d96a;
                 color: #ffffff;
                 border: 0;
-                border-radius: 4px;
+                border-radius: 5px;
                 font-size: 17px;
                 font-weight: 700;
                 padding: 8px 18px;
             }
+            QPushButton#playButton:hover {
+                background: #20ee7a;
+            }
             QPushButton#playButton:disabled {
-                background: #9aa36f;
-                color: #e7eadb;
+                background: #375140;
+                color: #9eb0a5;
             }
             QProgressBar {
-                background: #497a36;
+                background: #25382e;
                 border: 0;
                 border-radius: 3px;
                 text-align: center;
             }
             QProgressBar::chunk {
-                background: #f0c13d;
+                background: #16d96a;
                 border-radius: 3px;
             }
             """
