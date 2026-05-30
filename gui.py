@@ -59,6 +59,12 @@ TRANSLATIONS = {
         "username": "Nickname",
         "version": "Minecraft version",
         "play": "Check mods and PLAY",
+        "play_idle": "Launch & Mods",
+        "action_motor": "Rolling!",
+        "action_go": "Action!",
+        "action_scene": "Scene up!",
+        "action_cut": "Cut!",
+        "action_awake": "Stay sharp!",
         "loading_versions": "Loading versions...",
         "ready": "Ready",
         "status_syncing": "Checking modpack files...",
@@ -98,6 +104,12 @@ TRANSLATIONS = {
         "username": "\u041d\u0438\u043a\u043d\u0435\u0439\u043c",
         "version": "\u0412\u0435\u0440\u0441\u0438\u044f Minecraft",
         "play": "\u041f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c \u043c\u043e\u0434\u044b \u0438 \u0418\u0413\u0420\u0410\u0422\u042c",
+        "play_idle": "\u0417\u0430\u043f\u0443\u0441\u043a \u0438 \u043c\u043e\u0434\u044b",
+        "action_motor": "\u041c\u043e\u0442\u043e\u0440!",
+        "action_go": "\u041f\u043e\u0435\u0445\u0430\u043b\u0438!",
+        "action_scene": "\u042d\u043a\u0448\u0435\u043d\u0430!",
+        "action_cut": "\u0421\u043d\u044f\u0442\u043e!",
+        "action_awake": "\u041d\u0435 \u0441\u043f\u0438\u043c!",
         "loading_versions": "\u0417\u0430\u0433\u0440\u0443\u0437\u043a\u0430 \u0432\u0435\u0440\u0441\u0438\u0439...",
         "ready": "\u0413\u043e\u0442\u043e\u0432\u043e",
         "status_syncing": "\u041f\u0440\u043e\u0432\u0435\u0440\u043a\u0430 \u0444\u0430\u0439\u043b\u043e\u0432 \u0441\u0431\u043e\u0440\u043a\u0438...",
@@ -462,6 +474,8 @@ class ParallaxFrame(QFrame):
         self._target_offset_x = 0.0
         self._target_offset_y = 0.0
         self._pixmap = self._load_background()
+        self._particle_phase = 0
+        self._particles = self._create_particles()
         self._animation_timer = QTimer(self)
         self._animation_timer.setInterval(16)
         self._animation_timer.timeout.connect(self._tick)
@@ -495,6 +509,7 @@ class ParallaxFrame(QFrame):
 
         self._current_offset_x += (self._target_offset_x - self._current_offset_x) * 0.08
         self._current_offset_y += (self._target_offset_y - self._current_offset_y) * 0.08
+        self._particle_phase = (self._particle_phase + 1) % 720
         self.update()
 
     def paintEvent(self, event) -> None:
@@ -506,6 +521,7 @@ class ParallaxFrame(QFrame):
             painter.fillRect(self.rect(), QColor("#253642"))
 
         painter.fillRect(self.rect(), QColor(5, 9, 12, 122))
+        self._paint_particles(painter)
         self._paint_depth_overlay(painter)
         super().paintEvent(event)
 
@@ -530,6 +546,39 @@ class ParallaxFrame(QFrame):
         painter.fillRect(0, 0, int(width * 0.1), height, QColor(0, 0, 0, 54))
         painter.fillRect(int(width * 0.86), 0, int(width * 0.14), height, QColor(0, 0, 0, 58))
 
+    def _create_particles(self) -> list[tuple[float, float, float, int, int]]:
+        randomizer = random.Random(42)
+        return [
+            (
+                randomizer.random(),
+                randomizer.random(),
+                randomizer.uniform(0.18, 0.75),
+                randomizer.randint(1, 3),
+                randomizer.randint(26, 68),
+            )
+            for _ in range(34)
+        ]
+
+    def _paint_particles(self, painter: QPainter) -> None:
+        painter.save()
+        painter.setPen(Qt.PenStyle.NoPen)
+        width = max(1, self.width())
+        height = max(1, self.height())
+
+        for index, (base_x, base_y, speed, size, alpha) in enumerate(self._particles):
+            drift = (self._particle_phase * speed + index * 19) % 180
+            fade = abs(90 - drift) / 90
+            particle_alpha = int(alpha * (1 - fade * 0.72))
+            if particle_alpha <= 4:
+                continue
+
+            x = int((base_x * width + drift * 0.22 + self._current_offset_x * 0.22) % width)
+            y = int((base_y * height - drift * 0.16 + self._current_offset_y * 0.16) % height)
+            painter.setBrush(QColor(225, 238, 230, particle_alpha))
+            painter.drawEllipse(x, y, size, size)
+
+        painter.restore()
+
 
 class MSLauncherWindow(QMainWindow):
     def __init__(self) -> None:
@@ -550,6 +599,7 @@ class MSLauncherWindow(QMainWindow):
         self.selected_manifest_url = ""
         self.selected_launch_options: dict[str, object] = {}
         self.brand_subtitle_key = random.choice(self.get_brand_subtitle_keys())
+        self.action_phrase_key = "play_idle"
 
         self._build_ui()
         self._connect_signals()
@@ -722,7 +772,7 @@ class MSLauncherWindow(QMainWindow):
         self.build_label.setText(self.translate("build"))
         self.username_label.setText(self.translate("username"))
         self.version_label.setText(self.translate("version"))
-        self.play_button.setText(self.translate("play"))
+        self.play_button.setText(self.translate(self.action_phrase_key))
 
         status_key = self.status_label.property("status_key")
         status_detail = self.status_label.property("status_detail")
@@ -831,20 +881,24 @@ class MSLauncherWindow(QMainWindow):
                 width: 22px;
             }
             QPushButton#playButton {
-                background: #16d96a;
-                color: #ffffff;
-                border: 0;
-                border-radius: 5px;
-                font-size: 17px;
+                background: rgba(21, 214, 102, 46);
+                color: #28f279;
+                border: 1px solid rgba(40, 242, 121, 120);
+                border-radius: 18px;
+                font-size: 13px;
                 font-weight: 700;
-                padding: 8px 18px;
+                letter-spacing: 0px;
+                padding: 8px 20px;
             }
             QPushButton#playButton:hover {
-                background: #20ee7a;
+                background: rgba(31, 238, 122, 72);
+                color: #eafff1;
+                border: 1px solid rgba(40, 242, 121, 190);
             }
             QPushButton#playButton:disabled {
-                background: #375140;
-                color: #9eb0a5;
+                background: rgba(31, 238, 122, 32);
+                color: #93dbae;
+                border: 1px solid rgba(40, 242, 121, 80);
             }
             QProgressBar {
                 background: #25382e;
@@ -939,6 +993,8 @@ class MSLauncherWindow(QMainWindow):
             return
 
         self.selected_username = username
+        self.action_phrase_key = random.choice(self.get_action_phrase_keys())
+        self.play_button.setText(self.translate(self.action_phrase_key))
         self.play_button.setEnabled(False)
         self.progress_bar.setValue(0)
         self.set_status("status_loading_build")
@@ -960,6 +1016,8 @@ class MSLauncherWindow(QMainWindow):
         if not version:
             self.show_error(self.translate("empty_version"))
             self.play_button.setEnabled(True)
+            self.action_phrase_key = "play_idle"
+            self.play_button.setText(self.translate(self.action_phrase_key))
             self.set_status("ready")
             return
 
@@ -967,6 +1025,8 @@ class MSLauncherWindow(QMainWindow):
         if not manifest_url:
             self.show_error(self.translate("empty_manifest"))
             self.play_button.setEnabled(True)
+            self.action_phrase_key = "play_idle"
+            self.play_button.setText(self.translate(self.action_phrase_key))
             self.set_status("ready")
             return
 
@@ -985,6 +1045,8 @@ class MSLauncherWindow(QMainWindow):
 
     def on_build_config_failed(self, error: str) -> None:
         self.play_button.setEnabled(True)
+        self.action_phrase_key = "play_idle"
+        self.play_button.setText(self.translate(self.action_phrase_key))
         self.show_error(self.translate("build_config_failed", error=error))
         self.set_status("ready")
 
@@ -1005,6 +1067,8 @@ class MSLauncherWindow(QMainWindow):
 
     def on_download_failed(self, error_key: str, error: str) -> None:
         self.play_button.setEnabled(True)
+        self.action_phrase_key = "play_idle"
+        self.play_button.setText(self.translate(self.action_phrase_key))
         self.show_error(self.translate(error_key, error=error))
         self.set_status("ready")
 
@@ -1013,16 +1077,22 @@ class MSLauncherWindow(QMainWindow):
 
     def on_launch_failed(self, error: str) -> None:
         self.play_button.setEnabled(True)
+        self.action_phrase_key = "play_idle"
+        self.play_button.setText(self.translate(self.action_phrase_key))
         self.show_error(self.translate("launch_failed", error=error))
         self.set_status("ready")
 
     def on_game_crashed(self, crash_reason: str) -> None:
         self.play_button.setEnabled(True)
+        self.action_phrase_key = "play_idle"
+        self.play_button.setText(self.translate(self.action_phrase_key))
         QMessageBox.critical(self, self.translate("crash_title"), crash_reason)
         self.set_status("ready")
 
     def on_game_closed(self) -> None:
         self.play_button.setEnabled(True)
+        self.action_phrase_key = "play_idle"
+        self.play_button.setText(self.translate(self.action_phrase_key))
         self.set_status("status_game_closed")
 
     def set_status(self, key: str) -> None:
@@ -1080,6 +1150,15 @@ class MSLauncherWindow(QMainWindow):
             "brand_subtitle_crew",
             "brand_subtitle_places",
             "brand_subtitle_session",
+        ]
+
+    def get_action_phrase_keys(self) -> list[str]:
+        return [
+            "action_motor",
+            "action_go",
+            "action_scene",
+            "action_cut",
+            "action_awake",
         ]
 
 
