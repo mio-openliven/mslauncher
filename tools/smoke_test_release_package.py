@@ -30,7 +30,7 @@ def main() -> None:
 
     build = builds[0]
     assert build["id"] == "main"
-    assert build["source_key"] == "example.com"
+    assert build["source_key"] == "https://raw.githubusercontent.com/OWNER/REPO/BRANCH/mslauncher/build.json"
     assert not str(build["source_key"]).lower().startswith("http://")
     assert build["loader"] == "fabric"
     assert build["minecraft_version"] == "1.20.1"
@@ -41,6 +41,8 @@ def main() -> None:
     backlog_text = backlog_path.read_text(encoding="utf-8")
     assert "Windows без Python" in checklist_text
     assert "source_key" in checklist_text
+    assert "GitHub" in checklist_text
+    assert "UI-барьер" in checklist_text
     assert "POST_RELEASE_BACKLOG_RU.md" in checklist_text
     assert "Bundled Java" in backlog_text
     assert "manifest.json" in backlog_text
@@ -53,6 +55,9 @@ def main() -> None:
     assert "build.json" in setup_text
     assert "manifest.json" in setup_text
     assert "source_key" in setup_text
+    assert "raw.githubusercontent.com" in setup_text
+    assert "публичный GitHub не скрывает файлы" in setup_text
+    assert "client-side барьер" in setup_text
     assert "server_pack" in setup_text
     assert "server_pack/mods" in setup_text
     assert "dist\\MSLauncher" in setup_text

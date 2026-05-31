@@ -49,6 +49,8 @@ def normalize_source_key_url(source_key: object, *, allow_insecure_local: bool =
         raise URLPolicyError("source_key must not be empty.")
 
     if "://" in stripped_source:
+        # Full raw.githubusercontent.com source_key values are treated as ordinary public HTTPS URLs.
+        # A launcher password gate can block UI downloads, but it cannot make public raw files secret.
         return normalize_https_url(stripped_source, "source_key", allow_insecure_local=allow_insecure_local)
 
     host_candidate = stripped_source.strip("/")

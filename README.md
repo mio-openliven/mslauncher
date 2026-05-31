@@ -169,6 +169,35 @@ then the client config can use the short form:
 
 MSLaunch expands it to `https://example.com/mslauncher/build.json`.
 
+## GitHub Modpack Hosting
+
+For client projects, use a separate public GitHub repository that contains only the modpack files:
+
+```text
+mslauncher/
+  build.json
+  manifest.json
+  mods/
+  config/
+  resourcepacks/
+```
+
+Generate the files with the raw GitHub base URL:
+
+```powershell
+python generate_manifest.py --base-dir server_pack --base-url https://raw.githubusercontent.com/OWNER/REPO/BRANCH/mslauncher --minecraft-version 1.20.1 --loader fabric
+```
+
+Set `source_key` to the full raw `build.json` URL:
+
+```json
+"source_key": "https://raw.githubusercontent.com/OWNER/REPO/BRANCH/mslauncher/build.json"
+```
+
+The short host form such as `"source_key": "example.com"` is meant for normal hosting where `build.json` is exactly at `/mslauncher/build.json`. For GitHub, prefer the full raw URL.
+
+Theoretical/security note: a public GitHub repository does not hide files. A password gate in the launcher is only a client-side UI barrier that stops casual downloads through MSLaunch. If a user gets the raw URL, the files are public. Real access protection requires a private repo, backend, signed URLs, or token-based delivery.
+
 MSLaunch does not guess which mods are correct. It downloads `manifest.json`, compares local files by SHA-256, downloads missing/changed files, and removes extra mods only in managed server profiles after successful sync.
 
 If `--base-url` is empty, `manifest.json` will be generated with empty file URLs. That is useful for local inspection, but players cannot download files until a real HTTPS base URL is set.
@@ -205,6 +234,7 @@ Security rules:
 - `http://` is not supported outside explicit local smoke tests.
 - URLs must not contain username/password or fragments such as `#section`.
 - Production URLs must not point to localhost or private IP addresses.
+- Public GitHub raw URLs are allowed, but public repositories are not access control.
 
 Supported loader values:
 

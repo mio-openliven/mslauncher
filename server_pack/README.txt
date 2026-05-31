@@ -30,9 +30,15 @@ MSLauncher server pack
    This short value works only when build.json is exactly here:
    https://example.com/mslauncher/build.json
 
-7. build.example.json shows the expected build.json format.
+7. For public GitHub hosting, use the full raw URL:
+   https://raw.githubusercontent.com/OWNER/REPO/BRANCH/mslauncher/build.json
+
+   GitHub short host form is not recommended.
+
+8. build.example.json shows the expected build.json format.
 
 Important:
 - MSLauncher does not guess the mod list.
 - It reads manifest.json and compares player files by SHA-256.
 - If you change mods/config/resourcepacks, generate manifest.json again.
+- Public GitHub files are public. A launcher password gate is only a UI barrier.

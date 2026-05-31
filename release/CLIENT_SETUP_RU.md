@@ -64,6 +64,35 @@ https://domain.com/mslauncher/resourcepacks/...
 
 Важно: production-ссылки должны быть HTTPS. HTTP лаунчер не принимает.
 
+## GitHub-хостинг сборки
+
+Рекомендуемый вариант для клиента: отдельный публичный GitHub-репозиторий только под сборку:
+
+```text
+mslauncher/
+  build.json
+  manifest.json
+  mods/
+  config/
+  resourcepacks/
+```
+
+Для GitHub используйте raw-ссылку:
+
+```powershell
+python generate_manifest.py --base-dir server_pack --base-url https://raw.githubusercontent.com/OWNER/REPO/BRANCH/mslauncher --minecraft-version 1.20.1 --loader fabric --server play.domain.com --port 25565
+```
+
+В `launcher_config.json` лучше указать полный raw `source_key`:
+
+```json
+"source_key": "https://raw.githubusercontent.com/OWNER/REPO/BRANCH/mslauncher/build.json"
+```
+
+Короткий вариант `"source_key": "domain.com"` для GitHub не подходит. Он нужен для обычного хостинга, где `build.json` лежит ровно по адресу `https://domain.com/mslauncher/build.json`.
+
+Теоретический риск: публичный GitHub не скрывает файлы. Если человек получит raw-ссылку, он сможет скачать файлы напрямую. Пароль в лаунчере - это только client-side барьер в UI, чтобы случайные пользователи не скачивали сборку через кнопку лаунчера. Настоящая защита требует private repo, backend, token или signed URLs.
+
 ## Что указать в launcher_config.json
 
 Если сборка лежит здесь:

@@ -3,6 +3,8 @@
 Перед передачей клиенту проверьте:
 
 - [ ] В `launcher_config.json` заполнен `source_key`.
+- [ ] Если сборка лежит на GitHub, используется полный raw `source_key`.
+- [ ] Если включен password gate, клиент понимает: публичный GitHub не скрывает файлы, это только UI-барьер.
 - [ ] Сервер открывает `https://.../mslauncher/build.json`.
 - [ ] `manifest.json` открывается в браузере.
 - [ ] Все файлы из `manifest.json` скачиваются по HTTPS.

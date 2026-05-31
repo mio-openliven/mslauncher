@@ -29,7 +29,7 @@
       "minecraft_version": "1.20.1",
       "loader": "fabric",
       "loader_version": "latest",
-      "source_key": "example.com",
+      "source_key": "https://raw.githubusercontent.com/OWNER/REPO/BRANCH/mslauncher/build.json",
       "server": "play.example.com",
       "port": "25565",
       "manifest_url": ""
