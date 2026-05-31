@@ -133,6 +133,29 @@ python generate_manifest.py --base-dir server_pack --base-url https://raw.github
 
 Теоретический риск: публичный GitHub не скрывает файлы. Если человек получит raw-ссылку, он сможет скачать файлы напрямую. Пароль в лаунчере - это только client-side барьер в UI, чтобы случайные пользователи не скачивали сборку через кнопку лаунчера. Настоящая защита требует private repo, backend, token или signed URLs.
 
+## Уведомление об обновлении лаунчера
+
+В remote `build.json` можно добавить поля:
+
+```json
+{
+  "launcher_version": "1.9.1",
+  "launcher_download_url": "https://github.com/OWNER/REPO/releases/download/v1.9.1/MSLauncher.zip",
+  "launcher_sha256": "optional_64_hex_sha256",
+  "launcher_notes": "Short update note"
+}
+```
+
+Если `launcher_version` больше текущей версии лаунчера, игрок увидит сообщение “Вышло обновление” и кнопку скачивания.
+
+Важно:
+
+- автообновления пока нет;
+- лаунчер не скачивает `.exe` в фоне;
+- игрок скачивает новую версию вручную;
+- `launcher_download_url` должен быть HTTPS;
+- `launcher_sha256` пока reserved/informational, но если поле заполнено, оно должно быть 64 hex-символа.
+
 ## Что указать в launcher_config.json
 
 Если сборка лежит здесь:

@@ -39,10 +39,12 @@ from app_paths import (
     get_last_config_backup_path,
 )
 from launcher_core import MinecraftEngine
+from launcher_update import APP_DISPLAY_NAME, APP_VERSION, get_launcher_update_notice, parse_version_numbers
 from manifest_validator import normalize_download_url, normalize_manifest_path
 from profile_manager import LauncherProfile, LauncherProfileManager, PROFILE_IDS, PROFILE_SERVER
 from remote_config import resolve_build_config
 from settings_validator import LaunchSettingsError, validate_launch_settings
+from url_policy import URLPolicyError, normalize_https_url
 from user_error_messages import explain_user_error, write_error_report
 
 
@@ -86,8 +88,8 @@ SOCIAL_FALLBACK_LABELS = {
 
 TRANSLATIONS = {
     "EN": {
-        "app_title": "MSLaunch",
-        "brand_title": "MSLaunch 1.9.0",
+        "app_title": APP_DISPLAY_NAME,
+        "brand_title": f"{APP_DISPLAY_NAME} {APP_VERSION}",
         "brand_credit": "Independent modpack launcher",
         "brand_credit_nukem": "Software by Nukem coders",
         "brand_subtitle_project": "Project entry point",
@@ -131,7 +133,9 @@ TRANSLATIONS = {
         "feedback_problem": "Click if there is a problem",
         "feedback_panel_title": "Need help?",
         "feedback_panel_body": "If something broke, open the reports folder and send the latest report to the server admin.",
-        "update_available": "Update available",
+        "update_available": "Launcher update available: {version}",
+        "download_update": "Download update",
+        "update_panel_body": "Manual update only. Download the new package and replace launcher files after closing the game.",
         "status_mods_ready": "Mod files are ready.",
         "status_mods_no_sync": "This profile does not use server mod sync.",
         "update_disabled": "Update status is not connected yet.",
@@ -177,8 +181,8 @@ TRANSLATIONS = {
         "crash_title": "Minecraft crashed",
     },
     "RU": {
-        "app_title": "MSLaunch",
-        "brand_title": "MSLaunch 1.9.0",
+        "app_title": APP_DISPLAY_NAME,
+        "brand_title": f"{APP_DISPLAY_NAME} {APP_VERSION}",
         "brand_credit": "\u041d\u0435\u0437\u0430\u0432\u0438\u0441\u0438\u043c\u044b\u0439 \u043b\u0430\u0443\u043d\u0447\u0435\u0440 \u0441\u0431\u043e\u0440\u043e\u043a",
         "brand_credit_nukem": "\u0421\u043e\u0444\u0442 \u043e\u0442 \u043a\u043e\u0434\u0435\u0440\u043e\u0432 \u041d\u044e\u043a\u0435\u043c\u0430",
         "brand_subtitle_project": "\u0422\u043e\u0447\u043a\u0430 \u0432\u0445\u043e\u0434\u0430 \u0432 \u043f\u0440\u043e\u0435\u043a\u0442",
@@ -222,7 +226,9 @@ TRANSLATIONS = {
         "feedback_problem": "\u041d\u0430\u0436\u043c\u0438, \u0435\u0441\u043b\u0438 \u043f\u0440\u043e\u0431\u043b\u0435\u043c\u0430",
         "feedback_panel_title": "\u041d\u0443\u0436\u043d\u0430 \u043f\u043e\u043c\u043e\u0449\u044c?",
         "feedback_panel_body": "\u0415\u0441\u043b\u0438 \u0447\u0442\u043e-\u0442\u043e \u0441\u043b\u043e\u043c\u0430\u043b\u043e\u0441\u044c, \u043e\u0442\u043a\u0440\u043e\u0439\u0442\u0435 \u043f\u0430\u043f\u043a\u0443 \u043e\u0442\u0447\u0435\u0442\u043e\u0432 \u0438 \u043e\u0442\u043f\u0440\u0430\u0432\u044c\u0442\u0435 \u0441\u0430\u043c\u044b\u0439 \u0441\u0432\u0435\u0436\u0438\u0439 report \u0430\u0434\u043c\u0438\u043d\u0443 \u0441\u0435\u0440\u0432\u0435\u0440\u0430.",
-        "update_available": "\u0412\u044b\u0448\u043b\u043e \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435",
+        "update_available": "\u0412\u044b\u0448\u043b\u043e \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435 \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430: {version}",
+        "download_update": "\u0421\u043a\u0430\u0447\u0430\u0442\u044c \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435",
+        "update_panel_body": "\u0410\u0432\u0442\u043e\u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u044f \u043f\u043e\u043a\u0430 \u043d\u0435\u0442. \u0421\u043a\u0430\u0447\u0430\u0439\u0442\u0435 \u043d\u043e\u0432\u044b\u0439 \u0430\u0440\u0445\u0438\u0432 \u0438 \u0437\u0430\u043c\u0435\u043d\u0438\u0442\u0435 \u0444\u0430\u0439\u043b\u044b \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430 \u043f\u043e\u0441\u043b\u0435 \u0437\u0430\u043a\u0440\u044b\u0442\u0438\u044f \u0438\u0433\u0440\u044b.",
         "status_mods_ready": "\u0424\u0430\u0439\u043b\u044b \u043c\u043e\u0434\u043e\u0432 \u0433\u043e\u0442\u043e\u0432\u044b.",
         "status_mods_no_sync": "\u042d\u0442\u043e\u0442 \u043f\u0440\u043e\u0444\u0438\u043b\u044c \u043d\u0435 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0435\u0442 \u0441\u0435\u0440\u0432\u0435\u0440\u043d\u0443\u044e \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u044e \u043c\u043e\u0434\u043e\u0432.",
         "update_disabled": "\u0421\u0442\u0430\u0442\u0443\u0441 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0439 \u043f\u043e\u043a\u0430 \u043d\u0435 \u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0435\u043d.",
@@ -888,6 +894,9 @@ class MSLauncherWindow(QMainWindow):
         self.last_crash_report_path: Path | None = None
         self.last_error_message = ""
         self.last_error_report_path: Path | None = None
+        self.launcher_update_version = ""
+        self.launcher_update_url = ""
+        self.launcher_update_notes = ""
         self.skin_path = get_config_text(self.config, "skin_path")
         self.info_panel_mode = "settings"
         self.brand_subtitle_key = random.choice(self.get_brand_subtitle_keys())
@@ -975,9 +984,12 @@ class MSLauncherWindow(QMainWindow):
         self.open_game_button.setObjectName("panelButton")
         self.open_crash_reports_button = QPushButton()
         self.open_crash_reports_button.setObjectName("panelButton")
+        self.download_update_button = QPushButton()
+        self.download_update_button.setObjectName("panelButton")
         info_layout.addWidget(self.open_profile_button)
         info_layout.addWidget(self.open_game_button)
         info_layout.addWidget(self.open_crash_reports_button)
+        info_layout.addWidget(self.download_update_button)
 
         self.loader_setting_label = QLabel()
         self.loader_setting_combo = QComboBox()
@@ -1160,6 +1172,7 @@ class MSLauncherWindow(QMainWindow):
         self.open_profile_button.clicked.connect(self.open_current_profile_folder)
         self.open_game_button.clicked.connect(self.open_profiles_root_folder)
         self.open_crash_reports_button.clicked.connect(self.open_crash_reports_folder)
+        self.download_update_button.clicked.connect(self.open_launcher_update_url)
         self.java_browse_button.clicked.connect(self.browse_java_path)
         self.skin_browse_button.clicked.connect(self.browse_skin_file)
         self.loader_setting_combo.currentTextChanged.connect(lambda *_: self.save_user_preferences())
@@ -1220,6 +1233,7 @@ class MSLauncherWindow(QMainWindow):
         self.open_profile_button.setText(self.translate("open_profile"))
         self.open_game_button.setText(self.translate("open_game"))
         self.open_crash_reports_button.setText(self.translate("open_crash_reports"))
+        self.download_update_button.setText(self.translate("download_update"))
         self.refresh_info_panel()
         self.loader_setting_label.setText(self.translate("loader"))
         self.memory_min_label.setText(self.translate("memory_min"))
@@ -1562,6 +1576,8 @@ class MSLauncherWindow(QMainWindow):
         self.on_build_config_loaded(dict(build))
 
     def on_build_config_loaded(self, resolved_build: dict) -> None:
+        self.evaluate_launcher_update(resolved_build)
+
         version = self.version_combo.currentText().strip()
         configured_version = str(resolved_build.get("minecraft_version", "")).strip()
         if configured_version:
@@ -1659,9 +1675,47 @@ class MSLauncherWindow(QMainWindow):
         self.show_error(self.with_report_path(self.translate(error_key, error=user_error), report_path))
         self.set_status("ready")
 
+    def evaluate_launcher_update(self, resolved_build: dict) -> None:
+        remote_version = str(resolved_build.get("launcher_version", "")).strip()
+        if remote_version and not parse_version_numbers(remote_version):
+            self.write_launcher_warning_report(
+                f"Malformed launcher_version in build config: {remote_version}",
+                "launcher_update",
+            )
+            return
+
+        update_notice = get_launcher_update_notice(resolved_build, APP_VERSION)
+        if not update_notice:
+            return
+
+        download_url = update_notice["download_url"]
+        if download_url:
+            try:
+                download_url = normalize_https_url(download_url, "Build launcher_download_url")
+            except URLPolicyError as exc:
+                self.write_launcher_warning_report(str(exc), "launcher_update")
+                download_url = ""
+
+        self.launcher_update_version = update_notice["version"]
+        self.launcher_update_url = download_url
+        self.launcher_update_notes = update_notice["notes"]
+        self.set_status_text(self.translate("update_available", version=self.launcher_update_version))
+        self.show_launcher_update_panel()
+
+    def show_launcher_update_panel(self) -> None:
+        if not self.launcher_update_version:
+            return
+        if self.info_panel_mode in ("crash", "error"):
+            return
+        self.info_panel_mode = "update"
+        self.refresh_info_panel()
+        self.info_panel.show()
+        for button in self.social_buttons:
+            button.show()
+
     def toggle_info_panel(self) -> None:
         should_show = not self.info_panel.isVisible()
-        if should_show and self.info_panel_mode != "crash":
+        if should_show and self.info_panel_mode not in ("crash", "error", "update"):
             self.info_panel_mode = "settings"
             self.refresh_info_panel()
         self.info_panel.setVisible(should_show)
@@ -1675,6 +1729,7 @@ class MSLauncherWindow(QMainWindow):
             self.info_body_label.setText(self.last_crash_reason)
             self.open_crash_reports_button.setText(self.translate("open_crash_reports"))
             self.open_crash_reports_button.show()
+            self.download_update_button.hide()
             return
 
         if self.info_panel_mode == "error" and self.last_error_message:
@@ -1683,6 +1738,19 @@ class MSLauncherWindow(QMainWindow):
             self.info_body_label.setText(self.last_error_message)
             self.open_crash_reports_button.setText(self.translate("open_error_report"))
             self.open_crash_reports_button.show()
+            self.download_update_button.hide()
+            return
+
+        if self.info_panel_mode == "update" and self.launcher_update_version:
+            self.set_settings_widgets_visible(False)
+            self.info_title_label.setText(self.translate("update_available", version=self.launcher_update_version))
+            body_parts = [self.translate("update_panel_body")]
+            if self.launcher_update_notes:
+                body_parts.insert(0, self.launcher_update_notes)
+            self.info_body_label.setText("\n".join(body_parts))
+            self.open_crash_reports_button.hide()
+            self.download_update_button.setText(self.translate("download_update"))
+            self.download_update_button.setVisible(bool(self.launcher_update_url))
             return
 
         if self.info_panel_mode == "feedback":
@@ -1691,6 +1759,7 @@ class MSLauncherWindow(QMainWindow):
             self.info_body_label.setText(self.translate("feedback_panel_body"))
             self.open_crash_reports_button.setText(self.translate("open_error_report"))
             self.open_crash_reports_button.show()
+            self.download_update_button.hide()
             return
 
         self.info_panel_mode = "settings"
@@ -1701,6 +1770,7 @@ class MSLauncherWindow(QMainWindow):
         )
         self.open_crash_reports_button.setText(self.translate("open_crash_reports"))
         self.open_crash_reports_button.hide()
+        self.download_update_button.hide()
 
     def set_settings_widgets_visible(self, visible: bool) -> None:
         for widget in getattr(self, "settings_widgets", []):
@@ -1735,6 +1805,10 @@ class MSLauncherWindow(QMainWindow):
 
     def open_external_link(self, url: str) -> None:
         QDesktopServices.openUrl(QUrl(url))
+
+    def open_launcher_update_url(self) -> None:
+        if self.launcher_update_url:
+            self.open_external_link(self.launcher_update_url)
 
     def open_folder(self, folder_path: Path) -> None:
         try:
@@ -1834,6 +1908,18 @@ class MSLauncherWindow(QMainWindow):
         for button in self.social_buttons:
             button.show()
         return report_path
+
+    def write_launcher_warning_report(self, technical_details: str, context: str) -> Path | None:
+        try:
+            profile = self.profile_manager.get_profile(self.get_selected_profile_id())
+            return write_error_report(
+                technical_details,
+                user_message="Launcher warning; no action was blocked.",
+                context=context,
+                base_directory=profile.directory,
+            )
+        except OSError:
+            return None
 
     def with_report_path(self, message: str, report_path: Path | None) -> str:
         if report_path is None:

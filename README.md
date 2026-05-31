@@ -262,9 +262,23 @@ https://HOST/mslauncher/build.json
 
 Remote `build.json` can provide `name`, `minecraft_version`, `loader`, `loader_version`, `manifest_url`, `server`, and `port`.
 
+Remote `build.json` can also announce a launcher update:
+
+```json
+{
+  "launcher_version": "1.9.1",
+  "launcher_download_url": "https://github.com/OWNER/REPO/releases/download/v1.9.1/MSLauncher.zip",
+  "launcher_sha256": "optional_64_hex_sha256",
+  "launcher_notes": "Short update note"
+}
+```
+
+This is a notice only. MSLaunch does not auto-update in this release and does not download the new package in the background. The player must open the download link and replace files manually. `launcher_sha256` is validated if present, but is reserved/informational until a later signed update flow.
+
 Security rules:
 
 - `source_key`, `manifest_url`, and every manifest file URL must use `https://` in production.
+- `launcher_download_url` must use `https://` if it is present.
 - `http://` is not supported outside explicit local smoke tests.
 - URLs must not contain username/password or fragments such as `#section`.
 - Production URLs must not point to localhost or private IP addresses.

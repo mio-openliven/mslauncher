@@ -18,6 +18,7 @@ import requests
 
 from crash_advisor import advise_crash
 from java_diagnostics import JavaDiagnosticError, diagnose_launch_environment
+from launcher_update import APP_DISPLAY_NAME, APP_VERSION
 from manifest_validator import ManifestValidationError, validate_manifest
 from profile_manager import MANAGED_MARKER
 from url_policy import URLPolicyError, normalize_https_url
@@ -223,8 +224,8 @@ class MinecraftEngine:
                 "uuid": str(uuid4()),
                 "token": "",
                 "gameDirectory": str(self.minecraft_directory),
-                "launcherName": "MSLauncher",
-                "launcherVersion": "0.1.0",
+                "launcherName": APP_DISPLAY_NAME,
+                "launcherVersion": APP_VERSION,
             }
             options.update(self._build_launch_options(effective_launch_options))
 

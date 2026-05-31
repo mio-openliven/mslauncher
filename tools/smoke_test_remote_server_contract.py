@@ -85,6 +85,10 @@ def main() -> None:
         "manifest_url": "https://example.com/mslauncher/manifest.json",
         "server": "play.example.com",
         "port": "25565",
+        "launcher_version": "1.9.1",
+        "launcher_download_url": "https://github.com/OWNER/REPO/releases/download/v1.9.1/MSLauncher.zip",
+        "launcher_sha256": "",
+        "launcher_notes": "Manual launcher update available",
     }
 
     print("remote server contract smoke test: OK")

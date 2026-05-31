@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from urllib.parse import urljoin
 
 import requests
@@ -15,7 +16,13 @@ REMOTE_BUILD_KEYS = (
     "manifest_url",
     "server",
     "port",
+    "launcher_version",
+    "launcher_download_url",
+    "launcher_sha256",
+    "launcher_notes",
 )
+
+SHA256_PATTERN = re.compile(r"^[a-fA-F0-9]{64}$")
 
 
 class RemoteBuildConfigError(RuntimeError):
@@ -112,6 +119,26 @@ def validate_build_config(
         raise RemoteBuildConfigError("Server build config must provide manifest_url.")
     normalized_build["manifest_url"] = manifest_url
 
+    launcher_download_url = normalize_optional_string(normalized_build, "launcher_download_url")
+    if launcher_download_url:
+        try:
+            launcher_download_url = normalize_https_url(
+                launcher_download_url,
+                "Build launcher_download_url",
+                allow_insecure_local=allow_insecure_local,
+            )
+        except URLPolicyError as exc:
+            raise RemoteBuildConfigError(str(exc)) from exc
+    normalized_build["launcher_download_url"] = launcher_download_url
+
+    launcher_sha256 = normalize_optional_string(normalized_build, "launcher_sha256")
+    if launcher_sha256 and not SHA256_PATTERN.match(launcher_sha256):
+        raise RemoteBuildConfigError("Build launcher_sha256 must be a 64-character SHA-256 hex string.")
+    normalized_build["launcher_sha256"] = launcher_sha256.lower()
+
+    normalized_build["launcher_version"] = normalize_optional_string(normalized_build, "launcher_version")
+    normalized_build["launcher_notes"] = normalize_optional_string(normalized_build, "launcher_notes")
+
     source_key = str(normalized_build.get("source_key", "")).strip()
     if source_key:
         normalized_build["source_key"] = source_key
@@ -127,6 +154,15 @@ def validate_build_config(
             normalized_build[key] = value.strip()
 
     return normalized_build
+
+
+def normalize_optional_string(build: dict[str, object], key: str) -> str:
+    value = build.get(key, "")
+    if value is None:
+        return ""
+    if not isinstance(value, str):
+        raise RemoteBuildConfigError(f"Build {key} must be a string.")
+    return value.strip()
 
 
 def normalize_source_key(source_key: str, *, allow_insecure_local: bool = False) -> str:

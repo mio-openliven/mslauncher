@@ -42,3 +42,6 @@ Important:
 - It reads manifest.json and compares player files by SHA-256.
 - If you change mods/config/resourcepacks, generate manifest.json again.
 - Public GitHub files are public. A launcher password gate is only a UI barrier.
+- Optional launcher update notice fields can be added to build.json:
+  launcher_version, launcher_download_url, launcher_sha256, launcher_notes.
+  This only shows a manual download notice; it does not auto-update the launcher.
