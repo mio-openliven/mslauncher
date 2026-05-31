@@ -11,6 +11,7 @@ a = Analysis(
         ('release/CLIENT_SETUP_RU.md', 'docs'),
         ('release/PLAYER_README_RU.txt', 'docs'),
         ('release/RELEASE_CHECKLIST_RU.md', 'docs'),
+        ('release/POST_RELEASE_BACKLOG_RU.md', 'docs'),
         ('release/launcher_config.template.json', 'docs'),
     ],
     hiddenimports=[],

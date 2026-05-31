@@ -234,6 +234,8 @@ Before handing the release to a client, run the exe on Windows without Python in
 
 Чеклист перед передачей: [release/RELEASE_CHECKLIST_RU.md](release/RELEASE_CHECKLIST_RU.md).
 
+Backlog после передачи: [release/POST_RELEASE_BACKLOG_RU.md](release/POST_RELEASE_BACKLOG_RU.md).
+
 Release template config: [release/launcher_config.template.json](release/launcher_config.template.json).
 
 ## Smoke Test
