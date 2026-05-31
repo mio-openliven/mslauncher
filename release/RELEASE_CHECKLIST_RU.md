@@ -13,6 +13,10 @@
 - [ ] Если analyzer показал Forge/NeoForge, релиз остановлен до отдельного прохода поддержки.
 - [ ] Если используется notice обновления, `build.json` содержит HTTPS `launcher_download_url`.
 - [ ] Проверено: новая `launcher_version` показывает кнопку скачивания, старая/равная версия ничего не показывает.
+- [ ] Для Nukem-релиза выбран `release/launcher_config.nukem.template.json`.
+- [ ] Для Nukem-релиза заполнен `project_access.nukem.password_hash_sha256`, если password gate включен.
+- [ ] Для Nukem-релиза raw GitHub `source_key` открывается в браузере.
+- [ ] YouTube/Discord кнопки видны только в Nukem mode.
 - [ ] QA sync проходит без Minecraft:
   `python tools\qa_clean_sync_flow.py`.
 - [ ] Лаунчер скачивает чистую сборку в server-профиль.

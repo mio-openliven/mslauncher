@@ -322,6 +322,8 @@ Before handing the release to a client, run the exe on Windows without Python in
 
 Для клиента: [release/CLIENT_SETUP_RU.md](release/CLIENT_SETUP_RU.md).
 
+Nukem preset: [release/NUKEM_SETUP_RU.md](release/NUKEM_SETUP_RU.md).
+
 Для игроков: [release/PLAYER_README_RU.txt](release/PLAYER_README_RU.txt).
 
 Чеклист перед передачей: [release/RELEASE_CHECKLIST_RU.md](release/RELEASE_CHECKLIST_RU.md).

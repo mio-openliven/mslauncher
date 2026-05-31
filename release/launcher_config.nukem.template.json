@@ -1,0 +1,45 @@
+{
+  "manifest_url": "",
+  "game_directory": "",
+  "profiles_directory": "",
+  "default_profile": "server",
+  "default_language": "RU",
+  "default_username": "",
+  "recent_usernames": [],
+  "client_mode": "nukem",
+  "skin_path": "",
+  "social_links": {
+    "nukem": {
+      "youtube": "https://youtube.com/@nuckem?si=8B60TLzrzN8HVh98",
+      "discord": "https://discord.com/invite/P35nvXQ"
+    }
+  },
+  "project_access": {
+    "nukem": {
+      "password_enabled": true,
+      "password_hash_sha256": "",
+      "password_hint": "Ask the project admin for the access password."
+    }
+  },
+  "default_build": "nukem",
+  "launch": {
+    "memory_min": "512M",
+    "memory_max": "4G",
+    "java_path": "",
+    "loader": "fabric",
+    "jvm_args": []
+  },
+  "builds": [
+    {
+      "id": "nukem",
+      "name": "Nukem Project",
+      "minecraft_version": "",
+      "loader": "fabric",
+      "loader_version": "latest",
+      "source_key": "https://raw.githubusercontent.com/OWNER/REPO/BRANCH/mslauncher/build.json",
+      "server": "",
+      "port": "",
+      "manifest_url": ""
+    }
+  ]
+}
