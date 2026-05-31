@@ -23,6 +23,7 @@ finally {
 Write-Host "Copying release docs..."
 New-Item -ItemType Directory -Path $docsPath -Force | Out-Null
 Copy-Item -Path (Join-Path $PSScriptRoot "CLIENT_SETUP_RU.md") -Destination $docsPath -Force
+Copy-Item -Path (Join-Path $PSScriptRoot "PLAYER_README_RU.txt") -Destination $docsPath -Force
 Copy-Item -Path (Join-Path $PSScriptRoot "RELEASE_CHECKLIST_RU.md") -Destination $docsPath -Force
 Copy-Item -Path (Join-Path $PSScriptRoot "launcher_config.template.json") -Destination $docsPath -Force
 

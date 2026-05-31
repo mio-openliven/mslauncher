@@ -11,11 +11,13 @@ def main() -> None:
     release_path = PROJECT_ROOT / "release"
     template_path = release_path / "launcher_config.template.json"
     setup_path = release_path / "CLIENT_SETUP_RU.md"
+    player_readme_path = release_path / "PLAYER_README_RU.txt"
     checklist_path = release_path / "RELEASE_CHECKLIST_RU.md"
     helper_path = release_path / "prepare_release.ps1"
 
     assert template_path.is_file()
     assert setup_path.is_file()
+    assert player_readme_path.is_file()
     assert checklist_path.is_file()
     assert helper_path.is_file()
 
@@ -38,9 +40,15 @@ def main() -> None:
     assert "source_key" in checklist_text
 
     setup_text = setup_path.read_text(encoding="utf-8")
+    player_readme_text = player_readme_path.read_text(encoding="utf-8")
     assert "build.json" in setup_text
+    assert "manifest.json" in setup_text
+    assert "source_key" in setup_text
+    assert "server_pack" in setup_text
     assert "server_pack/mods" in setup_text
     assert "dist\\MSLauncher" in setup_text
+    assert "MSLauncher.exe" in player_readme_text
+    assert "mslauncher-last-error.txt" in player_readme_text
 
     print("release package smoke test: OK")
 

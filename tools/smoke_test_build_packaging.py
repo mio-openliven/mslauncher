@@ -20,16 +20,19 @@ def main() -> None:
     assert "('assets', 'assets')" in spec_file
     assert "('launcher_config.json', '.')" in spec_file
     assert "release/CLIENT_SETUP_RU.md" in spec_file
+    assert "release/PLAYER_README_RU.txt" in spec_file
     assert "release/RELEASE_CHECKLIST_RU.md" in spec_file
     assert "console=False" in spec_file
     assert "name='MSLauncher'" in spec_file
     assert "contents_directory='.'" in spec_file
 
     assert (PROJECT_ROOT / "release" / "CLIENT_SETUP_RU.md").is_file()
+    assert (PROJECT_ROOT / "release" / "PLAYER_README_RU.txt").is_file()
     assert (PROJECT_ROOT / "release" / "RELEASE_CHECKLIST_RU.md").is_file()
     assert (PROJECT_ROOT / "release" / "launcher_config.template.json").is_file()
     assert "build_exe.ps1" in prepare_script
     assert "dist\\MSLauncher" in prepare_script
+    assert "PLAYER_README_RU.txt" in prepare_script
     assert "docs" in prepare_script
 
     print("build packaging smoke test: OK")

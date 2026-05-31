@@ -9,6 +9,7 @@ a = Analysis(
         ('assets', 'assets'),
         ('launcher_config.json', '.'),
         ('release/CLIENT_SETUP_RU.md', 'docs'),
+        ('release/PLAYER_README_RU.txt', 'docs'),
         ('release/RELEASE_CHECKLIST_RU.md', 'docs'),
         ('release/launcher_config.template.json', 'docs'),
     ],
