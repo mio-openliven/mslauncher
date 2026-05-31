@@ -189,6 +189,20 @@ Use `--clean` only when you intentionally want to replace `server_pack\mods`, `s
 
 If `.rar` cannot be opened, install 7-Zip/WinRAR/UnRAR or ask the client to send `.zip`. If the report says loader/version is unknown, ask the client for the exact Minecraft version and loader before generating `manifest.json`.
 
+After inspection, prepare `server_pack` from the archive:
+
+```powershell
+python tools\prepare_client_server_pack.py --archive "C:\Users\Li2Fox\Downloads\mods.rar" --output-dir server_pack --base-url https://raw.githubusercontent.com/OWNER/REPO/BRANCH/mslauncher --build-name "Nukem Project" --server play.example.com --port 25565
+```
+
+If the tool cannot determine the version or loader with high confidence, pass explicit values only after confirming them with the client:
+
+```powershell
+python tools\prepare_client_server_pack.py --archive "C:\Users\Li2Fox\Downloads\mods.rar" --output-dir server_pack --base-url https://raw.githubusercontent.com/OWNER/REPO/BRANCH/mslauncher --minecraft-version 1.20.1 --loader fabric --build-name "Nukem Project"
+```
+
+Current release packaging supports only `vanilla` and `fabric`. If the archive looks like Forge or NeoForge, stop and confirm requirements before release.
+
 ## GitHub Modpack Hosting
 
 For client projects, use a separate public GitHub repository that contains only the modpack files:

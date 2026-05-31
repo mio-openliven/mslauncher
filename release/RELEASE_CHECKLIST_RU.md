@@ -9,6 +9,8 @@
 - [ ] `manifest.json` открывается в браузере.
 - [ ] Все файлы из `manifest.json` скачиваются по HTTPS.
 - [ ] Если клиент прислал архив без версии, создан `release\client_pack_report.md` через `python tools\inspect_client_pack.py`.
+- [ ] Если сборка готовится из архива клиента, создан `release\client_pack_prepare_report.md` через `python tools\prepare_client_server_pack.py`.
+- [ ] Если analyzer показал Forge/NeoForge, релиз остановлен до отдельного прохода поддержки.
 - [ ] QA sync проходит без Minecraft:
   `python tools\qa_clean_sync_flow.py`.
 - [ ] Лаунчер скачивает чистую сборку в server-профиль.

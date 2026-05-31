@@ -60,6 +60,20 @@ python tools\inspect_client_pack.py --archive "C:\Users\Li2Fox\Downloads\mods.ra
 - loader: Fabric, Forge, NeoForge или vanilla;
 - нужен ли Fabric API.
 
+После анализа можно подготовить `server_pack` из архива:
+
+```powershell
+python tools\prepare_client_server_pack.py --archive "C:\Users\Li2Fox\Downloads\mods.rar" --output-dir server_pack --base-url https://raw.githubusercontent.com/OWNER/REPO/BRANCH/mslauncher --build-name "Nukem Project" --server play.domain.com --port 25565
+```
+
+Если версия или loader не определились уверенно, укажите их только после подтверждения клиента:
+
+```powershell
+python tools\prepare_client_server_pack.py --archive "C:\Users\Li2Fox\Downloads\mods.rar" --output-dir server_pack --base-url https://raw.githubusercontent.com/OWNER/REPO/BRANCH/mslauncher --minecraft-version 1.20.1 --loader fabric --build-name "Nukem Project"
+```
+
+Текущий релиз лаунчера поддерживает подготовку релиза только для `vanilla` и `fabric`. Если архив похож на Forge или NeoForge, не выпускайте сборку без отдельного прохода разработки.
+
 ## Команда генерации
 
 Пример:

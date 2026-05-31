@@ -13,3 +13,11 @@ build/
 dist/
 *.spec
 !MSLauncher.spec
+
+# Local generated client modpack output. Publish real files from a separate modpack repo.
+server_pack/mods/*
+!server_pack/mods/.gitkeep
+server_pack/config/*
+!server_pack/config/.gitkeep
+server_pack/resourcepacks/*
+!server_pack/resourcepacks/.gitkeep
