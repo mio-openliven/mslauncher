@@ -137,6 +137,7 @@ class MinecraftEngine:
         game_directory: str | os.PathLike[str],
         *,
         allow_insecure_local: bool = False,
+        require_files: bool = False,
     ) -> SyncPlan:
         """Compare local files with a remote manifest and return a safe sync plan."""
         game_path = Path(game_directory)
@@ -161,6 +162,8 @@ class MinecraftEngine:
             manifest_files = validate_manifest(manifest, allow_insecure_local=allow_insecure_local)
         except ManifestValidationError as exc:
             raise RuntimeError(f"Манифест сборки поврежден: {exc}") from exc
+        if require_files and not manifest_files:
+            raise RuntimeError("Server manifest contains no files. Check generated manifest.json before launching.")
 
         expected_files: dict[str, dict[str, str | int]] = {}
         files_to_download: list[dict[str, str | int]] = []

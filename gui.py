@@ -357,12 +357,14 @@ class DownloadWorker(QThread):
         game_directory: str | Path,
         *,
         allow_insecure_local: bool = False,
+        require_manifest_files: bool = True,
     ) -> None:
         super().__init__()
         self.engine = engine
         self.manifest_url = manifest_url
         self.game_directory = Path(game_directory)
         self.allow_insecure_local = allow_insecure_local
+        self.require_manifest_files = require_manifest_files
 
     def run(self) -> None:
         staging_path = self.game_directory / ".mslauncher-staging"
@@ -372,6 +374,7 @@ class DownloadWorker(QThread):
                 self.manifest_url,
                 self.game_directory,
                 allow_insecure_local=self.allow_insecure_local,
+                require_files=self.require_manifest_files,
             )
 
             if sync_plan.warning:
