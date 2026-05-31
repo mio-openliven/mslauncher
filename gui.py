@@ -11,8 +11,8 @@ import traceback
 from pathlib import Path
 
 import requests
-from PyQt6.QtCore import QSize, QTimer, QThread, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QCursor, QIcon, QPainter, QPixmap
+from PyQt6.QtCore import QSize, QTimer, QThread, Qt, QUrl, pyqtSignal
+from PyQt6.QtGui import QColor, QCursor, QDesktopServices, QIcon, QPainter, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -61,19 +61,43 @@ BACKGROUND_FILES = (
     "bg_05.jpg",
     "bg_06.jpg",
 )
+CLIENT_MODE_INDEPENDENT = "independent"
+CLIENT_MODE_NUKEM = "nukem"
+CLIENT_MODES = (CLIENT_MODE_INDEPENDENT, CLIENT_MODE_NUKEM)
+SOCIAL_ICON_NAMES = {
+    "discord": "discord",
+    "telegram": "telegram",
+    "youtube": "youtube",
+    "instagram": "instagram",
+    "tiktok": "tiktok",
+    "website": "link",
+    "link": "link",
+}
+SOCIAL_FALLBACK_LABELS = {
+    "discord": "DS",
+    "telegram": "TG",
+    "youtube": "YT",
+    "instagram": "IN",
+    "tiktok": "TT",
+    "website": "WB",
+    "link": "WB",
+}
 
 
 TRANSLATIONS = {
     "EN": {
-        "app_title": "MSLauncher",
-        "brand_title": "MSLauncher 1.9.0",
-        "brand_credit": "Software by Nukem coders",
+        "app_title": "MSLaunch",
+        "brand_title": "MSLaunch 1.9.0",
+        "brand_credit": "Independent modpack launcher",
+        "brand_credit_nukem": "Software by Nukem coders",
         "brand_subtitle_project": "Project entry point",
         "brand_subtitle_crew": "Built for the crew",
         "brand_subtitle_places": "Everything in its place",
         "brand_subtitle_session": "A clean start for the session",
+        "brand_subtitle_independent": "Profiles, mods and launch in one place",
+        "brand_subtitle_nukem": "Helping the crew keep every mod in place",
         "settings_title": "Launcher Panel",
-        "settings_body": "Build config, sync status and crash reports will appear here.",
+        "settings_body": "Sync status, Java checks and crash reports will appear here.",
         "open_profile": "Open profile folder",
         "open_game": "Open profiles root",
         "open_crash_reports": "Open crash reports",
@@ -85,7 +109,13 @@ TRANSLATIONS = {
         "memory_max": "Max RAM",
         "java_path": "Java path",
         "java_browse": "Browse",
+        "skin": "Skin",
+        "skin_browse": "Choose PNG",
+        "skin_saved": "Skin file saved. Server support depends on server plugins.",
+        "skin_empty": "No skin file selected.",
         "language": "Language",
+        "mode_independent": "Independent mode",
+        "mode_nukem": "Nukem mode",
         "profile": "Mods",
         "profile_server": "Server",
         "profile_personal": "Personal",
@@ -93,8 +123,18 @@ TRANSLATIONS = {
         "build": "Build",
         "username": "Nickname",
         "version": "Minecraft version",
-        "play": "Check mods and PLAY",
-        "play_idle": "Launch & Mods",
+        "play": "Play",
+        "mods": "Mods",
+        "play_idle": "Play",
+        "mods_idle": "Mods",
+        "feedback_ok": "Everything OK?",
+        "feedback_problem": "Click if there is a problem",
+        "feedback_panel_title": "Need help?",
+        "feedback_panel_body": "If something broke, open the reports folder and send the latest report to the server admin.",
+        "update_available": "Update available",
+        "status_mods_ready": "Mod files are ready.",
+        "status_mods_no_sync": "This profile does not use server mod sync.",
+        "update_disabled": "Update status is not connected yet.",
         "action_motor": "Rolling!",
         "action_go": "Action!",
         "action_scene": "Scene up!",
@@ -127,7 +167,7 @@ TRANSLATIONS = {
         "settings_failed": "Check launcher settings: {error}",
         "config_repaired": "Config was damaged. Backup saved here: {path}. Default settings were loaded.",
         "config_save_failed": "Could not save launcher settings: {error}",
-        "close_game_prompt": "Minecraft is still running. What should MSLauncher do?",
+        "close_game_prompt": "Minecraft is still running. What should MSLaunch do?",
         "leave_game_running": "Leave game running",
         "close_game": "Close game",
         "cancel_close": "Cancel",
@@ -137,15 +177,18 @@ TRANSLATIONS = {
         "crash_title": "Minecraft crashed",
     },
     "RU": {
-        "app_title": "MSLauncher",
-        "brand_title": "MSLauncher 1.9.0",
-        "brand_credit": "\u0421\u043e\u0444\u0442 \u043e\u0442 \u043a\u043e\u0434\u0435\u0440\u043e\u0432 \u041d\u044e\u043a\u0435\u043c\u0430",
+        "app_title": "MSLaunch",
+        "brand_title": "MSLaunch 1.9.0",
+        "brand_credit": "\u041d\u0435\u0437\u0430\u0432\u0438\u0441\u0438\u043c\u044b\u0439 \u043b\u0430\u0443\u043d\u0447\u0435\u0440 \u0441\u0431\u043e\u0440\u043e\u043a",
+        "brand_credit_nukem": "\u0421\u043e\u0444\u0442 \u043e\u0442 \u043a\u043e\u0434\u0435\u0440\u043e\u0432 \u041d\u044e\u043a\u0435\u043c\u0430",
         "brand_subtitle_project": "\u0422\u043e\u0447\u043a\u0430 \u0432\u0445\u043e\u0434\u0430 \u0432 \u043f\u0440\u043e\u0435\u043a\u0442",
         "brand_subtitle_crew": "\u0421\u043e\u0431\u0440\u0430\u043d\u043e \u0434\u043b\u044f \u0441\u0432\u043e\u0435\u0439 \u043a\u043e\u043c\u0430\u043d\u0434\u044b",
         "brand_subtitle_places": "\u0412\u0441\u0435 \u043d\u0430 \u0441\u0432\u043e\u0438\u0445 \u043c\u0435\u0441\u0442\u0430\u0445",
         "brand_subtitle_session": "\u0427\u0438\u0441\u0442\u044b\u0439 \u0441\u0442\u0430\u0440\u0442 \u0434\u043b\u044f \u0441\u0435\u0441\u0441\u0438\u0438",
+        "brand_subtitle_independent": "\u041f\u0440\u043e\u0444\u0438\u043b\u0438, \u043c\u043e\u0434\u044b \u0438 \u0437\u0430\u043f\u0443\u0441\u043a \u0432 \u043e\u0434\u043d\u043e\u043c \u043c\u0435\u0441\u0442\u0435",
+        "brand_subtitle_nukem": "\u041f\u043e\u043c\u043e\u0433\u0430\u0435\u043c \u0430\u043a\u0442\u0435\u0440\u0430\u043c \u0438 \u0438\u0433\u0440\u043e\u043a\u0430\u043c \u0434\u0435\u0440\u0436\u0430\u0442\u044c \u043c\u043e\u0434\u044b \u0432 \u043f\u043e\u0440\u044f\u0434\u043a\u0435",
         "settings_title": "\u041f\u0430\u043d\u0435\u043b\u044c \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430",
-        "settings_body": "\u0417\u0434\u0435\u0441\u044c \u0431\u0443\u0434\u0443\u0442 \u043a\u043e\u043d\u0444\u0438\u0433 \u0441\u0431\u043e\u0440\u043a\u0438, \u0441\u0442\u0430\u0442\u0443\u0441 \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u0438 \u0438 \u043e\u0442\u0447\u0435\u0442\u044b \u043e\u0448\u0438\u0431\u043e\u043a.",
+        "settings_body": "\u0417\u0434\u0435\u0441\u044c \u0431\u0443\u0434\u0443\u0442 \u0441\u0442\u0430\u0442\u0443\u0441 \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u0438, \u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0438 Java \u0438 \u043e\u0442\u0447\u0435\u0442\u044b \u043e\u0448\u0438\u0431\u043e\u043a.",
         "open_profile": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u043f\u0430\u043f\u043a\u0443 \u043f\u0440\u043e\u0444\u0438\u043b\u044f",
         "open_game": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u043a\u043e\u0440\u0435\u043d\u044c \u043f\u0440\u043e\u0444\u0438\u043b\u0435\u0439",
         "open_crash_reports": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c crash-reports",
@@ -157,7 +200,13 @@ TRANSLATIONS = {
         "memory_max": "\u041c\u0430\u043a\u0441. RAM",
         "java_path": "\u041f\u0443\u0442\u044c Java",
         "java_browse": "\u041e\u0431\u0437\u043e\u0440",
+        "skin": "Skin",
+        "skin_browse": "\u0412\u044b\u0431\u0440\u0430\u0442\u044c PNG",
+        "skin_saved": "\u0424\u0430\u0439\u043b \u0441\u043a\u0438\u043d\u0430 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d. \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0430 \u043d\u0430 \u0441\u0435\u0440\u0432\u0435\u0440\u0435 \u0437\u0430\u0432\u0438\u0441\u0438\u0442 \u043e\u0442 server plugins.",
+        "skin_empty": "\u0424\u0430\u0439\u043b \u0441\u043a\u0438\u043d\u0430 \u043d\u0435 \u0432\u044b\u0431\u0440\u0430\u043d.",
         "language": "\u042f\u0437\u044b\u043a",
+        "mode_independent": "\u041d\u0435\u0437\u0430\u0432\u0438\u0441\u0438\u043c\u044b\u0439 \u0440\u0435\u0436\u0438\u043c",
+        "mode_nukem": "Nukem mode",
         "profile": "\u041c\u043e\u0434\u044b",
         "profile_server": "\u0421\u0435\u0440\u0432\u0435\u0440",
         "profile_personal": "\u041b\u0438\u0447\u043d\u044b\u0435",
@@ -165,8 +214,18 @@ TRANSLATIONS = {
         "build": "\u0421\u0431\u043e\u0440\u043a\u0430",
         "username": "\u041d\u0438\u043a\u043d\u0435\u0439\u043c",
         "version": "\u0412\u0435\u0440\u0441\u0438\u044f Minecraft",
-        "play": "\u041f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c \u043c\u043e\u0434\u044b \u0438 \u0418\u0413\u0420\u0410\u0422\u042c",
-        "play_idle": "\u0417\u0430\u043f\u0443\u0441\u043a \u0438 \u043c\u043e\u0434\u044b",
+        "play": "\u0418\u0433\u0440\u0430\u0442\u044c",
+        "mods": "\u041c\u043e\u0434\u044b",
+        "play_idle": "\u0418\u0433\u0440\u0430\u0442\u044c",
+        "mods_idle": "\u041c\u043e\u0434\u044b",
+        "feedback_ok": "\u0412\u0441\u0435 \u043e\u043a?",
+        "feedback_problem": "\u041d\u0430\u0436\u043c\u0438, \u0435\u0441\u043b\u0438 \u043f\u0440\u043e\u0431\u043b\u0435\u043c\u0430",
+        "feedback_panel_title": "\u041d\u0443\u0436\u043d\u0430 \u043f\u043e\u043c\u043e\u0449\u044c?",
+        "feedback_panel_body": "\u0415\u0441\u043b\u0438 \u0447\u0442\u043e-\u0442\u043e \u0441\u043b\u043e\u043c\u0430\u043b\u043e\u0441\u044c, \u043e\u0442\u043a\u0440\u043e\u0439\u0442\u0435 \u043f\u0430\u043f\u043a\u0443 \u043e\u0442\u0447\u0435\u0442\u043e\u0432 \u0438 \u043e\u0442\u043f\u0440\u0430\u0432\u044c\u0442\u0435 \u0441\u0430\u043c\u044b\u0439 \u0441\u0432\u0435\u0436\u0438\u0439 report \u0430\u0434\u043c\u0438\u043d\u0443 \u0441\u0435\u0440\u0432\u0435\u0440\u0430.",
+        "update_available": "\u0412\u044b\u0448\u043b\u043e \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435",
+        "status_mods_ready": "\u0424\u0430\u0439\u043b\u044b \u043c\u043e\u0434\u043e\u0432 \u0433\u043e\u0442\u043e\u0432\u044b.",
+        "status_mods_no_sync": "\u042d\u0442\u043e\u0442 \u043f\u0440\u043e\u0444\u0438\u043b\u044c \u043d\u0435 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0435\u0442 \u0441\u0435\u0440\u0432\u0435\u0440\u043d\u0443\u044e \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u044e \u043c\u043e\u0434\u043e\u0432.",
+        "update_disabled": "\u0421\u0442\u0430\u0442\u0443\u0441 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0439 \u043f\u043e\u043a\u0430 \u043d\u0435 \u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0435\u043d.",
         "action_motor": "\u041c\u043e\u0442\u043e\u0440!",
         "action_go": "\u041f\u043e\u0435\u0445\u0430\u043b\u0438!",
         "action_scene": "\u042d\u043a\u0448\u0435\u043d\u0430!",
@@ -199,7 +258,7 @@ TRANSLATIONS = {
         "settings_failed": "\u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430: {error}",
         "config_repaired": "\u041a\u043e\u043d\u0444\u0438\u0433 \u0431\u044b\u043b \u043f\u043e\u0432\u0440\u0435\u0436\u0434\u0435\u043d. Backup \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d \u0437\u0434\u0435\u0441\u044c: {path}. \u0417\u0430\u0433\u0440\u0443\u0436\u0435\u043d\u044b \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u043f\u043e \u0443\u043c\u043e\u043b\u0447\u0430\u043d\u0438\u044e.",
         "config_save_failed": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430: {error}",
-        "close_game_prompt": "Minecraft \u0432\u0441\u0435 \u0435\u0449\u0435 \u0437\u0430\u043f\u0443\u0449\u0435\u043d. \u0427\u0442\u043e \u0441\u0434\u0435\u043b\u0430\u0442\u044c MSLauncher?",
+        "close_game_prompt": "Minecraft \u0432\u0441\u0435 \u0435\u0449\u0435 \u0437\u0430\u043f\u0443\u0449\u0435\u043d. \u0427\u0442\u043e \u0441\u0434\u0435\u043b\u0430\u0442\u044c MSLaunch?",
         "leave_game_running": "\u041e\u0441\u0442\u0430\u0432\u0438\u0442\u044c \u0438\u0433\u0440\u0443",
         "close_game": "\u0417\u0430\u043a\u0440\u044b\u0442\u044c \u0438\u0433\u0440\u0443",
         "cancel_close": "\u041e\u0442\u043c\u0435\u043d\u0430",
@@ -221,6 +280,10 @@ def load_launcher_config(config_path: str | Path = CONFIG_FILE) -> dict[str, obj
         "default_profile": PROFILE_SERVER,
         "default_language": "EN",
         "default_username": "",
+        "recent_usernames": [],
+        "client_mode": CLIENT_MODE_INDEPENDENT,
+        "social_links": {},
+        "skin_path": "",
         "default_build": "",
         "launch": {},
         "builds": [],
@@ -252,11 +315,25 @@ def load_launcher_config(config_path: str | Path = CONFIG_FILE) -> dict[str, obj
         "default_profile",
         "default_language",
         "default_username",
+        "client_mode",
+        "skin_path",
         "default_build",
     ):
         value = loaded_config.get(key)
         if isinstance(value, str):
             default_config[key] = value
+
+    recent_usernames = loaded_config.get("recent_usernames")
+    if isinstance(recent_usernames, list):
+        default_config["recent_usernames"] = [
+            username.strip()
+            for username in recent_usernames
+            if isinstance(username, str) and username.strip()
+        ][:10]
+
+    social_links = loaded_config.get("social_links")
+    if isinstance(social_links, dict):
+        default_config["social_links"] = social_links
 
     builds = loaded_config.get("builds")
     if isinstance(builds, list):
@@ -279,6 +356,57 @@ def save_launcher_config(config: dict[str, object], config_path: str | Path = CO
 def get_config_text(config: dict[str, object], key: str, default: str = "") -> str:
     value = config.get(key, default)
     return value if isinstance(value, str) else default
+
+
+def get_config_string_list(config: dict[str, object], key: str) -> list[str]:
+    values = config.get(key, [])
+    if not isinstance(values, list):
+        return []
+
+    result: list[str] = []
+    for value in values:
+        if isinstance(value, str):
+            cleaned_value = value.strip()
+            if cleaned_value and cleaned_value not in result:
+                result.append(cleaned_value)
+    return result
+
+
+def get_client_mode(config: dict[str, object]) -> str:
+    mode = get_config_text(config, "client_mode", CLIENT_MODE_INDEPENDENT).strip().lower()
+    return mode if mode in CLIENT_MODES else CLIENT_MODE_INDEPENDENT
+
+
+def get_social_links(config: dict[str, object], client_mode: str = CLIENT_MODE_NUKEM) -> dict[str, str]:
+    if client_mode != CLIENT_MODE_NUKEM:
+        return {}
+
+    raw_links = config.get("social_links", {})
+    if not isinstance(raw_links, dict):
+        return {}
+
+    project_links = raw_links.get(CLIENT_MODE_NUKEM)
+    if isinstance(project_links, dict):
+        raw_links = project_links
+
+    links: dict[str, str] = {}
+    for raw_name, raw_value in raw_links.items():
+        name = str(raw_name).strip().lower()
+        if name not in SOCIAL_ICON_NAMES:
+            continue
+
+        url = ""
+        enabled = True
+        if isinstance(raw_value, str):
+            url = raw_value.strip()
+        elif isinstance(raw_value, dict):
+            enabled = bool(raw_value.get("enabled", True))
+            value = raw_value.get("url", "")
+            url = value.strip() if isinstance(value, str) else ""
+
+        if enabled and url:
+            links[name] = url
+    return links
 
 
 def get_config_builds(config: dict[str, object]) -> list[dict[str, object]]:
@@ -740,6 +868,9 @@ class MSLauncherWindow(QMainWindow):
         self.builds = get_config_builds(self.config)
         config_language = get_config_text(self.config, "default_language", "EN")
         self.language = config_language if config_language in TRANSLATIONS else "EN"
+        self.client_mode = get_client_mode(self.config)
+        self.social_links = get_social_links(self.config, self.client_mode)
+        self.recent_usernames = get_config_string_list(self.config, "recent_usernames")
         self.profile_manager = LauncherProfileManager(get_profile_base_directory(self.config) or None)
         self.active_profile = self.profile_manager.get_profile(get_config_text(self.config, "default_profile"))
         self.engine = MinecraftEngine(str(self.active_profile.directory))
@@ -757,9 +888,11 @@ class MSLauncherWindow(QMainWindow):
         self.last_crash_report_path: Path | None = None
         self.last_error_message = ""
         self.last_error_report_path: Path | None = None
+        self.skin_path = get_config_text(self.config, "skin_path")
         self.info_panel_mode = "settings"
         self.brand_subtitle_key = random.choice(self.get_brand_subtitle_keys())
         self.action_phrase_key = "play_idle"
+        self.launch_after_sync = True
 
         self._build_ui()
         self._connect_signals()
@@ -775,8 +908,9 @@ class MSLauncherWindow(QMainWindow):
 
         hero_frame = ParallaxFrame()
         hero_frame.setObjectName("heroFrame")
+        hero_frame.setMinimumHeight(320)
         hero_layout = QVBoxLayout(hero_frame)
-        hero_layout.setContentsMargins(34, 28, 34, 30)
+        hero_layout.setContentsMargins(28, 24, 28, 24)
         hero_layout.addStretch()
 
         hero_content_layout = QHBoxLayout()
@@ -784,22 +918,22 @@ class MSLauncherWindow(QMainWindow):
 
         self.sidebar_frame = QFrame()
         self.sidebar_frame.setObjectName("sidebarFrame")
-        sidebar_layout = QVBoxLayout(self.sidebar_frame)
-        sidebar_layout.setContentsMargins(10, 14, 10, 14)
-        sidebar_layout.setSpacing(11)
+        self.sidebar_layout = QVBoxLayout(self.sidebar_frame)
+        self.sidebar_layout.setContentsMargins(10, 14, 10, 14)
+        self.sidebar_layout.setSpacing(11)
 
         self.settings_button = self.create_side_button("settings")
         self.settings_button.clicked.connect(self.toggle_info_panel)
-        sidebar_layout.addWidget(self.settings_button)
+        self.sidebar_layout.addWidget(self.settings_button)
+
+        self.mode_button = self.create_side_button("mode", "NK")
+        self.mode_button.setText("NK" if self.client_mode == CLIENT_MODE_INDEPENDENT else "MS")
+        self.sidebar_layout.addWidget(self.mode_button)
 
         self.social_buttons: list[QPushButton] = []
-        for icon_name in ("discord", "tiktok", "telegram", "youtube", "instagram", "link"):
-            button = self.create_side_button(icon_name)
-            button.hide()
-            self.social_buttons.append(button)
-            sidebar_layout.addWidget(button)
+        self.refresh_social_buttons()
 
-        sidebar_layout.addStretch()
+        self.sidebar_layout.addStretch()
 
         brand_panel = QFrame()
         brand_panel.setObjectName("brandPanel")
@@ -816,8 +950,10 @@ class MSLauncherWindow(QMainWindow):
         brand_layout.addWidget(self.title_label)
         brand_layout.addWidget(self.subtitle_label)
         brand_layout.addWidget(self.credit_label)
-        brand_panel.setMaximumWidth(500)
-        brand_panel.setMaximumHeight(142)
+        brand_panel.setMinimumWidth(300)
+        brand_panel.setMaximumWidth(520)
+        brand_panel.setMinimumHeight(112)
+        brand_panel.setMaximumHeight(150)
 
         self.info_panel = QFrame()
         self.info_panel.setObjectName("infoPanel")
@@ -829,6 +965,7 @@ class MSLauncherWindow(QMainWindow):
         self.info_body_label = QLabel()
         self.info_body_label.setObjectName("infoBody")
         self.info_body_label.setWordWrap(True)
+        self.info_body_label.setMinimumWidth(240)
         info_layout.addWidget(self.info_title_label)
         info_layout.addWidget(self.info_body_label)
 
@@ -853,6 +990,12 @@ class MSLauncherWindow(QMainWindow):
         self.java_path_input = QLineEdit()
         self.java_browse_button = QPushButton()
         self.java_browse_button.setObjectName("panelButton")
+        self.skin_label = QLabel()
+        self.skin_status_label = QLabel()
+        self.skin_status_label.setObjectName("infoBody")
+        self.skin_status_label.setWordWrap(True)
+        self.skin_browse_button = QPushButton()
+        self.skin_browse_button.setObjectName("panelButton")
 
         launch_options = get_config_launch_options(self.config)
         self.loader_setting_combo.setCurrentText(str(launch_options.get("loader", "vanilla")))
@@ -869,7 +1012,25 @@ class MSLauncherWindow(QMainWindow):
         info_layout.addWidget(self.java_path_label)
         info_layout.addWidget(self.java_path_input)
         info_layout.addWidget(self.java_browse_button)
+        info_layout.addWidget(self.skin_label)
+        info_layout.addWidget(self.skin_status_label)
+        info_layout.addWidget(self.skin_browse_button)
+        self.settings_widgets = [
+            self.loader_setting_label,
+            self.loader_setting_combo,
+            self.memory_min_label,
+            self.memory_min_input,
+            self.memory_max_label,
+            self.memory_max_input,
+            self.java_path_label,
+            self.java_path_input,
+            self.java_browse_button,
+            self.skin_label,
+            self.skin_status_label,
+            self.skin_browse_button,
+        ]
         info_layout.addStretch()
+        self.info_panel.setMinimumWidth(280)
         self.info_panel.setMaximumWidth(320)
         self.info_panel.hide()
 
@@ -883,6 +1044,7 @@ class MSLauncherWindow(QMainWindow):
 
         control_frame = QFrame()
         control_frame.setObjectName("controlFrame")
+        control_frame.setMinimumHeight(128)
         control_layout = QGridLayout(control_frame)
         control_layout.setContentsMargins(18, 12, 18, 14)
         control_layout.setHorizontalSpacing(10)
@@ -898,8 +1060,9 @@ class MSLauncherWindow(QMainWindow):
         self.populate_profiles()
 
         self.username_label = QLabel()
-        self.username_input = QLineEdit()
-        self.username_input.setText(get_config_text(self.config, "default_username"))
+        self.username_input = QComboBox()
+        self.username_input.setEditable(True)
+        self.populate_usernames()
 
         self.build_label = QLabel()
         self.build_combo = QComboBox()
@@ -912,14 +1075,31 @@ class MSLauncherWindow(QMainWindow):
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
         self.progress_bar.setFixedHeight(8)
+        self.progress_bar.setMinimumWidth(150)
 
         self.status_label = QLabel()
         self.status_label.setObjectName("statusLabel")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        self.status_label.setWordWrap(True)
 
         self.play_button = QPushButton()
         self.play_button.setObjectName("playButton")
-        self.play_button.setMinimumHeight(48)
+        self.play_button.setMinimumHeight(42)
+        self.play_button.setMinimumWidth(96)
+        self.mods_button = QPushButton()
+        self.mods_button.setObjectName("playButton")
+        self.mods_button.setMinimumHeight(42)
+        self.mods_button.setMinimumWidth(96)
+        action_layout = QHBoxLayout()
+        action_layout.setContentsMargins(0, 0, 0, 0)
+        action_layout.setSpacing(6)
+        action_layout.addWidget(self.play_button)
+        action_layout.addWidget(self.mods_button)
+
+        self.feedback_button = QPushButton()
+        self.feedback_button.setObjectName("panelButton")
+        self.feedback_button.setMinimumHeight(26)
+        self.feedback_button.setMaximumHeight(30)
 
         control_layout.addWidget(self.username_label, 0, 0)
         control_layout.addWidget(self.profile_label, 0, 1)
@@ -931,9 +1111,18 @@ class MSLauncherWindow(QMainWindow):
         control_layout.addWidget(self.build_combo, 1, 2)
         control_layout.addWidget(self.version_combo, 1, 3)
         control_layout.addWidget(self.language_combo, 1, 4)
-        control_layout.addWidget(self.play_button, 0, 5, 2, 1)
+        control_layout.addLayout(action_layout, 0, 5, 2, 1)
         control_layout.addWidget(self.status_label, 2, 0, 1, 5)
         control_layout.addWidget(self.progress_bar, 2, 5)
+        control_layout.addWidget(self.feedback_button, 3, 5)
+        for widget in (
+            self.username_input,
+            self.profile_combo,
+            self.build_combo,
+            self.version_combo,
+            self.language_combo,
+        ):
+            widget.setMinimumWidth(112)
         control_layout.setColumnStretch(0, 2)
         control_layout.setColumnStretch(1, 1)
         control_layout.setColumnStretch(2, 2)
@@ -945,11 +1134,11 @@ class MSLauncherWindow(QMainWindow):
         root_layout.addWidget(control_frame, 0)
 
         self.setCentralWidget(central_widget)
-        self.setMinimumSize(840, 360)
-        self.resize(900, 460)
+        self.setMinimumSize(960, 520)
+        self.resize(1040, 560)
         self.apply_styles()
 
-    def create_side_button(self, icon_name: str) -> QPushButton:
+    def create_side_button(self, icon_name: str, fallback_text: str = "") -> QPushButton:
         button = QPushButton()
         button.setObjectName("sideButton")
         icon_path = ICON_DIR / f"{icon_name}.svg"
@@ -957,22 +1146,27 @@ class MSLauncherWindow(QMainWindow):
             button.setIcon(QIcon(str(icon_path)))
             button.setIconSize(QSize(21, 21))
         else:
-            button.setText(icon_name[:2].upper())
+            button.setText(fallback_text or icon_name[:2].upper())
         return button
 
     def _connect_signals(self) -> None:
         self.language_combo.currentTextChanged.connect(self.change_language)
         self.profile_combo.currentIndexChanged.connect(self.on_profile_changed)
         self.build_combo.currentIndexChanged.connect(self.on_build_changed)
+        self.mode_button.clicked.connect(self.toggle_client_mode)
         self.play_button.clicked.connect(self.check_mods_and_play)
+        self.mods_button.clicked.connect(self.check_mods_only)
+        self.feedback_button.clicked.connect(self.show_feedback_panel)
         self.open_profile_button.clicked.connect(self.open_current_profile_folder)
         self.open_game_button.clicked.connect(self.open_profiles_root_folder)
         self.open_crash_reports_button.clicked.connect(self.open_crash_reports_folder)
         self.java_browse_button.clicked.connect(self.browse_java_path)
-        self.loader_setting_combo.currentTextChanged.connect(self.save_user_preferences)
+        self.skin_browse_button.clicked.connect(self.browse_skin_file)
+        self.loader_setting_combo.currentTextChanged.connect(lambda *_: self.save_user_preferences())
         self.memory_min_input.editingFinished.connect(self.save_user_preferences)
         self.memory_max_input.editingFinished.connect(self.save_user_preferences)
         self.java_path_input.editingFinished.connect(self.save_user_preferences)
+        self.username_input.editTextChanged.connect(lambda *_: self.save_user_preferences())
 
     def change_language(self, language: str) -> None:
         if language in TRANSLATIONS:
@@ -980,11 +1174,48 @@ class MSLauncherWindow(QMainWindow):
             self.apply_translations()
             self.save_user_preferences()
 
+    def toggle_client_mode(self) -> None:
+        self.client_mode = (
+            CLIENT_MODE_NUKEM
+            if self.client_mode == CLIENT_MODE_INDEPENDENT
+            else CLIENT_MODE_INDEPENDENT
+        )
+        self.social_links = get_social_links(self.config, self.client_mode)
+        self.refresh_social_buttons()
+        self.apply_translations()
+        self.save_user_preferences()
+
+    def refresh_social_buttons(self) -> None:
+        for button in self.social_buttons:
+            button.setParent(None)
+            button.deleteLater()
+        self.social_buttons = []
+
+        for offset, (link_name, url) in enumerate(self.social_links.items()):
+            icon_name = SOCIAL_ICON_NAMES.get(link_name, "link")
+            fallback_text = SOCIAL_FALLBACK_LABELS.get(link_name, "WB")
+            button = self.create_side_button(icon_name, fallback_text)
+            button.clicked.connect(lambda checked=False, link=url: self.open_external_link(link))
+            info_panel = getattr(self, "info_panel", None)
+            button.setVisible(bool(info_panel and info_panel.isVisible()))
+            self.social_buttons.append(button)
+            self.sidebar_layout.insertWidget(2 + offset, button)
+
+    def get_mode_credit_key(self) -> str:
+        return "brand_credit_nukem" if self.client_mode == CLIENT_MODE_NUKEM else "brand_credit"
+
+    def get_mode_subtitle_key(self) -> str:
+        return (
+            "brand_subtitle_nukem"
+            if self.client_mode == CLIENT_MODE_NUKEM
+            else "brand_subtitle_independent"
+        )
+
     def apply_translations(self) -> None:
         self.setWindowTitle(self.translate("app_title"))
         self.title_label.setText(self.translate("brand_title"))
-        self.subtitle_label.setText(self.translate(self.brand_subtitle_key))
-        self.credit_label.setText(self.translate("brand_credit"))
+        self.subtitle_label.setText(self.translate(self.get_mode_subtitle_key()))
+        self.credit_label.setText(self.translate(self.get_mode_credit_key()))
         self.refresh_info_panel()
         self.open_profile_button.setText(self.translate("open_profile"))
         self.open_game_button.setText(self.translate("open_game"))
@@ -995,6 +1226,9 @@ class MSLauncherWindow(QMainWindow):
         self.memory_max_label.setText(self.translate("memory_max"))
         self.java_path_label.setText(self.translate("java_path"))
         self.java_browse_button.setText(self.translate("java_browse"))
+        self.skin_label.setText(self.translate("skin"))
+        self.skin_browse_button.setText(self.translate("skin_browse"))
+        self.refresh_skin_status()
         self.language_label.setText(self.translate("language"))
         self.profile_label.setText(self.translate("profile"))
         self.refresh_profile_labels()
@@ -1002,6 +1236,16 @@ class MSLauncherWindow(QMainWindow):
         self.username_label.setText(self.translate("username"))
         self.version_label.setText(self.translate("version"))
         self.play_button.setText(self.translate(self.action_phrase_key))
+        self.mods_button.setText(self.translate("mods_idle"))
+        self.feedback_button.setText(self.translate("feedback_ok"))
+        self.mode_button.setText("NK" if self.client_mode == CLIENT_MODE_INDEPENDENT else "MS")
+        self.mode_button.setToolTip(
+            self.translate(
+                "mode_nukem"
+                if self.client_mode == CLIENT_MODE_INDEPENDENT
+                else "mode_independent"
+            )
+        )
 
         status_key = self.status_label.property("status_key")
         status_detail = self.status_label.property("status_detail")
@@ -1074,23 +1318,21 @@ class MSLauncherWindow(QMainWindow):
                 color: #b9d4c4;
             }
             QPushButton#sideButton {
-                background: rgba(255, 255, 255, 18);
+                background: rgba(255, 255, 255, 14);
                 color: #dceee4;
-                border: 1px solid rgba(255, 255, 255, 16);
-                border-radius: 8px;
-                min-width: 34px;
-                min-height: 34px;
-                max-width: 34px;
-                max-height: 34px;
+                border: 1px solid rgba(220, 238, 228, 28);
+                border-radius: 6px;
+                min-width: 36px;
+                min-height: 36px;
+                max-width: 36px;
+                max-height: 36px;
                 font-size: 10px;
                 font-weight: 800;
             }
             QPushButton#sideButton:hover {
-                background: rgba(36, 223, 119, 80);
+                background: rgba(134, 184, 157, 70);
                 color: #ffffff;
-                border: 1px solid rgba(36, 223, 119, 130);
-                padding-left: 1px;
-                padding-top: 1px;
+                border: 1px solid rgba(191, 223, 206, 120);
             }
             QPushButton#panelButton {
                 background: rgba(255, 255, 255, 18);
@@ -1125,24 +1367,24 @@ class MSLauncherWindow(QMainWindow):
                 width: 22px;
             }
             QPushButton#playButton {
-                background: rgba(214, 230, 220, 22);
+                background: rgba(255, 255, 255, 14);
                 color: #dceee4;
-                border: 1px solid rgba(220, 238, 228, 70);
-                border-radius: 18px;
+                border: 1px solid rgba(220, 238, 228, 78);
+                border-radius: 12px;
                 font-size: 13px;
                 font-weight: 700;
                 letter-spacing: 0px;
-                padding: 8px 20px;
+                padding: 8px 14px;
             }
             QPushButton#playButton:hover {
-                background: rgba(117, 152, 134, 58);
+                background: rgba(117, 152, 134, 62);
                 color: #ffffff;
-                border: 1px solid rgba(191, 223, 206, 130);
+                border: 1px solid rgba(191, 223, 206, 145);
             }
             QPushButton#playButton:disabled {
-                background: rgba(117, 152, 134, 28);
+                background: rgba(117, 152, 134, 22);
                 color: #aab9b1;
-                border: 1px solid rgba(191, 223, 206, 58);
+                border: 1px solid rgba(191, 223, 206, 48);
             }
             QProgressBar {
                 background: #25382e;
@@ -1178,6 +1420,24 @@ class MSLauncherWindow(QMainWindow):
         index = self.profile_combo.findData(current_profile)
         if index >= 0:
             self.profile_combo.setCurrentIndex(index)
+
+    def populate_usernames(self) -> None:
+        current_username = get_config_text(self.config, "default_username").strip()
+        usernames = self.get_recent_usernames(current_username)
+        self.username_input.clear()
+        self.username_input.addItems(usernames)
+        self.username_input.setCurrentText(current_username)
+
+    def get_current_username(self) -> str:
+        return self.username_input.currentText().strip()
+
+    def get_recent_usernames(self, preferred_username: str = "") -> list[str]:
+        usernames: list[str] = []
+        for username in [preferred_username, *self.recent_usernames]:
+            cleaned_username = username.strip()
+            if cleaned_username and cleaned_username not in usernames:
+                usernames.append(cleaned_username)
+        return usernames[:10]
 
     def on_profile_changed(self) -> None:
         self.active_profile = self.profile_manager.get_profile(self.get_selected_profile_id())
@@ -1262,10 +1522,16 @@ class MSLauncherWindow(QMainWindow):
         return str(build.get("id", "")).strip()
 
     def check_mods_and_play(self) -> None:
-        username = self.username_input.text().strip()
+        self.start_mod_check(launch_after_sync=True)
+
+    def check_mods_only(self) -> None:
+        self.start_mod_check(launch_after_sync=False)
+
+    def start_mod_check(self, launch_after_sync: bool) -> None:
+        username = self.get_current_username()
         build = self.get_selected_build()
 
-        if not username:
+        if launch_after_sync and not username:
             self.show_error(self.translate("empty_username"))
             return
         if build is None:
@@ -1277,9 +1543,11 @@ class MSLauncherWindow(QMainWindow):
         self.game_directory = self.selected_profile.directory
         self.engine.minecraft_directory = self.selected_profile.directory
         self.selected_username = username
-        self.action_phrase_key = random.choice(self.get_action_phrase_keys())
-        self.play_button.setText(self.translate(self.action_phrase_key))
-        self.play_button.setEnabled(False)
+        self.launch_after_sync = launch_after_sync
+        self.action_phrase_key = random.choice(self.get_action_phrase_keys()) if launch_after_sync else "mods_idle"
+        if launch_after_sync:
+            self.play_button.setText(self.translate(self.action_phrase_key))
+        self.set_action_buttons_enabled(False)
         self.progress_bar.setValue(0)
 
         if self.selected_profile.server_sync_enabled:
@@ -1304,9 +1572,7 @@ class MSLauncherWindow(QMainWindow):
 
         if not version:
             self.show_error(self.translate("empty_version"))
-            self.play_button.setEnabled(True)
-            self.action_phrase_key = "play_idle"
-            self.play_button.setText(self.translate(self.action_phrase_key))
+            self.reset_action_buttons()
             self.set_status("ready")
             return
 
@@ -1314,7 +1580,7 @@ class MSLauncherWindow(QMainWindow):
         self.selected_version = version
         self.selected_manifest_url = manifest_url
         if requires_server_manifest(self.selected_profile, manifest_url):
-            self.reset_play_button()
+            self.reset_action_buttons()
             user_error = explain_user_error(
                 "Server profile needs manifest_url or source_key before launch.",
                 language=self.language,
@@ -1328,7 +1594,7 @@ class MSLauncherWindow(QMainWindow):
         try:
             self.selected_launch_options = self.build_launch_options(resolved_build)
         except LaunchSettingsError as exc:
-            self.reset_play_button()
+            self.reset_action_buttons()
             user_error = explain_user_error(exc, language=self.language, context="settings")
             report_path = self.write_launcher_error_report(user_error, str(exc), "settings")
             self.show_error(self.with_report_path(self.translate("settings_failed", error=user_error), report_path))
@@ -1339,9 +1605,13 @@ class MSLauncherWindow(QMainWindow):
         self.save_user_preferences()
 
         if not self.selected_profile.server_sync_enabled:
-            self.set_status("status_skipping_sync")
             self.progress_bar.setValue(0)
-            self.launch_game()
+            if self.launch_after_sync:
+                self.set_status("status_skipping_sync")
+                self.launch_game()
+            else:
+                self.set_status("status_mods_no_sync")
+                self.reset_action_buttons()
             return
 
         self.download_worker = DownloadWorker(self.engine, self.selected_manifest_url, self.game_directory)
@@ -1349,17 +1619,23 @@ class MSLauncherWindow(QMainWindow):
         self.download_worker.status_changed.connect(self.set_status)
         self.download_worker.status_detail_changed.connect(self.set_status_detail)
         self.download_worker.error_occurred.connect(self.on_download_failed)
-        self.download_worker.finished_successfully.connect(self.launch_game)
+        self.download_worker.finished_successfully.connect(self.on_sync_finished)
         self.download_worker.start()
 
     def on_build_config_failed(self, error: str) -> None:
-        self.play_button.setEnabled(True)
-        self.action_phrase_key = "play_idle"
-        self.play_button.setText(self.translate(self.action_phrase_key))
+        self.reset_action_buttons()
         user_error = explain_user_error(error, language=self.language, context="build_config")
         report_path = self.write_launcher_error_report(user_error, error, "build_config")
         self.show_error(self.with_report_path(self.translate("build_config_failed", error=user_error), report_path))
         self.set_status("ready")
+
+    def on_sync_finished(self) -> None:
+        if self.launch_after_sync:
+            self.launch_game()
+            return
+
+        self.set_status("status_mods_ready")
+        self.reset_action_buttons()
 
     def launch_game(self) -> None:
         self.set_status("status_launching")
@@ -1377,9 +1653,7 @@ class MSLauncherWindow(QMainWindow):
         self.launch_worker.start()
 
     def on_download_failed(self, error_key: str, error: str) -> None:
-        self.play_button.setEnabled(True)
-        self.action_phrase_key = "play_idle"
-        self.play_button.setText(self.translate(self.action_phrase_key))
+        self.reset_action_buttons()
         user_error = explain_user_error(error, language=self.language, context=error_key)
         report_path = self.write_launcher_error_report(user_error, error, error_key)
         self.show_error(self.with_report_path(self.translate(error_key, error=user_error), report_path))
@@ -1396,6 +1670,7 @@ class MSLauncherWindow(QMainWindow):
 
     def refresh_info_panel(self) -> None:
         if self.info_panel_mode == "crash" and self.last_crash_reason:
+            self.set_settings_widgets_visible(False)
             self.info_title_label.setText(self.translate("crash_panel_title"))
             self.info_body_label.setText(self.last_crash_reason)
             self.open_crash_reports_button.setText(self.translate("open_crash_reports"))
@@ -1403,17 +1678,41 @@ class MSLauncherWindow(QMainWindow):
             return
 
         if self.info_panel_mode == "error" and self.last_error_message:
+            self.set_settings_widgets_visible(False)
             self.info_title_label.setText(self.translate("error_panel_title"))
             self.info_body_label.setText(self.last_error_message)
             self.open_crash_reports_button.setText(self.translate("open_error_report"))
             self.open_crash_reports_button.show()
             return
 
+        if self.info_panel_mode == "feedback":
+            self.set_settings_widgets_visible(False)
+            self.info_title_label.setText(self.translate("feedback_panel_title"))
+            self.info_body_label.setText(self.translate("feedback_panel_body"))
+            self.open_crash_reports_button.setText(self.translate("open_error_report"))
+            self.open_crash_reports_button.show()
+            return
+
         self.info_panel_mode = "settings"
+        self.set_settings_widgets_visible(True)
         self.info_title_label.setText(self.translate("settings_title"))
-        self.info_body_label.setText(self.translate("settings_body"))
+        self.info_body_label.setText(
+            f"{self.translate('settings_body')}\n{self.translate('update_disabled')}"
+        )
         self.open_crash_reports_button.setText(self.translate("open_crash_reports"))
         self.open_crash_reports_button.hide()
+
+    def set_settings_widgets_visible(self, visible: bool) -> None:
+        for widget in getattr(self, "settings_widgets", []):
+            widget.setVisible(visible)
+
+    def show_feedback_panel(self) -> None:
+        self.feedback_button.setText(self.translate("feedback_problem"))
+        self.info_panel_mode = "feedback"
+        self.refresh_info_panel()
+        self.info_panel.show()
+        for button in self.social_buttons:
+            button.show()
 
     def open_current_profile_folder(self) -> None:
         profile = self.profile_manager.get_profile(self.get_selected_profile_id())
@@ -1434,6 +1733,9 @@ class MSLauncherWindow(QMainWindow):
             crash_reports_path = profile.directory
         self.open_folder(crash_reports_path)
 
+    def open_external_link(self, url: str) -> None:
+        QDesktopServices.openUrl(QUrl(url))
+
     def open_folder(self, folder_path: Path) -> None:
         try:
             folder_path.mkdir(parents=True, exist_ok=True)
@@ -1452,19 +1754,46 @@ class MSLauncherWindow(QMainWindow):
             self.java_path_input.setText(selected_path)
             self.save_user_preferences()
 
+    def browse_skin_file(self) -> None:
+        selected_path, _ = QFileDialog.getOpenFileName(
+            self,
+            self.translate("skin"),
+            str(Path.home()),
+            "PNG (*.png);;All files (*)",
+        )
+        if not selected_path:
+            return
+
+        source_path = Path(selected_path)
+        if source_path.suffix.lower() != ".png":
+            self.show_error(self.translate("skin_browse"))
+            return
+
+        profile = self.profile_manager.get_profile(self.get_selected_profile_id())
+        skin_directory = profile.directory / "skin"
+        skin_directory.mkdir(parents=True, exist_ok=True)
+        target_path = skin_directory / "skin.png"
+        shutil.copyfile(source_path, target_path)
+        self.skin_path = str(target_path)
+        self.refresh_skin_status()
+        self.set_status_text(self.translate("skin_saved"))
+        self.save_user_preferences()
+
+    def refresh_skin_status(self) -> None:
+        if self.skin_path:
+            self.skin_status_label.setText(f"{self.translate('skin_saved')}\n{self.skin_path}")
+            return
+        self.skin_status_label.setText(self.translate("skin_empty"))
+
     def on_launch_failed(self, error: str, technical_report: str = "") -> None:
-        self.play_button.setEnabled(True)
-        self.action_phrase_key = "play_idle"
-        self.play_button.setText(self.translate(self.action_phrase_key))
+        self.reset_action_buttons()
         user_error = explain_user_error(error, language=self.language, context="launch")
         report_path = self.write_launcher_error_report(user_error, technical_report or error, "launch")
         self.show_error(self.with_report_path(self.translate("launch_failed", error=user_error), report_path))
         self.set_status("ready")
 
     def on_game_crashed(self, crash_reason: str) -> None:
-        self.play_button.setEnabled(True)
-        self.action_phrase_key = "play_idle"
-        self.play_button.setText(self.translate(self.action_phrase_key))
+        self.reset_action_buttons()
         self.last_crash_reason = crash_reason
         self.last_crash_report_path = self.write_launcher_crash_report(crash_reason, "mslauncher-last-crash.txt")
         self.info_panel_mode = "crash"
@@ -1512,30 +1841,40 @@ class MSLauncherWindow(QMainWindow):
         return f"{message}\n\n{self.translate('error_report_saved', path=report_path)}"
 
     def on_game_closed(self) -> None:
-        self.play_button.setEnabled(True)
-        self.action_phrase_key = "play_idle"
-        self.play_button.setText(self.translate(self.action_phrase_key))
+        self.reset_action_buttons()
         self.set_status("status_game_closed")
 
-    def reset_play_button(self) -> None:
-        self.play_button.setEnabled(True)
+    def set_action_buttons_enabled(self, enabled: bool) -> None:
+        self.play_button.setEnabled(enabled)
+        self.mods_button.setEnabled(enabled)
+
+    def reset_action_buttons(self) -> None:
+        self.set_action_buttons_enabled(True)
         self.action_phrase_key = "play_idle"
         self.play_button.setText(self.translate(self.action_phrase_key))
+        self.mods_button.setText(self.translate("mods_idle"))
 
     def set_status(self, key: str) -> None:
         self.status_label.setProperty("status_key", key)
         self.status_label.setProperty("status_detail", None)
         self.status_label.setText(self.translate(key))
+        self.refresh_status_panel_text(self.translate(key))
 
     def set_status_detail(self, key: str, detail: str) -> None:
         self.status_label.setProperty("status_key", key)
         self.status_label.setProperty("status_detail", detail)
         self.status_label.setText(self.translate(key, file=detail))
+        self.refresh_status_panel_text(self.translate(key, file=detail))
 
     def set_status_text(self, text: str) -> None:
         self.status_label.setProperty("status_key", None)
         self.status_label.setProperty("status_detail", None)
         self.status_label.setText(text)
+        self.refresh_status_panel_text(text)
+
+    def refresh_status_panel_text(self, text: str) -> None:
+        if self.info_panel_mode == "settings" and self.info_panel.isVisible():
+            self.info_body_label.setText(text)
 
     def show_error(self, message: str) -> None:
         QMessageBox.critical(self, self.translate("error"), message)
@@ -1575,7 +1914,12 @@ class MSLauncherWindow(QMainWindow):
             self.set_status_text(self.translate("settings_failed", error=user_error))
 
         self.config["default_language"] = self.language
-        self.config["default_username"] = self.username_input.text().strip()
+        username = self.get_current_username()
+        self.recent_usernames = self.get_recent_usernames(username)
+        self.config["default_username"] = username
+        self.config["recent_usernames"] = self.recent_usernames
+        self.config["client_mode"] = self.client_mode
+        self.config["skin_path"] = self.skin_path
         self.config["default_profile"] = self.get_selected_profile_id()
         selected_build_id = self.get_selected_build_id()
         if selected_build_id:

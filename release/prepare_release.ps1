@@ -7,11 +7,11 @@ $buildScript = Join-Path $projectRoot "build_exe.ps1"
 $distPath = Join-Path $projectRoot "dist\MSLauncher"
 $docsPath = Join-Path $distPath "docs"
 
-Write-Host "MSLauncher release prepare"
+Write-Host "MSLaunch release prepare"
 Write-Host "Copying template config to launcher_config.json..."
 Copy-Item -Path $templateConfig -Destination $projectConfig -Force
 
-Write-Host "Building MSLauncher..."
+Write-Host "Building MSLaunch..."
 Push-Location $projectRoot
 try {
   powershell -ExecutionPolicy Bypass -File $buildScript

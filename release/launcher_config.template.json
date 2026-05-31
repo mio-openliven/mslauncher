@@ -5,6 +5,15 @@
   "default_profile": "server",
   "default_language": "RU",
   "default_username": "",
+  "recent_usernames": [],
+  "client_mode": "independent",
+  "skin_path": "",
+  "social_links": {
+    "nukem": {
+      "youtube": "https://youtube.com/@nuckem?si=8B60TLzrzN8HVh98",
+      "discord": "https://discord.com/invite/P35nvXQ"
+    }
+  },
   "default_build": "main",
   "launch": {
     "memory_min": "512M",

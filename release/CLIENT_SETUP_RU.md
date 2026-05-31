@@ -1,4 +1,4 @@
-# Инструкция для администратора MSLauncher
+# Инструкция для администратора MSLaunch
 
 ## Что делает лаунчер
 
@@ -85,6 +85,30 @@ https://domain.com/mslauncher/build.json
 ```
 
 Моды вручную в `launcher_config.json` прописывать не нужно.
+
+## Режим лаунчера и кнопки ссылок
+
+По умолчанию лаунчер запускается как независимый:
+
+```json
+"client_mode": "independent"
+```
+
+В этом режиме ссылки проекта не показываются.
+
+Для режима заказчика можно указать:
+
+```json
+"client_mode": "nukem",
+"social_links": {
+  "nukem": {
+    "youtube": "https://youtube.com/@nuckem?si=8B60TLzrzN8HVh98",
+    "discord": "https://discord.com/invite/P35nvXQ"
+  }
+}
+```
+
+Пустые ссылки не отображаются. Если ссылка не нужна, оставьте ее пустой или удалите строку.
 
 ## Как собрать exe
 

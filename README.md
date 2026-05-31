@@ -1,6 +1,6 @@
-# MSLauncher
+# MSLaunch
 
-MSLauncher is a compact Minecraft launcher and modpack synchronizer.
+MSLaunch is a compact Minecraft launcher and modpack synchronizer.
 
 ## Project Map
 
@@ -13,7 +13,7 @@ MSLauncher is a compact Minecraft launcher and modpack synchronizer.
 
 ## Launch Config
 
-MSLauncher keeps user data outside the install folder by default. On Windows, runtime data is stored under:
+MSLaunch keeps user data outside the install folder by default. On Windows, runtime data is stored under:
 
 ```text
 %APPDATA%\MSLauncher
@@ -67,6 +67,20 @@ You can override the root profile folder:
 
 The in-app settings panel can change the loader, RAM, Java path, and open the current profile folder.
 
+`client_mode` controls branding and project links:
+
+```json
+"client_mode": "independent",
+"social_links": {
+  "nukem": {
+    "youtube": "https://youtube.com/@nuckem?si=8B60TLzrzN8HVh98",
+    "discord": "https://discord.com/invite/P35nvXQ"
+  }
+}
+```
+
+`independent` mode is neutral and does not show project social buttons. `nukem` mode shows only non-empty links from `social_links.nukem`. Empty or disabled links are hidden. Older flat `social_links` configs are still accepted for compatibility.
+
 ## Минимальная Настройка Клиента
 
 Откройте `launcher_config.json` и в блоке `builds` укажите главный параметр `source_key`.
@@ -83,11 +97,11 @@ https://domain.com/mslauncher/build.json
 "source_key": "domain.com"
 ```
 
-MSLauncher сам скачает `build.json`, возьмет из него `manifest_url`, скачает `manifest.json`, а потом проверит и докачает файлы из `mods`, `config`, `resourcepacks`. Моды вручную в конфиг лаунчера прописывать не нужно.
+MSLaunch сам скачает `build.json`, возьмет из него `manifest_url`, скачает `manifest.json`, а потом проверит и докачает файлы из `mods`, `config`, `resourcepacks`. Моды вручную в конфиг лаунчера прописывать не нужно.
 
 ## Java Requirements
 
-MSLauncher checks Java before trying to start Minecraft. If `java_path` is empty, the launcher tries to find Java automatically from `PATH` and common Windows install folders:
+MSLaunch checks Java before trying to start Minecraft. If `java_path` is empty, the launcher tries to find Java automatically from `PATH` and common Windows install folders:
 
 - `C:\Program Files\Eclipse Adoptium`
 - `C:\Program Files\Java`
@@ -153,9 +167,9 @@ then the client config can use the short form:
 "source_key": "example.com"
 ```
 
-MSLauncher expands it to `https://example.com/mslauncher/build.json`.
+MSLaunch expands it to `https://example.com/mslauncher/build.json`.
 
-MSLauncher does not guess which mods are correct. It downloads `manifest.json`, compares local files by SHA-256, downloads missing/changed files, and removes extra mods only in managed server profiles after successful sync.
+MSLaunch does not guess which mods are correct. It downloads `manifest.json`, compares local files by SHA-256, downloads missing/changed files, and removes extra mods only in managed server profiles after successful sync.
 
 If `--base-url` is empty, `manifest.json` will be generated with empty file URLs. That is useful for local inspection, but players cannot download files until a real HTTPS base URL is set.
 
@@ -177,7 +191,7 @@ Each build can use either `manifest_url` directly or a `source_key`.
 }
 ```
 
-If `source_key` is not a full URL, MSLauncher treats it as a host and loads:
+If `source_key` is not a full URL, MSLaunch treats it as a host and loads:
 
 ```text
 https://HOST/mslauncher/build.json
