@@ -113,6 +113,7 @@ TRANSLATIONS = {
         "java_browse": "Browse",
         "skin": "Skin",
         "skin_browse": "Choose PNG",
+        "skin_invalid": "Choose a PNG skin file.",
         "skin_saved": "Skin file saved. Server support depends on server plugins.",
         "skin_empty": "No skin file selected.",
         "language": "Language",
@@ -138,7 +139,7 @@ TRANSLATIONS = {
         "update_panel_body": "Manual update only. Download the new package and replace launcher files after closing the game.",
         "status_mods_ready": "Mod files are ready.",
         "status_mods_no_sync": "This profile does not use server mod sync.",
-        "update_disabled": "Update status is not connected yet.",
+        "update_disabled": "No launcher update notice.",
         "action_motor": "Rolling!",
         "action_go": "Action!",
         "action_scene": "Scene up!",
@@ -206,6 +207,7 @@ TRANSLATIONS = {
         "java_browse": "\u041e\u0431\u0437\u043e\u0440",
         "skin": "Skin",
         "skin_browse": "\u0412\u044b\u0431\u0440\u0430\u0442\u044c PNG",
+        "skin_invalid": "\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 PNG-\u0444\u0430\u0439\u043b \u0441\u043a\u0438\u043d\u0430.",
         "skin_saved": "\u0424\u0430\u0439\u043b \u0441\u043a\u0438\u043d\u0430 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d. \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0430 \u043d\u0430 \u0441\u0435\u0440\u0432\u0435\u0440\u0435 \u0437\u0430\u0432\u0438\u0441\u0438\u0442 \u043e\u0442 server plugins.",
         "skin_empty": "\u0424\u0430\u0439\u043b \u0441\u043a\u0438\u043d\u0430 \u043d\u0435 \u0432\u044b\u0431\u0440\u0430\u043d.",
         "language": "\u042f\u0437\u044b\u043a",
@@ -231,7 +233,7 @@ TRANSLATIONS = {
         "update_panel_body": "\u0410\u0432\u0442\u043e\u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u044f \u043f\u043e\u043a\u0430 \u043d\u0435\u0442. \u0421\u043a\u0430\u0447\u0430\u0439\u0442\u0435 \u043d\u043e\u0432\u044b\u0439 \u0430\u0440\u0445\u0438\u0432 \u0438 \u0437\u0430\u043c\u0435\u043d\u0438\u0442\u0435 \u0444\u0430\u0439\u043b\u044b \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430 \u043f\u043e\u0441\u043b\u0435 \u0437\u0430\u043a\u0440\u044b\u0442\u0438\u044f \u0438\u0433\u0440\u044b.",
         "status_mods_ready": "\u0424\u0430\u0439\u043b\u044b \u043c\u043e\u0434\u043e\u0432 \u0433\u043e\u0442\u043e\u0432\u044b.",
         "status_mods_no_sync": "\u042d\u0442\u043e\u0442 \u043f\u0440\u043e\u0444\u0438\u043b\u044c \u043d\u0435 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0435\u0442 \u0441\u0435\u0440\u0432\u0435\u0440\u043d\u0443\u044e \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u044e \u043c\u043e\u0434\u043e\u0432.",
-        "update_disabled": "\u0421\u0442\u0430\u0442\u0443\u0441 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0439 \u043f\u043e\u043a\u0430 \u043d\u0435 \u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0435\u043d.",
+        "update_disabled": "\u041d\u0435\u0442 \u0443\u0432\u0435\u0434\u043e\u043c\u043b\u0435\u043d\u0438\u044f \u043e\u0431 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0438.",
         "action_motor": "\u041c\u043e\u0442\u043e\u0440!",
         "action_go": "\u041f\u043e\u0435\u0445\u0430\u043b\u0438!",
         "action_scene": "\u042d\u043a\u0448\u0435\u043d\u0430!",
@@ -1086,6 +1088,7 @@ class MSLauncherWindow(QMainWindow):
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
+        self.progress_bar.setTextVisible(False)
         self.progress_bar.setFixedHeight(8)
         self.progress_bar.setMinimumWidth(150)
 
@@ -1105,8 +1108,8 @@ class MSLauncherWindow(QMainWindow):
         action_layout = QHBoxLayout()
         action_layout.setContentsMargins(0, 0, 0, 0)
         action_layout.setSpacing(6)
-        action_layout.addWidget(self.play_button)
-        action_layout.addWidget(self.mods_button)
+        action_layout.addWidget(self.play_button, 1)
+        action_layout.addWidget(self.mods_button, 1)
 
         self.feedback_button = QPushButton()
         self.feedback_button.setObjectName("panelButton")
@@ -1840,7 +1843,7 @@ class MSLauncherWindow(QMainWindow):
 
         source_path = Path(selected_path)
         if source_path.suffix.lower() != ".png":
-            self.show_error(self.translate("skin_browse"))
+            self.show_error(self.translate("skin_invalid"))
             return
 
         profile = self.profile_manager.get_profile(self.get_selected_profile_id())
