@@ -17,6 +17,10 @@
 - [ ] Для Nukem-релиза заполнен `project_access.nukem.password_hash_sha256`, если password gate включен.
 - [ ] Для Nukem-релиза raw GitHub `source_key` открывается в браузере.
 - [ ] YouTube/Discord кнопки видны только в Nukem mode.
+- [ ] Release folder проверен: `dist\MSLauncher\MSLauncher.exe`, `assets`, `launcher_config.json`, `docs`.
+- [ ] Packaged config проверен: Nukem mode, social links, password gate, без plaintext password.
+- [ ] `.exe` был запущен smoke-style без запуска Minecraft.
+- [ ] Во время packaging check Minecraft не запускался.
 - [ ] QA sync проходит без Minecraft:
   `python tools\qa_clean_sync_flow.py`.
 - [ ] Лаунчер скачивает чистую сборку в server-профиль.

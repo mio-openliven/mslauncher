@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
+import hashlib
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -47,6 +48,24 @@ def main() -> None:
         window.refresh_social_buttons()
         assert len(window.social_buttons) == 2
         assert all(button.minimumSizeHint().width() > 0 for button in window.social_buttons)
+        window.config["project_access"] = {
+            "nukem": {
+                "password_enabled": True,
+                "password_hash_sha256": "",
+            }
+        }
+        window.show_error = lambda message: None
+        window.project_access_unlocked = False
+        assert not window.ensure_project_access()
+        window.config["project_access"]["nukem"]["password_hash_sha256"] = hashlib.sha256(
+            b"secret"
+        ).hexdigest()
+        original_get_text = gui.QInputDialog.getText
+        gui.QInputDialog.getText = lambda *args, **kwargs: ("secret", True)
+        try:
+            assert window.ensure_project_access()
+        finally:
+            gui.QInputDialog.getText = original_get_text
 
         window.info_panel_mode = "settings"
         window.refresh_info_panel()

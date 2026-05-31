@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import os
 import random
@@ -19,6 +20,7 @@ from PyQt6.QtWidgets import (
     QFrame,
     QGridLayout,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QLineEdit,
     QMainWindow,
@@ -140,6 +142,10 @@ TRANSLATIONS = {
         "status_mods_ready": "Mod files are ready.",
         "status_mods_no_sync": "This profile does not use server mod sync.",
         "update_disabled": "No launcher update notice.",
+        "access_password_prompt": "Enter project access password.",
+        "access_password_failed": "Wrong project password.",
+        "access_password_missing": "Project password hash is not configured. Ask the admin to fill password_hash_sha256.",
+        "access_granted": "Project access granted.",
         "action_motor": "Rolling!",
         "action_go": "Action!",
         "action_scene": "Scene up!",
@@ -234,6 +240,10 @@ TRANSLATIONS = {
         "status_mods_ready": "\u0424\u0430\u0439\u043b\u044b \u043c\u043e\u0434\u043e\u0432 \u0433\u043e\u0442\u043e\u0432\u044b.",
         "status_mods_no_sync": "\u042d\u0442\u043e\u0442 \u043f\u0440\u043e\u0444\u0438\u043b\u044c \u043d\u0435 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0435\u0442 \u0441\u0435\u0440\u0432\u0435\u0440\u043d\u0443\u044e \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u044e \u043c\u043e\u0434\u043e\u0432.",
         "update_disabled": "\u041d\u0435\u0442 \u0443\u0432\u0435\u0434\u043e\u043c\u043b\u0435\u043d\u0438\u044f \u043e\u0431 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0438.",
+        "access_password_prompt": "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u043f\u0430\u0440\u043e\u043b\u044c \u0434\u043e\u0441\u0442\u0443\u043f\u0430 \u043a \u043f\u0440\u043e\u0435\u043a\u0442\u0443.",
+        "access_password_failed": "\u041d\u0435\u0432\u0435\u0440\u043d\u044b\u0439 \u043f\u0430\u0440\u043e\u043b\u044c \u043f\u0440\u043e\u0435\u043a\u0442\u0430.",
+        "access_password_missing": "\u0425\u044d\u0448 \u043f\u0430\u0440\u043e\u043b\u044f \u043f\u0440\u043e\u0435\u043a\u0442\u0430 \u043d\u0435 \u0437\u0430\u0434\u0430\u043d. \u0410\u0434\u043c\u0438\u043d \u0434\u043e\u043b\u0436\u0435\u043d \u0437\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u044c password_hash_sha256.",
+        "access_granted": "\u0414\u043e\u0441\u0442\u0443\u043f \u043a \u043f\u0440\u043e\u0435\u043a\u0442\u0443 \u043e\u0442\u043a\u0440\u044b\u0442.",
         "action_motor": "\u041c\u043e\u0442\u043e\u0440!",
         "action_go": "\u041f\u043e\u0435\u0445\u0430\u043b\u0438!",
         "action_scene": "\u042d\u043a\u0448\u0435\u043d\u0430!",
@@ -901,6 +911,7 @@ class MSLauncherWindow(QMainWindow):
         self.launcher_update_notes = ""
         self.skin_path = get_config_text(self.config, "skin_path")
         self.info_panel_mode = "settings"
+        self.project_access_unlocked = False
         self.brand_subtitle_key = random.choice(self.get_brand_subtitle_keys())
         self.action_phrase_key = "play_idle"
         self.launch_after_sync = True
@@ -1196,6 +1207,7 @@ class MSLauncherWindow(QMainWindow):
             if self.client_mode == CLIENT_MODE_INDEPENDENT
             else CLIENT_MODE_INDEPENDENT
         )
+        self.project_access_unlocked = False
         self.social_links = get_social_links(self.config, self.client_mode)
         self.refresh_social_buttons()
         self.apply_translations()
@@ -1538,6 +1550,46 @@ class MSLauncherWindow(QMainWindow):
             return ""
         return str(build.get("id", "")).strip()
 
+    def get_project_access_config(self) -> dict[str, object]:
+        access_config = self.config.get("project_access")
+        if not isinstance(access_config, dict):
+            return {}
+        project_config = access_config.get(self.client_mode)
+        return project_config if isinstance(project_config, dict) else {}
+
+    def ensure_project_access(self) -> bool:
+        if self.client_mode != CLIENT_MODE_NUKEM or self.project_access_unlocked:
+            return True
+
+        access_config = self.get_project_access_config()
+        if not bool(access_config.get("password_enabled", False)):
+            return True
+
+        expected_hash = str(access_config.get("password_hash_sha256", "")).strip().lower()
+        if not expected_hash:
+            self.show_error(self.translate("access_password_missing"))
+            self.set_status("ready")
+            return False
+
+        password, accepted = QInputDialog.getText(
+            self,
+            APP_DISPLAY_NAME,
+            self.translate("access_password_prompt"),
+            QLineEdit.EchoMode.Password,
+        )
+        if not accepted:
+            return False
+
+        actual_hash = hashlib.sha256(password.encode("utf-8")).hexdigest()
+        if not hmac.compare_digest(actual_hash, expected_hash):
+            self.show_error(self.translate("access_password_failed"))
+            self.set_status("ready")
+            return False
+
+        self.project_access_unlocked = True
+        self.set_status("access_granted")
+        return True
+
     def check_mods_and_play(self) -> None:
         self.start_mod_check(launch_after_sync=True)
 
@@ -1553,6 +1605,8 @@ class MSLauncherWindow(QMainWindow):
             return
         if build is None:
             self.show_error(self.translate("empty_build"))
+            return
+        if not self.ensure_project_access():
             return
 
         self.selected_profile = self.profile_manager.get_profile(self.get_selected_profile_id())
