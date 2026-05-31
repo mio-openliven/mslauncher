@@ -331,13 +331,14 @@ class BuildConfigWorker(QThread):
     build_loaded = pyqtSignal(dict)
     error_occurred = pyqtSignal(str)
 
-    def __init__(self, build: dict[str, object]) -> None:
+    def __init__(self, build: dict[str, object], *, require_manifest: bool = False) -> None:
         super().__init__()
         self.build = build
+        self.require_manifest = require_manifest
 
     def run(self) -> None:
         try:
-            self.build_loaded.emit(resolve_build_config(self.build))
+            self.build_loaded.emit(resolve_build_config(self.build, require_manifest=self.require_manifest))
         except Exception as exc:
             self.error_occurred.emit(str(exc))
 
@@ -1268,7 +1269,7 @@ class MSLauncherWindow(QMainWindow):
 
         if self.selected_profile.server_sync_enabled:
             self.set_status("status_loading_build")
-            self.build_config_worker = BuildConfigWorker(build)
+            self.build_config_worker = BuildConfigWorker(build, require_manifest=True)
             self.build_config_worker.build_loaded.connect(self.on_build_config_loaded)
             self.build_config_worker.error_occurred.connect(self.on_build_config_failed)
             self.build_config_worker.start()

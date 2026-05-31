@@ -8,7 +8,6 @@ from url_policy import URLPolicyError, ensure_same_https_origin, normalize_https
 
 
 REMOTE_BUILD_KEYS = (
-    "id",
     "name",
     "minecraft_version",
     "loader",
@@ -23,10 +22,19 @@ class RemoteBuildConfigError(RuntimeError):
     pass
 
 
-def resolve_build_config(build: dict[str, object], *, allow_insecure_local: bool = False) -> dict[str, object]:
+def resolve_build_config(
+    build: dict[str, object],
+    *,
+    allow_insecure_local: bool = False,
+    require_manifest: bool = False,
+) -> dict[str, object]:
     source_key = str(build.get("source_key", "")).strip()
     if not source_key:
-        return validate_build_config(dict(build), allow_insecure_local=allow_insecure_local)
+        return validate_build_config(
+            dict(build),
+            allow_insecure_local=allow_insecure_local,
+            require_manifest=require_manifest,
+        )
 
     try:
         remote_url = normalize_source_key(source_key, allow_insecure_local=allow_insecure_local)
@@ -68,10 +76,19 @@ def resolve_build_config(build: dict[str, object], *, allow_insecure_local: bool
             raise RemoteBuildConfigError(f"Remote field '{key}' must be a string.")
         resolved_build[key] = value.strip()
 
-    return validate_build_config(resolved_build, allow_insecure_local=allow_insecure_local)
+    return validate_build_config(
+        resolved_build,
+        allow_insecure_local=allow_insecure_local,
+        require_manifest=require_manifest,
+    )
 
 
-def validate_build_config(build: dict[str, object], *, allow_insecure_local: bool = False) -> dict[str, object]:
+def validate_build_config(
+    build: dict[str, object],
+    *,
+    allow_insecure_local: bool = False,
+    require_manifest: bool = False,
+) -> dict[str, object]:
     normalized_build = dict(build)
     loader = str(normalized_build.get("loader", "vanilla")).strip().lower() or "vanilla"
     if loader not in ("vanilla", "fabric"):
@@ -91,6 +108,8 @@ def validate_build_config(build: dict[str, object], *, allow_insecure_local: boo
             )
         except URLPolicyError as exc:
             raise RemoteBuildConfigError(str(exc)) from exc
+    elif require_manifest:
+        raise RemoteBuildConfigError("Server build config must provide manifest_url.")
     normalized_build["manifest_url"] = manifest_url
 
     source_key = str(normalized_build.get("source_key", "")).strip()

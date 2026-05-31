@@ -12,7 +12,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from remote_config import RemoteBuildConfigError, normalize_source_key, resolve_build_config
+from remote_config import RemoteBuildConfigError, normalize_source_key, resolve_build_config, validate_build_config
 
 
 def write_text(path: Path, text: str) -> None:
@@ -45,6 +45,13 @@ def main() -> None:
     expect_error({"loader": "vanilla", "manifest_url": "ftp://example.com/manifest.json"})
     expect_error({"loader": "vanilla", "manifest_url": "http://example.com/manifest.json"})
     expect_error({"loader": "vanilla", "port": "99999"})
+    validate_build_config({"loader": "vanilla", "manifest_url": ""})
+    try:
+        validate_build_config({"loader": "vanilla", "manifest_url": ""}, require_manifest=True)
+    except RemoteBuildConfigError:
+        pass
+    else:
+        raise AssertionError("Expected RemoteBuildConfigError for required manifest.")
 
     with tempfile.TemporaryDirectory() as temp_root:
         server_path = Path(temp_root)
@@ -52,6 +59,7 @@ def main() -> None:
             server_path / "valid.json",
             json.dumps(
                 {
+                    "id": "remote-id-must-not-win",
                     "name": "Remote",
                     "minecraft_version": "1.20.1",
                     "loader": "fabric",
@@ -62,6 +70,7 @@ def main() -> None:
                 ensure_ascii=False,
             ),
         )
+        write_text(server_path / "empty-manifest.json", json.dumps({"manifest_url": ""}))
         write_text(server_path / "bad-json.json", "{")
         write_text(server_path / "array.json", "[]")
         write_text(server_path / "bad-loader.json", json.dumps({"loader": "forge"}))
@@ -73,9 +82,29 @@ def main() -> None:
                 {"id": "main", "source_key": f"{base_url}/valid.json"},
                 allow_insecure_local=True,
             )
+            assert build["id"] == "main"
             assert build["name"] == "Remote"
             assert build["loader"] == "fabric"
             assert build["port"] == "25565"
+            assert build["manifest_url"] == "https://example.com/manifest.json"
+
+            required_build = resolve_build_config(
+                {"id": "main", "source_key": f"{base_url}/valid.json"},
+                allow_insecure_local=True,
+                require_manifest=True,
+            )
+            assert required_build["manifest_url"] == "https://example.com/manifest.json"
+
+            try:
+                resolve_build_config(
+                    {"id": "main", "source_key": f"{base_url}/empty-manifest.json"},
+                    allow_insecure_local=True,
+                    require_manifest=True,
+                )
+            except RemoteBuildConfigError:
+                pass
+            else:
+                raise AssertionError("Expected RemoteBuildConfigError for remote empty manifest.")
 
             for path in ("missing.json", "bad-json.json", "array.json", "bad-loader.json", "bad-type.json"):
                 try:

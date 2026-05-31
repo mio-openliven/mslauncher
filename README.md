@@ -67,6 +67,24 @@ You can override the root profile folder:
 
 The in-app settings panel can change the loader, RAM, Java path, and open the current profile folder.
 
+## Минимальная Настройка Клиента
+
+Откройте `launcher_config.json` и в блоке `builds` укажите главный параметр `source_key`.
+
+Если серверная папка доступна так:
+
+```text
+https://domain.com/mslauncher/build.json
+```
+
+то в конфиге достаточно написать:
+
+```json
+"source_key": "domain.com"
+```
+
+MSLauncher сам скачает `build.json`, возьмет из него `manifest_url`, скачает `manifest.json`, а потом проверит и докачает файлы из `mods`, `config`, `resourcepacks`. Моды вручную в конфиг лаунчера прописывать не нужно.
+
 ## Java Requirements
 
 MSLauncher checks Java before trying to start Minecraft. If `java_path` is empty, the launcher tries to find Java automatically from `PATH` and common Windows install folders:
