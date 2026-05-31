@@ -250,13 +250,14 @@ python tools\smoke_test_remote_server_contract.py
 python tools\smoke_test_release_package.py
 python tools\smoke_test_manifest_validator.py
 python tools\smoke_test_url_security.py
+python tools\smoke_test_user_errors.py
 python tools\smoke_test_crash_advisor.py
 python tools\smoke_test_crash_logs.py
 python tools\smoke_test_launch_worker_lifecycle.py
 python tools\smoke_test_app_paths.py
 ```
 
-The sync smoke test starts a local temporary HTTP server in explicit test mode and checks the `source_key -> manifest -> sync -> download` flow. The safe sync smoke test checks staging, managed markers, and no data loss on failed downloads. The QA clean sync flow checks a clean server pack download, managed extra-mod deletion, bad hashes, missing files, missing manifest, and empty server manifest handling without launching Minecraft or opening the GUI. The profile smoke test checks isolated launcher folders. The build packaging smoke test checks PyInstaller spec/script release wiring. The generate manifest smoke test checks admin manifest/build generation and URL encoding. The settings smoke test checks loader, RAM, and Java path validation. The Java diagnostics smoke test checks Minecraft/Fabric Java requirements. The remote config smoke test checks invalid JSON, HTTP errors, and bad remote build fields. The remote server contract smoke test checks the `mslauncher/build.json + manifest.json + mods/config/resourcepacks` URL contract. The release package smoke test checks client release templates/docs. The manifest validator smoke test checks unsafe paths, hashes, URLs, and sizes. The URL security smoke test checks HTTPS-only production policy. The crash advisor smoke test checks player-friendly crash hints. The app paths smoke test checks source and packaged path resolution.
+The sync smoke test starts a local temporary HTTP server in explicit test mode and checks the `source_key -> manifest -> sync -> download` flow. The safe sync smoke test checks staging, managed markers, and no data loss on failed downloads. The QA clean sync flow checks a clean server pack download, managed extra-mod deletion, bad hashes, missing files, missing manifest, and empty server manifest handling without launching Minecraft or opening the GUI. The profile smoke test checks isolated launcher folders. The build packaging smoke test checks PyInstaller spec/script release wiring. The generate manifest smoke test checks admin manifest/build generation and URL encoding. The settings smoke test checks loader, RAM, and Java path validation. The Java diagnostics smoke test checks Minecraft/Fabric Java requirements. The user errors smoke test checks player-friendly Java, HTTPS, hash, manifest, and technical report messages. The remote config smoke test checks invalid JSON, HTTP errors, and bad remote build fields. The remote server contract smoke test checks the `mslauncher/build.json + manifest.json + mods/config/resourcepacks` URL contract. The release package smoke test checks client release templates/docs. The manifest validator smoke test checks unsafe paths, hashes, URLs, and sizes. The URL security smoke test checks HTTPS-only production policy. The crash advisor smoke test checks player-friendly crash hints. The app paths smoke test checks source and packaged path resolution.
 
 ## Release Checklist
 
@@ -265,6 +266,7 @@ The sync smoke test starts a local temporary HTTP server in explicit test mode a
 - Verify Java auto-detection and the missing-Java error message.
 - Verify successful server sync.
 - Run `python tools\qa_clean_sync_flow.py`; it does not launch Minecraft and checks only server pack/config sync.
+- Verify no-internet/source_key failure shows a short message and writes a technical report.
 - Verify failed network sync leaves existing files untouched.
 - Verify hash mismatch leaves existing files untouched.
 - Verify Fabric launch for the target Minecraft version.

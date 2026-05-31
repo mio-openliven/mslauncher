@@ -43,6 +43,7 @@ from manifest_validator import normalize_download_url, normalize_manifest_path
 from profile_manager import LauncherProfile, LauncherProfileManager, PROFILE_IDS, PROFILE_SERVER
 from remote_config import resolve_build_config
 from settings_validator import LaunchSettingsError, validate_launch_settings
+from user_error_messages import explain_user_error, write_error_report
 
 
 CONFIG_FILE = ensure_user_config()
@@ -76,7 +77,9 @@ TRANSLATIONS = {
         "open_profile": "Open profile folder",
         "open_game": "Open profiles root",
         "open_crash_reports": "Open crash reports",
+        "open_error_report": "Open logs",
         "crash_panel_title": "Minecraft crashed",
+        "error_panel_title": "Last launcher error",
         "loader": "Loader",
         "memory_min": "Min RAM",
         "memory_max": "Max RAM",
@@ -129,6 +132,7 @@ TRANSLATIONS = {
         "close_game": "Close game",
         "cancel_close": "Cancel",
         "launch_report_saved": "Technical report saved here: {path}",
+        "error_report_saved": "Technical report saved here: {path}",
         "hash_failed": "Downloaded file checksum mismatch: {file}",
         "crash_title": "Minecraft crashed",
     },
@@ -145,7 +149,9 @@ TRANSLATIONS = {
         "open_profile": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u043f\u0430\u043f\u043a\u0443 \u043f\u0440\u043e\u0444\u0438\u043b\u044f",
         "open_game": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u043a\u043e\u0440\u0435\u043d\u044c \u043f\u0440\u043e\u0444\u0438\u043b\u0435\u0439",
         "open_crash_reports": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c crash-reports",
+        "open_error_report": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u043e\u0442\u0447\u0435\u0442\u044b",
         "crash_panel_title": "Minecraft \u0432\u044b\u043b\u0435\u0442\u0435\u043b",
+        "error_panel_title": "\u041f\u043e\u0441\u043b\u0435\u0434\u043d\u044f\u044f \u043e\u0448\u0438\u0431\u043a\u0430 \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430",
         "loader": "\u0417\u0430\u0433\u0440\u0443\u0437\u0447\u0438\u043a",
         "memory_min": "\u041c\u0438\u043d. RAM",
         "memory_max": "\u041c\u0430\u043a\u0441. RAM",
@@ -198,6 +204,7 @@ TRANSLATIONS = {
         "close_game": "\u0417\u0430\u043a\u0440\u044b\u0442\u044c \u0438\u0433\u0440\u0443",
         "cancel_close": "\u041e\u0442\u043c\u0435\u043d\u0430",
         "launch_report_saved": "\u0422\u0435\u0445\u043d\u0438\u0447\u0435\u0441\u043a\u0438\u0439 report \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d \u0437\u0434\u0435\u0441\u044c: {path}",
+        "error_report_saved": "\u0422\u0435\u0445\u043d\u0438\u0447\u0435\u0441\u043a\u0438\u0439 report \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d \u0437\u0434\u0435\u0441\u044c: {path}",
         "hash_failed": "\u0425\u044d\u0448 \u0441\u043a\u0430\u0447\u0430\u043d\u043d\u043e\u0433\u043e \u0444\u0430\u0439\u043b\u0430 \u043d\u0435 \u0441\u043e\u0432\u043f\u0430\u043b: {file}",
         "crash_title": "Minecraft \u0432\u044b\u043b\u0435\u0442\u0435\u043b",
     },
@@ -748,6 +755,8 @@ class MSLauncherWindow(QMainWindow):
         self.selected_launch_options: dict[str, object] = {}
         self.last_crash_reason = ""
         self.last_crash_report_path: Path | None = None
+        self.last_error_message = ""
+        self.last_error_report_path: Path | None = None
         self.info_panel_mode = "settings"
         self.brand_subtitle_key = random.choice(self.get_brand_subtitle_keys())
         self.action_phrase_key = "play_idle"
@@ -980,6 +989,7 @@ class MSLauncherWindow(QMainWindow):
         self.open_profile_button.setText(self.translate("open_profile"))
         self.open_game_button.setText(self.translate("open_game"))
         self.open_crash_reports_button.setText(self.translate("open_crash_reports"))
+        self.refresh_info_panel()
         self.loader_setting_label.setText(self.translate("loader"))
         self.memory_min_label.setText(self.translate("memory_min"))
         self.memory_max_label.setText(self.translate("memory_max"))
@@ -1221,7 +1231,9 @@ class MSLauncherWindow(QMainWindow):
 
     def on_versions_failed(self, error: str) -> None:
         self.version_combo.setEnabled(True)
-        self.show_error(self.translate("versions_failed", error=error))
+        user_error = explain_user_error(error, language=self.language, context="versions")
+        report_path = self.write_launcher_error_report(user_error, error, "versions")
+        self.show_error(self.with_report_path(self.translate("versions_failed", error=user_error), report_path))
         self.set_status("ready")
 
     def on_build_changed(self) -> None:
@@ -1303,7 +1315,13 @@ class MSLauncherWindow(QMainWindow):
         self.selected_manifest_url = manifest_url
         if requires_server_manifest(self.selected_profile, manifest_url):
             self.reset_play_button()
-            self.show_error(self.translate("server_manifest_required"))
+            user_error = explain_user_error(
+                "Server profile needs manifest_url or source_key before launch.",
+                language=self.language,
+                context="server_manifest",
+            )
+            report_path = self.write_launcher_error_report(user_error, "Missing manifest_url/source_key.", "server_manifest")
+            self.show_error(self.with_report_path(self.translate("server_manifest_required"), report_path))
             self.set_status("ready")
             return
 
@@ -1311,7 +1329,9 @@ class MSLauncherWindow(QMainWindow):
             self.selected_launch_options = self.build_launch_options(resolved_build)
         except LaunchSettingsError as exc:
             self.reset_play_button()
-            self.show_error(self.translate("settings_failed", error=str(exc)))
+            user_error = explain_user_error(exc, language=self.language, context="settings")
+            report_path = self.write_launcher_error_report(user_error, str(exc), "settings")
+            self.show_error(self.with_report_path(self.translate("settings_failed", error=user_error), report_path))
             self.set_status("ready")
             return
 
@@ -1336,7 +1356,9 @@ class MSLauncherWindow(QMainWindow):
         self.play_button.setEnabled(True)
         self.action_phrase_key = "play_idle"
         self.play_button.setText(self.translate(self.action_phrase_key))
-        self.show_error(self.translate("build_config_failed", error=error))
+        user_error = explain_user_error(error, language=self.language, context="build_config")
+        report_path = self.write_launcher_error_report(user_error, error, "build_config")
+        self.show_error(self.with_report_path(self.translate("build_config_failed", error=user_error), report_path))
         self.set_status("ready")
 
     def launch_game(self) -> None:
@@ -1358,7 +1380,9 @@ class MSLauncherWindow(QMainWindow):
         self.play_button.setEnabled(True)
         self.action_phrase_key = "play_idle"
         self.play_button.setText(self.translate(self.action_phrase_key))
-        self.show_error(self.translate(error_key, error=error))
+        user_error = explain_user_error(error, language=self.language, context=error_key)
+        report_path = self.write_launcher_error_report(user_error, error, error_key)
+        self.show_error(self.with_report_path(self.translate(error_key, error=user_error), report_path))
         self.set_status("ready")
 
     def toggle_info_panel(self) -> None:
@@ -1374,12 +1398,21 @@ class MSLauncherWindow(QMainWindow):
         if self.info_panel_mode == "crash" and self.last_crash_reason:
             self.info_title_label.setText(self.translate("crash_panel_title"))
             self.info_body_label.setText(self.last_crash_reason)
+            self.open_crash_reports_button.setText(self.translate("open_crash_reports"))
+            self.open_crash_reports_button.show()
+            return
+
+        if self.info_panel_mode == "error" and self.last_error_message:
+            self.info_title_label.setText(self.translate("error_panel_title"))
+            self.info_body_label.setText(self.last_error_message)
+            self.open_crash_reports_button.setText(self.translate("open_error_report"))
             self.open_crash_reports_button.show()
             return
 
         self.info_panel_mode = "settings"
         self.info_title_label.setText(self.translate("settings_title"))
         self.info_body_label.setText(self.translate("settings_body"))
+        self.open_crash_reports_button.setText(self.translate("open_crash_reports"))
         self.open_crash_reports_button.hide()
 
     def open_current_profile_folder(self) -> None:
@@ -1391,6 +1424,10 @@ class MSLauncherWindow(QMainWindow):
         self.open_folder(self.profile_manager.base_directory)
 
     def open_crash_reports_folder(self) -> None:
+        if self.info_panel_mode == "error" and self.last_error_report_path is not None:
+            self.open_folder(self.last_error_report_path.parent)
+            return
+
         profile = self.profile_manager.get_profile(self.get_selected_profile_id())
         crash_reports_path = profile.directory / "crash-reports"
         if not crash_reports_path.exists():
@@ -1419,11 +1456,9 @@ class MSLauncherWindow(QMainWindow):
         self.play_button.setEnabled(True)
         self.action_phrase_key = "play_idle"
         self.play_button.setText(self.translate(self.action_phrase_key))
-        report_path = self.write_launcher_crash_report(technical_report or error, "mslauncher-launch-error.txt")
-        message = self.translate("launch_failed", error=error)
-        if report_path is not None:
-            message = f"{message}\n\n{self.translate('launch_report_saved', path=report_path)}"
-        self.show_error(message)
+        user_error = explain_user_error(error, language=self.language, context="launch")
+        report_path = self.write_launcher_error_report(user_error, technical_report or error, "launch")
+        self.show_error(self.with_report_path(self.translate("launch_failed", error=user_error), report_path))
         self.set_status("ready")
 
     def on_game_crashed(self, crash_reason: str) -> None:
@@ -1449,6 +1484,32 @@ class MSLauncherWindow(QMainWindow):
             return report_path
         except OSError:
             return None
+
+    def write_launcher_error_report(self, user_message: str, technical_details: str, context: str) -> Path | None:
+        try:
+            profile = self.profile_manager.get_profile(self.get_selected_profile_id())
+            report_path = write_error_report(
+                technical_details,
+                user_message=user_message,
+                context=context,
+                base_directory=profile.directory,
+            )
+        except OSError:
+            return None
+
+        self.last_error_message = user_message
+        self.last_error_report_path = report_path
+        self.info_panel_mode = "error"
+        self.refresh_info_panel()
+        self.info_panel.show()
+        for button in self.social_buttons:
+            button.show()
+        return report_path
+
+    def with_report_path(self, message: str, report_path: Path | None) -> str:
+        if report_path is None:
+            return message
+        return f"{message}\n\n{self.translate('error_report_saved', path=report_path)}"
 
     def on_game_closed(self) -> None:
         self.play_button.setEnabled(True)
@@ -1509,7 +1570,9 @@ class MSLauncherWindow(QMainWindow):
         try:
             self.config["launch"] = self.get_current_launch_settings()
         except LaunchSettingsError as exc:
-            self.set_status_text(self.translate("settings_failed", error=exc))
+            user_error = explain_user_error(exc, language=self.language, context="settings")
+            self.write_launcher_error_report(user_error, str(exc), "settings")
+            self.set_status_text(self.translate("settings_failed", error=user_error))
 
         self.config["default_language"] = self.language
         self.config["default_username"] = self.username_input.text().strip()
@@ -1521,7 +1584,9 @@ class MSLauncherWindow(QMainWindow):
         try:
             save_launcher_config(self.config)
         except OSError as exc:
-            message = self.translate("config_save_failed", error=exc)
+            user_error = explain_user_error(exc, language=self.language, context="config_save")
+            report_path = self.write_launcher_error_report(user_error, str(exc), "config_save")
+            message = self.with_report_path(self.translate("config_save_failed", error=user_error), report_path)
             self.set_status_text(message)
             if self.isVisible():
                 self.show_error(message)
@@ -1529,7 +1594,13 @@ class MSLauncherWindow(QMainWindow):
     def show_config_repair_warning_if_needed(self) -> None:
         backup_path = CONFIG_LOAD_WARNING or get_last_config_backup_path()
         if backup_path:
-            self.show_error(self.translate("config_repaired", path=backup_path))
+            user_error = explain_user_error("Damaged launcher_config.json", language=self.language, context="config_load")
+            report_path = self.write_launcher_error_report(
+                user_error,
+                f"Config backup created: {backup_path}",
+                "config_load",
+            )
+            self.show_error(self.with_report_path(self.translate("config_repaired", path=backup_path), report_path))
 
     def closeEvent(self, event) -> None:
         if self.launch_worker is not None and self.launch_worker.isRunning() and self.engine.is_game_process_running():
