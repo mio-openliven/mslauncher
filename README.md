@@ -169,6 +169,26 @@ then the client config can use the short form:
 
 MSLaunch expands it to `https://example.com/mslauncher/build.json`.
 
+## Inspect Unknown Client Archive
+
+If a client sends a modpack archive without the Minecraft version or loader, inspect it before touching `server_pack`:
+
+```powershell
+python tools\inspect_client_pack.py --archive "C:\Users\Li2Fox\Downloads\mods.rar" --output release\client_pack_report.md
+```
+
+The tool only reads and extracts the archive into a temporary folder. It does not run Minecraft and does not execute `.jar` files.
+
+Optional copy into `server_pack`:
+
+```powershell
+python tools\inspect_client_pack.py --archive "C:\Users\Li2Fox\Downloads\mods.rar" --output release\client_pack_report.md --extract-to server_pack
+```
+
+Use `--clean` only when you intentionally want to replace `server_pack\mods`, `server_pack\config`, and `server_pack\resourcepacks`.
+
+If `.rar` cannot be opened, install 7-Zip/WinRAR/UnRAR or ask the client to send `.zip`. If the report says loader/version is unknown, ask the client for the exact Minecraft version and loader before generating `manifest.json`.
+
 ## GitHub Modpack Hosting
 
 For client projects, use a separate public GitHub repository that contains only the modpack files:
@@ -305,7 +325,7 @@ python tools\smoke_test_launch_worker_lifecycle.py
 python tools\smoke_test_app_paths.py
 ```
 
-The sync smoke test starts a local temporary HTTP server in explicit test mode and checks the `source_key -> manifest -> sync -> download` flow. The safe sync smoke test checks staging, managed markers, and no data loss on failed downloads. The QA clean sync flow checks a clean server pack download, managed extra-mod deletion, bad hashes, missing files, missing manifest, and empty server manifest handling without launching Minecraft or opening the GUI. The profile smoke test checks isolated launcher folders. The build packaging smoke test checks PyInstaller spec/script release wiring. The generate manifest smoke test checks admin manifest/build generation and URL encoding. The settings smoke test checks loader, RAM, and Java path validation. The Java diagnostics smoke test checks Minecraft/Fabric Java requirements. The user errors smoke test checks player-friendly Java, HTTPS, hash, manifest, and technical report messages. The remote config smoke test checks invalid JSON, HTTP errors, and bad remote build fields. The remote server contract smoke test checks the `mslauncher/build.json + manifest.json + mods/config/resourcepacks` URL contract. The release package smoke test checks client release templates/docs. The manifest validator smoke test checks unsafe paths, hashes, URLs, and sizes. The URL security smoke test checks HTTPS-only production policy. The crash advisor smoke test checks player-friendly crash hints. The app paths smoke test checks source and packaged path resolution.
+The sync smoke test starts a local temporary HTTP server in explicit test mode and checks the `source_key -> manifest -> sync -> download` flow. The safe sync smoke test checks staging, managed markers, and no data loss on failed downloads. The QA clean sync flow checks a clean server pack download, managed extra-mod deletion, bad hashes, missing files, missing manifest, and empty server manifest handling without launching Minecraft or opening the GUI. The profile smoke test checks isolated launcher folders. The build packaging smoke test checks PyInstaller spec/script release wiring. The generate manifest smoke test checks admin manifest/build generation and URL encoding. The client pack inspector smoke test checks safe archive inspection, loader guesses, traversal rejection, and reports. The settings smoke test checks loader, RAM, and Java path validation. The Java diagnostics smoke test checks Minecraft/Fabric Java requirements. The user errors smoke test checks player-friendly Java, HTTPS, hash, manifest, and technical report messages. The remote config smoke test checks invalid JSON, HTTP errors, and bad remote build fields. The remote server contract smoke test checks the `mslauncher/build.json + manifest.json + mods/config/resourcepacks` URL contract. The release package smoke test checks client release templates/docs. The manifest validator smoke test checks unsafe paths, hashes, URLs, and sizes. The URL security smoke test checks HTTPS-only production policy. The crash advisor smoke test checks player-friendly crash hints. The app paths smoke test checks source and packaged path resolution.
 
 ## Release Checklist
 

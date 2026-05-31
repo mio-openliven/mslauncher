@@ -34,6 +34,32 @@ server_pack/
 
 После каждого изменения файлов сборки команду генерации нужно запускать заново.
 
+## Если клиент прислал архив без версии
+
+Сначала проанализируйте архив, не копируя его в `server_pack`:
+
+```powershell
+python tools\inspect_client_pack.py --archive "C:\Users\Li2Fox\Downloads\mods.rar" --output release\client_pack_report.md
+```
+
+Инструмент не запускает Minecraft и не исполняет `.jar`. Он только распаковывает архив во временную папку и читает metadata модов.
+
+Если нужно аккуратно перенести найденные `mods`, `config`, `resourcepacks` в `server_pack`:
+
+```powershell
+python tools\inspect_client_pack.py --archive "C:\Users\Li2Fox\Downloads\mods.rar" --output release\client_pack_report.md --extract-to server_pack
+```
+
+Флаг `--clean` используйте только если специально хотите очистить `server_pack/mods`, `server_pack/config`, `server_pack/resourcepacks` перед копированием.
+
+Если `.rar` не открылся, установите 7-Zip/WinRAR/UnRAR или попросите клиента прислать `.zip`.
+
+Если версия или loader остались `unknown`, спросите у клиента:
+
+- точную версию Minecraft;
+- loader: Fabric, Forge, NeoForge или vanilla;
+- нужен ли Fabric API.
+
 ## Команда генерации
 
 Пример:

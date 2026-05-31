@@ -8,6 +8,7 @@
 - [ ] Сервер открывает `https://.../mslauncher/build.json`.
 - [ ] `manifest.json` открывается в браузере.
 - [ ] Все файлы из `manifest.json` скачиваются по HTTPS.
+- [ ] Если клиент прислал архив без версии, создан `release\client_pack_report.md` через `python tools\inspect_client_pack.py`.
 - [ ] QA sync проходит без Minecraft:
   `python tools\qa_clean_sync_flow.py`.
 - [ ] Лаунчер скачивает чистую сборку в server-профиль.
