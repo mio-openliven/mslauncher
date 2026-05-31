@@ -32,10 +32,21 @@ def main() -> None:
         app.processEvents()
         assert window.width() >= 960
         assert window.height() >= 520
+        assert window.info_panel_mode == "status"
+        assert all(not row.isHidden() for row in window.status_rows)
+        window.show_success_status_card()
+        assert window.info_panel_mode == "status"
+        assert all(not row.isHidden() for row in window.status_rows)
+        window.info_panel_mode = "feedback"
+        window.refresh_info_panel()
+        assert all(row.isHidden() for row in window.status_rows)
         window.client_mode = gui.CLIENT_MODE_INDEPENDENT
         window.social_links = gui.get_social_links(window.config, window.client_mode)
+        window.refresh_project_backgrounds()
         window.refresh_social_buttons()
         assert not window.social_buttons
+        assert window.get_mods_action_key() == "game_folder"
+        assert not window.hero_frame._slideshow_enabled
 
         window.config["social_links"] = {
             "nukem": {
@@ -45,9 +56,13 @@ def main() -> None:
         }
         window.client_mode = gui.CLIENT_MODE_NUKEM
         window.social_links = gui.get_social_links(window.config, window.client_mode)
+        window.refresh_project_backgrounds()
         window.refresh_social_buttons()
         assert len(window.social_buttons) == 2
         assert all(button.minimumSizeHint().width() > 0 for button in window.social_buttons)
+        assert window.get_mods_action_key() == "download_mods"
+        assert len(window.get_project_background_paths()) == 6
+        assert window.hero_frame._slideshow_enabled
         window.config["project_access"] = {
             "nukem": {
                 "password_enabled": True,

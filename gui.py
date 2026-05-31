@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import math
 import os
 import random
 import shutil
@@ -12,10 +13,11 @@ import traceback
 from pathlib import Path
 
 import requests
-from PyQt6.QtCore import QSize, QTimer, QThread, Qt, QUrl, pyqtSignal
-from PyQt6.QtGui import QColor, QCursor, QDesktopServices, QIcon, QPainter, QPixmap
+from PyQt6.QtCore import QPointF, QSize, QTimer, QThread, Qt, QUrl, pyqtSignal
+from PyQt6.QtGui import QColor, QCursor, QDesktopServices, QIcon, QPainter, QPainterPath, QPen, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
+    QButtonGroup,
     QComboBox,
     QFrame,
     QGridLayout,
@@ -57,6 +59,8 @@ DOWNLOAD_RETRIES = 3
 REQUEST_TIMEOUT = 60
 BACKGROUND_DIR = get_asset_path("backgrounds")
 ICON_DIR = get_asset_path("icons")
+PROJECT_ICON_DIR = get_asset_path("project_icons")
+APP_ICON_PATH = get_asset_path("app_icon.ico")
 BACKGROUND_FILES = (
     "bg_01.jpg",
     "bg_02.jpg",
@@ -65,15 +69,32 @@ BACKGROUND_FILES = (
     "bg_05.jpg",
     "bg_06.jpg",
 )
+NUKEM_BACKGROUND_DIR = BACKGROUND_DIR / "nukem"
+NUKEM_BACKGROUND_FILES = (
+    "nukem_01_winter.jpg",
+    "nukem_02_island.jpg",
+    "nukem_03_city.jpg",
+    "nukem_04_road.jpg",
+    "nukem_05_river.jpg",
+    "nukem_06_village.jpg",
+)
 CLIENT_MODE_INDEPENDENT = "independent"
 CLIENT_MODE_NUKEM = "nukem"
 CLIENT_MODES = (CLIENT_MODE_INDEPENDENT, CLIENT_MODE_NUKEM)
+PROJECT_ICON_FILES = {
+    CLIENT_MODE_INDEPENDENT: "mslaunch.png",
+    CLIENT_MODE_NUKEM: "nukem.png",
+    "vibecraft": "vibecraft.png",
+}
 SOCIAL_ICON_NAMES = {
     "discord": "discord",
     "telegram": "telegram",
     "youtube": "youtube",
     "instagram": "instagram",
     "tiktok": "tiktok",
+    "vk": "vk",
+    "vk_group": "vk",
+    "rutube": "rutube",
     "website": "link",
     "link": "link",
 }
@@ -83,17 +104,28 @@ SOCIAL_FALLBACK_LABELS = {
     "youtube": "YT",
     "instagram": "IN",
     "tiktok": "TT",
+    "vk": "VK",
+    "vk_group": "VK",
+    "rutube": "RT",
     "website": "WB",
     "link": "WB",
+}
+
+DEFAULT_NUKEM_SOCIAL_LINKS = {
+    "youtube": "https://www.youtube.com/@Nuckem",
+    "discord": "https://discord.gg/P35nvXQ",
+    "vk": "https://vk.com/belchak",
+    "vk_group": "https://vk.com/nuckem_garage",
+    "rutube": "https://rutube.ru/channel/64641198",
 }
 
 
 TRANSLATIONS = {
     "EN": {
         "app_title": APP_DISPLAY_NAME,
-        "brand_title": f"{APP_DISPLAY_NAME} {APP_VERSION}",
-        "brand_credit": "Independent modpack launcher",
-        "brand_credit_nukem": "Software by Nukem coders",
+        "brand_title": APP_DISPLAY_NAME,
+        "brand_credit": f"Beta {APP_VERSION} independent launcher",
+        "brand_credit_nukem": f"Beta {APP_VERSION} for MS Nuckem",
         "brand_subtitle_project": "Project entry point",
         "brand_subtitle_crew": "Built for the crew",
         "brand_subtitle_places": "Everything in its place",
@@ -126,16 +158,27 @@ TRANSLATIONS = {
         "profile_personal": "Personal",
         "profile_other": "Other",
         "build": "Build",
-        "username": "Nickname",
-        "version": "Minecraft version",
+        "username": "Nick",
+        "version": "Version",
         "play": "Play",
         "mods": "Mods",
         "play_idle": "Play",
         "mods_idle": "Mods",
+        "game_folder": "Game Folder",
+        "download_mods": "Download Mods",
         "feedback_ok": "Everything OK?",
         "feedback_problem": "Click if there is a problem",
+        "feedback_card_title": "Problems?",
+        "feedback_card_body": "Report a bug or open logs if something does not launch cleanly.",
+        "report_bug": "Report a bug",
+        "support_offline": "Could not open the report page. Open logs and send the latest report to the admin.",
         "feedback_panel_title": "Need help?",
         "feedback_panel_body": "If something broke, open the reports folder and send the latest report to the server admin.",
+        "status_card_mods": "Mods ready",
+        "status_card_mods_body": "Files checked successfully.",
+        "status_card_fabric": "Fabric OK",
+        "status_card_java": "Java OK",
+        "runtime_auto": "Runtime auto",
         "update_available": "Launcher update available: {version}",
         "download_update": "Download update",
         "update_panel_body": "Manual update only. Download the new package and replace launcher files after closing the game.",
@@ -143,7 +186,7 @@ TRANSLATIONS = {
         "status_mods_no_sync": "This profile does not use server mod sync.",
         "update_disabled": "No launcher update notice.",
         "access_password_prompt": "Enter project access password.",
-        "access_password_failed": "Wrong project password.",
+        "access_password_failed": "You do not know the current project password. Ask the Nukem admin for the details.",
         "access_password_missing": "Project password hash is not configured. Ask the admin to fill password_hash_sha256.",
         "access_granted": "Project access granted.",
         "action_motor": "Rolling!",
@@ -189,9 +232,9 @@ TRANSLATIONS = {
     },
     "RU": {
         "app_title": APP_DISPLAY_NAME,
-        "brand_title": f"{APP_DISPLAY_NAME} {APP_VERSION}",
-        "brand_credit": "\u041d\u0435\u0437\u0430\u0432\u0438\u0441\u0438\u043c\u044b\u0439 \u043b\u0430\u0443\u043d\u0447\u0435\u0440 \u0441\u0431\u043e\u0440\u043e\u043a",
-        "brand_credit_nukem": "\u0421\u043e\u0444\u0442 \u043e\u0442 \u043a\u043e\u0434\u0435\u0440\u043e\u0432 \u041d\u044e\u043a\u0435\u043c\u0430",
+        "brand_title": APP_DISPLAY_NAME,
+        "brand_credit": f"Beta {APP_VERSION} MSLaunch",
+        "brand_credit_nukem": f"Beta {APP_VERSION} MS Nuckem",
         "brand_subtitle_project": "\u0422\u043e\u0447\u043a\u0430 \u0432\u0445\u043e\u0434\u0430 \u0432 \u043f\u0440\u043e\u0435\u043a\u0442",
         "brand_subtitle_crew": "\u0421\u043e\u0431\u0440\u0430\u043d\u043e \u0434\u043b\u044f \u0441\u0432\u043e\u0435\u0439 \u043a\u043e\u043c\u0430\u043d\u0434\u044b",
         "brand_subtitle_places": "\u0412\u0441\u0435 \u043d\u0430 \u0441\u0432\u043e\u0438\u0445 \u043c\u0435\u0441\u0442\u0430\u0445",
@@ -224,16 +267,27 @@ TRANSLATIONS = {
         "profile_personal": "\u041b\u0438\u0447\u043d\u044b\u0435",
         "profile_other": "\u0414\u0440\u0443\u0433\u043e\u0435",
         "build": "\u0421\u0431\u043e\u0440\u043a\u0430",
-        "username": "\u041d\u0438\u043a\u043d\u0435\u0439\u043c",
-        "version": "\u0412\u0435\u0440\u0441\u0438\u044f Minecraft",
+        "username": "\u041d\u0438\u043a",
+        "version": "\u0412\u0435\u0440\u0441\u0438\u044f",
         "play": "\u0418\u0433\u0440\u0430\u0442\u044c",
         "mods": "\u041c\u043e\u0434\u044b",
         "play_idle": "\u0418\u0433\u0440\u0430\u0442\u044c",
         "mods_idle": "\u041c\u043e\u0434\u044b",
+        "game_folder": "\u041f\u0430\u043f\u043a\u0430 \u0438\u0433\u0440\u044b",
+        "download_mods": "\u0421\u043a\u0430\u0447\u0430\u0442\u044c \u043c\u043e\u0434\u044b",
         "feedback_ok": "\u0412\u0441\u0435 \u043e\u043a?",
         "feedback_problem": "\u041d\u0430\u0436\u043c\u0438, \u0435\u0441\u043b\u0438 \u043f\u0440\u043e\u0431\u043b\u0435\u043c\u0430",
+        "feedback_card_title": "\u041f\u0440\u043e\u0431\u043b\u0435\u043c\u044b?",
+        "feedback_card_body": "\u0421\u043e\u043e\u0431\u0449\u0438\u0442\u0435 \u043e \u0431\u0430\u0433\u0435 \u0438\u043b\u0438 \u043e\u0442\u043a\u0440\u043e\u0439\u0442\u0435 \u043e\u0442\u0447\u0435\u0442\u044b, \u0435\u0441\u043b\u0438 \u0447\u0442\u043e-\u0442\u043e \u043d\u0435 \u0437\u0430\u043f\u0443\u0441\u043a\u0430\u0435\u0442\u0441\u044f.",
+        "report_bug": "\u0421\u043e\u043e\u0431\u0449\u0438\u0442\u044c \u043e \u0431\u0430\u0433\u0435",
+        "support_offline": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043a\u0440\u044b\u0442\u044c \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0443 report. \u041e\u0442\u043a\u0440\u043e\u0439\u0442\u0435 \u043e\u0442\u0447\u0435\u0442\u044b \u0438 \u043e\u0442\u043f\u0440\u0430\u0432\u044c\u0442\u0435 \u0441\u0432\u0435\u0436\u0438\u0439 report \u0430\u0434\u043c\u0438\u043d\u0443.",
         "feedback_panel_title": "\u041d\u0443\u0436\u043d\u0430 \u043f\u043e\u043c\u043e\u0449\u044c?",
         "feedback_panel_body": "\u0415\u0441\u043b\u0438 \u0447\u0442\u043e-\u0442\u043e \u0441\u043b\u043e\u043c\u0430\u043b\u043e\u0441\u044c, \u043e\u0442\u043a\u0440\u043e\u0439\u0442\u0435 \u043f\u0430\u043f\u043a\u0443 \u043e\u0442\u0447\u0435\u0442\u043e\u0432 \u0438 \u043e\u0442\u043f\u0440\u0430\u0432\u044c\u0442\u0435 \u0441\u0430\u043c\u044b\u0439 \u0441\u0432\u0435\u0436\u0438\u0439 report \u0430\u0434\u043c\u0438\u043d\u0443 \u0441\u0435\u0440\u0432\u0435\u0440\u0430.",
+        "status_card_mods": "\u041c\u043e\u0434\u044b \u0433\u043e\u0442\u043e\u0432\u044b",
+        "status_card_mods_body": "\u0424\u0430\u0439\u043b\u044b \u0443\u0441\u043f\u0435\u0448\u043d\u043e \u043f\u0440\u043e\u0432\u0435\u0440\u0435\u043d\u044b.",
+        "status_card_fabric": "Fabric OK",
+        "status_card_java": "Java OK",
+        "runtime_auto": "\u0410\u0432\u0442\u043e Java",
         "update_available": "\u0412\u044b\u0448\u043b\u043e \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435 \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430: {version}",
         "download_update": "\u0421\u043a\u0430\u0447\u0430\u0442\u044c \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435",
         "update_panel_body": "\u0410\u0432\u0442\u043e\u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u044f \u043f\u043e\u043a\u0430 \u043d\u0435\u0442. \u0421\u043a\u0430\u0447\u0430\u0439\u0442\u0435 \u043d\u043e\u0432\u044b\u0439 \u0430\u0440\u0445\u0438\u0432 \u0438 \u0437\u0430\u043c\u0435\u043d\u0438\u0442\u0435 \u0444\u0430\u0439\u043b\u044b \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430 \u043f\u043e\u0441\u043b\u0435 \u0437\u0430\u043a\u0440\u044b\u0442\u0438\u044f \u0438\u0433\u0440\u044b.",
@@ -241,7 +295,7 @@ TRANSLATIONS = {
         "status_mods_no_sync": "\u042d\u0442\u043e\u0442 \u043f\u0440\u043e\u0444\u0438\u043b\u044c \u043d\u0435 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0435\u0442 \u0441\u0435\u0440\u0432\u0435\u0440\u043d\u0443\u044e \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u044e \u043c\u043e\u0434\u043e\u0432.",
         "update_disabled": "\u041d\u0435\u0442 \u0443\u0432\u0435\u0434\u043e\u043c\u043b\u0435\u043d\u0438\u044f \u043e\u0431 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0438.",
         "access_password_prompt": "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u043f\u0430\u0440\u043e\u043b\u044c \u0434\u043e\u0441\u0442\u0443\u043f\u0430 \u043a \u043f\u0440\u043e\u0435\u043a\u0442\u0443.",
-        "access_password_failed": "\u041d\u0435\u0432\u0435\u0440\u043d\u044b\u0439 \u043f\u0430\u0440\u043e\u043b\u044c \u043f\u0440\u043e\u0435\u043a\u0442\u0430.",
+        "access_password_failed": "\u0412\u044b \u043d\u0435 \u0437\u043d\u0430\u0435\u0442\u0435 \u0430\u043a\u0442\u0443\u0430\u043b\u044c\u043d\u044b\u0439 \u043f\u0430\u0440\u043e\u043b\u044c. \u0423\u0442\u043e\u0447\u043d\u0438\u0442\u0435 \u0434\u0435\u0442\u0430\u043b\u0438 \u0443 \u0430\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0446\u0438\u0438 \u041d\u044e\u043a\u0435\u043c\u0430.",
         "access_password_missing": "\u0425\u044d\u0448 \u043f\u0430\u0440\u043e\u043b\u044f \u043f\u0440\u043e\u0435\u043a\u0442\u0430 \u043d\u0435 \u0437\u0430\u0434\u0430\u043d. \u0410\u0434\u043c\u0438\u043d \u0434\u043e\u043b\u0436\u0435\u043d \u0437\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u044c password_hash_sha256.",
         "access_granted": "\u0414\u043e\u0441\u0442\u0443\u043f \u043a \u043f\u0440\u043e\u0435\u043a\u0442\u0443 \u043e\u0442\u043a\u0440\u044b\u0442.",
         "action_motor": "\u041c\u043e\u0442\u043e\u0440!",
@@ -300,7 +354,11 @@ def load_launcher_config(config_path: str | Path = CONFIG_FILE) -> dict[str, obj
         "default_username": "",
         "recent_usernames": [],
         "client_mode": CLIENT_MODE_INDEPENDENT,
-        "social_links": {},
+        "social_links": {
+            CLIENT_MODE_NUKEM: dict(DEFAULT_NUKEM_SOCIAL_LINKS),
+        },
+        "support_url": "https://github.com/mio-openliven/mslauncher/issues/new",
+        "support_urls": {},
         "skin_path": "",
         "default_build": "",
         "launch": {},
@@ -334,6 +392,7 @@ def load_launcher_config(config_path: str | Path = CONFIG_FILE) -> dict[str, obj
         "default_language",
         "default_username",
         "client_mode",
+        "support_url",
         "skin_path",
         "default_build",
     ):
@@ -351,7 +410,22 @@ def load_launcher_config(config_path: str | Path = CONFIG_FILE) -> dict[str, obj
 
     social_links = loaded_config.get("social_links")
     if isinstance(social_links, dict):
-        default_config["social_links"] = social_links
+        merged_links = {
+            CLIENT_MODE_NUKEM: dict(DEFAULT_NUKEM_SOCIAL_LINKS),
+        }
+        for project_key, project_links in social_links.items():
+            if not isinstance(project_key, str) or not isinstance(project_links, dict):
+                continue
+            project_merged = dict(merged_links.get(project_key, {}))
+            for link_key, url in project_links.items():
+                if isinstance(link_key, str) and isinstance(url, str) and url.strip():
+                    project_merged[link_key] = url.strip()
+            merged_links[project_key] = project_merged
+        default_config["social_links"] = merged_links
+
+    support_urls = loaded_config.get("support_urls")
+    if isinstance(support_urls, dict):
+        default_config["support_urls"] = support_urls
 
     builds = loaded_config.get("builds")
     if isinstance(builds, list):
@@ -425,6 +499,15 @@ def get_social_links(config: dict[str, object], client_mode: str = CLIENT_MODE_N
         if enabled and url:
             links[name] = url
     return links
+
+
+def get_support_url(config: dict[str, object], client_mode: str) -> str:
+    support_urls = config.get("support_urls")
+    if isinstance(support_urls, dict):
+        project_url = support_urls.get(client_mode)
+        if isinstance(project_url, str) and project_url.strip():
+            return project_url.strip()
+    return get_config_text(config, "support_url").strip()
 
 
 def get_config_builds(config: dict[str, object]) -> list[dict[str, object]]:
@@ -748,78 +831,179 @@ class LaunchWorker(QThread):
         self.engine.terminate_game_process()
 
 
+class StatusGlyph(QFrame):
+    def __init__(self, glyph: str, size: int, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.glyph = glyph
+        self.setFixedSize(size, size)
+        self.setObjectName("statusCheck" if glyph == "check" else "statusIcon")
+
+    def paintEvent(self, event) -> None:
+        super().paintEvent(event)
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        rect = self.rect().adjusted(1, 1, -1, -1)
+        border = QColor(116, 231, 186, 120)
+        ink = QColor("#9ff4cf")
+
+        painter.setPen(QPen(border, 1.4))
+        painter.setBrush(QColor(116, 231, 186, 24 if self.glyph != "check" else 18))
+        painter.drawRoundedRect(rect, 8, 8)
+        painter.setPen(QPen(ink, 3.2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin))
+
+        width = self.width()
+        height = self.height()
+        if self.glyph == "shield":
+            path = QPainterPath()
+            path.moveTo(width * 0.50, height * 0.18)
+            path.lineTo(width * 0.74, height * 0.27)
+            path.lineTo(width * 0.70, height * 0.56)
+            path.lineTo(width * 0.50, height * 0.78)
+            path.lineTo(width * 0.30, height * 0.56)
+            path.lineTo(width * 0.26, height * 0.27)
+            path.closeSubpath()
+            painter.drawPath(path)
+            self._paint_check(painter, width, height, 0.02)
+        elif self.glyph == "fabric":
+            for offset in (-10, 0, 10):
+                painter.drawLine(QPointF(width * 0.34 + offset, height * 0.68), QPointF(width * 0.62 + offset, height * 0.30))
+                painter.drawLine(QPointF(width * 0.36 + offset, height * 0.32), QPointF(width * 0.66 + offset, height * 0.66))
+            painter.setPen(QPen(ink, 2.0, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+            for x_position in (0.35, 0.50, 0.65):
+                painter.drawPoint(QPointF(width * x_position, height * 0.50))
+        elif self.glyph == "java":
+            for offset in (-8, 8):
+                path = QPainterPath(QPointF(width * 0.50 + offset, height * 0.22))
+                path.cubicTo(width * 0.38 + offset, height * 0.35, width * 0.62 + offset, height * 0.42, width * 0.48 + offset, height * 0.55)
+                painter.drawPath(path)
+            painter.drawLine(QPointF(width * 0.30, height * 0.68), QPointF(width * 0.70, height * 0.68))
+            painter.drawLine(QPointF(width * 0.36, height * 0.78), QPointF(width * 0.64, height * 0.78))
+        else:
+            self._paint_check(painter, width, height, 0.0)
+
+    def _paint_check(self, painter: QPainter, width: int, height: int, shift: float) -> None:
+        painter.drawLine(QPointF(width * (0.34 + shift), height * 0.52), QPointF(width * (0.45 + shift), height * 0.64))
+        painter.drawLine(QPointF(width * (0.45 + shift), height * 0.64), QPointF(width * (0.68 + shift), height * 0.38))
+
+
 class ParallaxFrame(QFrame):
     def __init__(self) -> None:
         super().__init__()
-        self.setMouseTracking(True)
+        self.setMouseTracking(False)
         self._current_offset_x = 0.0
         self._current_offset_y = 0.0
         self._target_offset_x = 0.0
         self._target_offset_y = 0.0
-        self._pixmap = self._load_background()
+        self._background_paths = self._default_background_paths()
+        self._background_index = random.randrange(len(self._background_paths)) if self._background_paths else 0
+        self._pixmap = self._load_current_background()
+        self._next_pixmap: QPixmap | None = None
+        self._fade_progress = 1.0
+        self._slideshow_enabled = False
+        self._slide_ticks = 0
+        self._slide_interval_ticks = 122
+        self._cinema_phase = random.random() * math.tau
         self._particle_phase = 0
         self._particles = self._create_particles()
+        self._glow_particles = self._create_glow_particles()
         self._animation_timer = QTimer(self)
-        self._animation_timer.setInterval(16)
+        self._animation_timer.setInterval(33)
         self._animation_timer.timeout.connect(self._tick)
         self._animation_timer.start()
 
-    def _load_background(self) -> QPixmap | None:
-        available_files = [BACKGROUND_DIR / name for name in BACKGROUND_FILES if (BACKGROUND_DIR / name).is_file()]
-        if not available_files:
+    def _default_background_paths(self) -> list[Path]:
+        return [BACKGROUND_DIR / name for name in BACKGROUND_FILES if (BACKGROUND_DIR / name).is_file()]
+
+    def set_background_files(self, paths: list[Path], slideshow_enabled: bool = False) -> None:
+        available_paths = [path for path in paths if path.is_file()] or self._default_background_paths()
+        if available_paths == self._background_paths and slideshow_enabled == self._slideshow_enabled:
+            return
+
+        self._background_paths = available_paths
+        self._background_index = random.randrange(len(self._background_paths)) if self._background_paths else 0
+        self._pixmap = self._load_current_background()
+        self._next_pixmap = None
+        self._fade_progress = 1.0
+        self._slideshow_enabled = slideshow_enabled and len(self._background_paths) > 1
+        self._slide_ticks = 0
+        self._cinema_phase = random.random() * math.tau
+        self.update()
+
+    def _load_current_background(self) -> QPixmap | None:
+        if not self._background_paths:
             return None
-        return QPixmap(str(random.choice(available_files)))
+        return QPixmap(str(self._background_paths[self._background_index]))
+
+    def _load_next_background(self) -> QPixmap | None:
+        if len(self._background_paths) < 2:
+            return None
+        self._background_index = (self._background_index + 1) % len(self._background_paths)
+        return QPixmap(str(self._background_paths[self._background_index]))
 
     def mouseMoveEvent(self, event) -> None:
         super().mouseMoveEvent(event)
 
     def leaveEvent(self, event) -> None:
-        self._target_offset_x = 0.0
-        self._target_offset_y = 0.0
         super().leaveEvent(event)
 
     def _tick(self) -> None:
-        if self.window().isActiveWindow():
-            local_position = self.mapFromGlobal(QCursor.pos())
-            bounded_x = min(max(local_position.x(), 0), max(1, self.width()))
-            bounded_y = min(max(local_position.y(), 0), max(1, self.height()))
-            relative_x = (bounded_x / max(1, self.width())) - 0.5
-            relative_y = (bounded_y / max(1, self.height())) - 0.5
-            curve_x = relative_x + (relative_y * relative_y * 0.42 if relative_x >= 0 else -relative_y * relative_y * 0.42)
-            curve_y = relative_y - relative_x * relative_y * 0.55
-            self._target_offset_x = curve_x * 70
-            self._target_offset_y = curve_y * 42
+        self._current_offset_x *= 0.94
+        self._current_offset_y *= 0.94
+        self._cinema_phase = (self._cinema_phase + 0.0014) % math.tau
 
-        self._current_offset_x += (self._target_offset_x - self._current_offset_x) * 0.08
-        self._current_offset_y += (self._target_offset_y - self._current_offset_y) * 0.08
-        self._particle_phase = (self._particle_phase + 1) % 720
+        if self._next_pixmap is not None:
+            self._fade_progress += 0.022
+            if self._fade_progress >= 1:
+                self._pixmap = self._next_pixmap
+                self._next_pixmap = None
+                self._fade_progress = 1.0
+                self._slide_ticks = 0
+        elif self._slideshow_enabled:
+            self._slide_ticks += 1
+            if self._slide_ticks >= self._slide_interval_ticks:
+                next_pixmap = self._load_next_background()
+                if next_pixmap is not None and not next_pixmap.isNull():
+                    self._next_pixmap = next_pixmap
+                    self._fade_progress = 0.0
+                else:
+                    self._slide_ticks = 0
+
+        self._particle_phase = (self._particle_phase + 1) % 1620
         self.update()
 
     def paintEvent(self, event) -> None:
         painter = QPainter(self)
 
         if self._pixmap and not self._pixmap.isNull():
-            self._paint_cover_pixmap(painter)
+            self._paint_cover_pixmap(painter, self._pixmap, 1.0)
+            if self._next_pixmap and not self._next_pixmap.isNull():
+                self._paint_cover_pixmap(painter, self._next_pixmap, min(1.0, self._fade_progress))
         else:
             painter.fillRect(self.rect(), QColor("#253642"))
 
         painter.fillRect(self.rect(), QColor(5, 9, 12, 122))
         self._paint_particles(painter)
+        self._paint_glow_particles(painter)
         self._paint_depth_overlay(painter)
         super().paintEvent(event)
 
-    def _paint_cover_pixmap(self, painter: QPainter) -> None:
-        target_width = max(1, int(self.width() * 1.2) + 120)
-        target_height = max(1, int(self.height() * 1.2) + 100)
-        scaled = self._pixmap.scaled(
+    def _paint_cover_pixmap(self, painter: QPainter, pixmap: QPixmap, opacity: float) -> None:
+        target_width = max(1, int(self.width() * 1.10) + 64)
+        target_height = max(1, int(self.height() * 1.10) + 48)
+        scaled = pixmap.scaled(
             target_width,
             target_height,
             Qt.AspectRatioMode.KeepAspectRatioByExpanding,
             Qt.TransformationMode.SmoothTransformation,
         )
-        x = int((self.width() - scaled.width()) / 2 - self._current_offset_x)
-        y = int((self.height() - scaled.height()) / 2 - self._current_offset_y)
+        cinematic_x = math.sin(self._cinema_phase * 0.74) * 10
+        cinematic_y = math.cos(self._cinema_phase * 0.52) * 6
+        x = int((self.width() - scaled.width()) / 2 - self._current_offset_x - cinematic_x)
+        y = int((self.height() - scaled.height()) / 2 - self._current_offset_y - cinematic_y)
+        painter.save()
+        painter.setOpacity(opacity)
         painter.drawPixmap(x, y, scaled)
+        painter.restore()
 
     def _paint_depth_overlay(self, painter: QPainter) -> None:
         width = self.width()
@@ -844,14 +1028,26 @@ class ParallaxFrame(QFrame):
             for _ in range(204)
         ]
 
+    def _create_glow_particles(self) -> list[tuple[float, float, float, int, int, int, int]]:
+        randomizer = random.Random(73)
+        return [
+            (
+                randomizer.random(),
+                randomizer.uniform(0.18, 0.82),
+                randomizer.uniform(0.06, 0.16),
+                randomizer.randint(1, 2),
+                randomizer.randint(45, 95),
+                randomizer.randint(150, 270),
+                randomizer.randint(150, 270),
+            )
+            for _ in range(10)
+        ]
+
     def _paint_particles(self, painter: QPainter) -> None:
         painter.save()
         painter.setPen(Qt.PenStyle.NoPen)
         width = max(1, self.width())
         height = max(1, self.height())
-        cursor_position = self.mapFromGlobal(QCursor.pos())
-        cursor_x = min(max(cursor_position.x(), 0), width)
-        cursor_y = min(max(cursor_position.y(), 0), height)
 
         for index, (base_x, base_y, speed, size, alpha) in enumerate(self._particles):
             drift_cycle = 315
@@ -861,19 +1057,39 @@ class ParallaxFrame(QFrame):
             if particle_alpha <= 4:
                 continue
 
-            x = int((base_x * width + drift * 0.22 + self._current_offset_x * 0.22) % width)
-            y = int((base_y * height - drift * 0.16 + self._current_offset_y * 0.16) % height)
-            distance_x = x - cursor_x
-            distance_y = y - cursor_y
-            distance_squared = distance_x * distance_x + distance_y * distance_y
-            repel_radius = 150
-            if 0 < distance_squared < repel_radius * repel_radius:
-                distance = distance_squared ** 0.5
-                force = (1 - distance / repel_radius) ** 2
-                x += int((distance_x / distance) * force * 56)
-                y += int((distance_y / distance) * force * 56)
+            x = int((base_x * width + drift * 0.12) % width)
+            y = int((base_y * height - drift * 0.08) % height)
 
             painter.setBrush(QColor(225, 238, 230, particle_alpha))
+            painter.drawEllipse(x, y, size, size)
+
+        painter.restore()
+
+    def _paint_glow_particles(self, painter: QPainter) -> None:
+        painter.save()
+        painter.setPen(Qt.PenStyle.NoPen)
+        width = max(1, self.width())
+        height = max(1, self.height())
+        phase = self._particle_phase
+
+        for index, (base_x, base_y, speed, size, peak_alpha, active_span, cycle) in enumerate(self._glow_particles):
+            age = (phase + index * 113) % cycle
+            active_span = min(cycle - 20, active_span)
+            if age > active_span:
+                continue
+
+            fade_in = min(1.0, age / 45)
+            fade_out = min(1.0, (active_span - age) / 60)
+            pulse = 0.65 + 0.35 * math.sin((age / max(1, active_span)) * math.tau)
+            alpha = int(peak_alpha * max(0.0, min(fade_in, fade_out)) * pulse)
+            if alpha <= 8:
+                continue
+
+            x = int((base_x * width + age * speed * 8) % width)
+            y = int(base_y * height + math.sin((age + index * 17) * 0.025) * 10)
+            painter.setBrush(QColor(134, 255, 200, min(16, alpha // 4)))
+            painter.drawEllipse(x - size * 2, y - size * 2, size * 5, size * 5)
+            painter.setBrush(QColor(190, 255, 220, alpha))
             painter.drawEllipse(x, y, size, size)
 
         painter.restore()
@@ -910,13 +1126,19 @@ class MSLauncherWindow(QMainWindow):
         self.launcher_update_url = ""
         self.launcher_update_notes = ""
         self.skin_path = get_config_text(self.config, "skin_path")
-        self.info_panel_mode = "settings"
+        self.info_panel_mode = "status"
+        self.status_card_confirmed = True
+        self._drag_position = None
         self.project_access_unlocked = False
         self.brand_subtitle_key = random.choice(self.get_brand_subtitle_keys())
         self.action_phrase_key = "play_idle"
         self.launch_after_sync = True
 
         self._build_ui()
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Window)
+        if APP_ICON_PATH.is_file():
+            self.setWindowIcon(QIcon(str(APP_ICON_PATH)))
+        self.refresh_project_backgrounds()
         self._connect_signals()
         self.apply_translations()
         self.show_config_repair_warning_if_needed()
@@ -928,60 +1150,129 @@ class MSLauncherWindow(QMainWindow):
         root_layout.setContentsMargins(0, 0, 0, 0)
         root_layout.setSpacing(0)
 
-        hero_frame = ParallaxFrame()
+        self.hero_frame = ParallaxFrame()
+        hero_frame = self.hero_frame
         hero_frame.setObjectName("heroFrame")
-        hero_frame.setMinimumHeight(320)
+        hero_frame.setMinimumHeight(540)
         hero_layout = QVBoxLayout(hero_frame)
-        hero_layout.setContentsMargins(28, 24, 28, 24)
-        hero_layout.addStretch()
+        hero_layout.setContentsMargins(30, 20, 30, 22)
+        hero_layout.setSpacing(14)
 
-        hero_content_layout = QHBoxLayout()
-        hero_content_layout.setSpacing(22)
+        top_layout = QGridLayout()
+        top_layout.setContentsMargins(0, 0, 0, 0)
+        top_layout.setHorizontalSpacing(12)
+        top_layout.setColumnStretch(0, 1)
+        top_layout.setColumnStretch(1, 0)
+        top_layout.setColumnStretch(2, 1)
+
+        brand_lockup = QFrame()
+        brand_lockup.setObjectName("brandLockup")
+        brand_lockup.setMaximumWidth(330)
+        brand_lockup_layout = QHBoxLayout(brand_lockup)
+        brand_lockup_layout.setContentsMargins(0, 0, 0, 0)
+        brand_lockup_layout.setSpacing(12)
+
+        logo_badge = QLabel("MS")
+        logo_badge.setObjectName("logoBadge")
+        logo_badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        logo_badge.setFixedSize(60, 60)
+        logo_badge.hide()
+
+        brand_text_layout = QVBoxLayout()
+        brand_text_layout.setContentsMargins(0, 0, 0, 0)
+        brand_text_layout.setSpacing(0)
+        self.title_label = QLabel()
+        self.title_label.setObjectName("titleLabel")
+        self.title_label.setMaximumWidth(240)
+        self.logo_label = QLabel()
+        self.logo_label.setObjectName("brandIcon")
+        self.logo_label.setFixedSize(58, 58)
+        self.logo_label.setScaledContents(True)
+        self.subtitle_label = QLabel()
+        self.subtitle_label.setObjectName("subtitleLabel")
+        self.credit_label = QLabel()
+        self.credit_label.setObjectName("creditLabel")
+        brand_text_layout.addWidget(self.title_label)
+        brand_text_layout.addWidget(self.subtitle_label)
+        brand_text_layout.addWidget(self.credit_label)
+        brand_lockup_layout.addWidget(logo_badge)
+        brand_lockup_layout.addWidget(self.logo_label)
+        brand_lockup_layout.addLayout(brand_text_layout)
+
+        self.project_switcher = QFrame()
+        self.project_switcher.setObjectName("projectSwitcher")
+        project_layout = QHBoxLayout(self.project_switcher)
+        project_layout.setContentsMargins(6, 6, 6, 6)
+        project_layout.setSpacing(4)
+        self.mslaunch_tab = self.create_project_tab("MS", "MSLaunch")
+        self.nukem_tab = self.create_project_tab("KH", "MS Nuckem")
+        self.vibecraft_tab = self.create_project_tab("VC", "VibeCraft")
+        self.vibecraft_tab.setEnabled(False)
+        project_layout.addWidget(self.mslaunch_tab)
+        project_layout.addWidget(self.nukem_tab)
+        project_layout.addWidget(self.vibecraft_tab)
+
+        self.language_toggle_button = QPushButton()
+        self.language_toggle_button.setObjectName("languageToggle")
+        self.language_toggle_button.setFixedSize(52, 42)
+        self.language_toggle_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+
+        right_controls = QFrame()
+        right_controls.setObjectName("topRightControls")
+        right_controls_layout = QHBoxLayout(right_controls)
+        right_controls_layout.setContentsMargins(0, 0, 0, 0)
+        right_controls_layout.setSpacing(8)
+
+        title_controls = QFrame()
+        title_controls.setObjectName("windowControls")
+        title_controls_layout = QHBoxLayout(title_controls)
+        title_controls_layout.setContentsMargins(0, 0, 0, 0)
+        title_controls_layout.setSpacing(8)
+        self.minimize_button = QPushButton("-")
+        self.minimize_button.setObjectName("windowButton")
+        self.minimize_button.setFixedSize(34, 34)
+        self.minimize_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.close_button = QPushButton("x")
+        self.close_button.setObjectName("windowButton")
+        self.close_button.setFixedSize(34, 34)
+        self.close_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        title_controls_layout.addWidget(self.minimize_button)
+        title_controls_layout.addWidget(self.close_button)
+        right_controls_layout.addWidget(self.language_toggle_button)
+        right_controls_layout.addWidget(title_controls)
+
+        top_layout.addWidget(brand_lockup, 0, 0, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        top_layout.addWidget(self.project_switcher, 0, 1, Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
+        top_layout.addWidget(right_controls, 0, 2, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
+        hero_layout.addLayout(top_layout, 0)
 
         self.sidebar_frame = QFrame()
         self.sidebar_frame.setObjectName("sidebarFrame")
         self.sidebar_layout = QVBoxLayout(self.sidebar_frame)
-        self.sidebar_layout.setContentsMargins(10, 14, 10, 14)
-        self.sidebar_layout.setSpacing(11)
+        self.sidebar_layout.setContentsMargins(12, 14, 12, 14)
+        self.sidebar_layout.setSpacing(10)
 
         self.settings_button = self.create_side_button("settings")
         self.settings_button.clicked.connect(self.toggle_info_panel)
         self.sidebar_layout.addWidget(self.settings_button)
 
+        self.report_button = self.create_side_button("report", "DOC")
+        self.report_button.clicked.connect(self.show_feedback_panel)
+        self.sidebar_layout.addWidget(self.report_button)
+
         self.mode_button = self.create_side_button("mode", "NK")
-        self.mode_button.setText("NK" if self.client_mode == CLIENT_MODE_INDEPENDENT else "MS")
-        self.sidebar_layout.addWidget(self.mode_button)
+        self.mode_button.hide()
 
         self.social_buttons: list[QPushButton] = []
         self.refresh_social_buttons()
 
         self.sidebar_layout.addStretch()
 
-        brand_panel = QFrame()
-        brand_panel.setObjectName("brandPanel")
-        brand_layout = QVBoxLayout(brand_panel)
-        brand_layout.setContentsMargins(24, 16, 24, 16)
-        brand_layout.setSpacing(5)
-
-        self.title_label = QLabel()
-        self.title_label.setObjectName("titleLabel")
-        self.credit_label = QLabel()
-        self.credit_label.setObjectName("creditLabel")
-        self.subtitle_label = QLabel()
-        self.subtitle_label.setObjectName("subtitleLabel")
-        brand_layout.addWidget(self.title_label)
-        brand_layout.addWidget(self.subtitle_label)
-        brand_layout.addWidget(self.credit_label)
-        brand_panel.setMinimumWidth(300)
-        brand_panel.setMaximumWidth(520)
-        brand_panel.setMinimumHeight(112)
-        brand_panel.setMaximumHeight(150)
-
         self.info_panel = QFrame()
         self.info_panel.setObjectName("infoPanel")
         info_layout = QVBoxLayout(self.info_panel)
-        info_layout.setContentsMargins(22, 18, 22, 18)
-        info_layout.setSpacing(10)
+        info_layout.setContentsMargins(28, 24, 28, 24)
+        info_layout.setSpacing(14)
         self.info_title_label = QLabel()
         self.info_title_label.setObjectName("infoTitle")
         self.info_body_label = QLabel()
@@ -990,6 +1281,20 @@ class MSLauncherWindow(QMainWindow):
         self.info_body_label.setMinimumWidth(240)
         info_layout.addWidget(self.info_title_label)
         info_layout.addWidget(self.info_body_label)
+
+        self.mods_status_title, self.mods_status_body, self.mods_status_check, mods_row = self.create_status_row(
+            "shield", "Mods ready", "All mods loaded and compatible."
+        )
+        self.fabric_status_title, self.fabric_status_body, self.fabric_status_check, fabric_row = self.create_status_row(
+            "fabric", "Fabric OK", "Loader ready"
+        )
+        self.java_status_title, self.java_status_body, self.java_status_check, java_row = self.create_status_row(
+            "java", "Java OK", "Runtime ready"
+        )
+        info_layout.addWidget(mods_row)
+        info_layout.addWidget(fabric_row)
+        info_layout.addWidget(java_row)
+        self.status_rows = [mods_row, fabric_row, java_row]
 
         self.open_profile_button = QPushButton()
         self.open_profile_button.setObjectName("panelButton")
@@ -1055,25 +1360,23 @@ class MSLauncherWindow(QMainWindow):
             self.skin_browse_button,
         ]
         info_layout.addStretch()
-        self.info_panel.setMinimumWidth(280)
-        self.info_panel.setMaximumWidth(320)
-        self.info_panel.hide()
+        self.info_panel.setMinimumWidth(390)
+        self.info_panel.setMaximumWidth(430)
+        self.info_panel.setMinimumHeight(220)
 
-        hero_content_layout.addWidget(self.sidebar_frame)
-        hero_content_layout.addWidget(brand_panel)
-        hero_content_layout.addWidget(self.info_panel)
-        hero_content_layout.addStretch()
-
-        hero_layout.addLayout(hero_content_layout)
-        hero_layout.addStretch()
+        stage_layout = QHBoxLayout()
+        stage_layout.setSpacing(24)
+        stage_layout.addWidget(self.sidebar_frame, 0, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        stage_layout.addStretch(1)
+        stage_layout.addWidget(self.info_panel, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        hero_layout.addLayout(stage_layout, 1)
 
         control_frame = QFrame()
         control_frame.setObjectName("controlFrame")
-        control_frame.setMinimumHeight(128)
-        control_layout = QGridLayout(control_frame)
-        control_layout.setContentsMargins(18, 12, 18, 14)
-        control_layout.setHorizontalSpacing(10)
-        control_layout.setVerticalSpacing(6)
+        control_frame.setMinimumHeight(108)
+        control_layout = QHBoxLayout(control_frame)
+        control_layout.setContentsMargins(16, 16, 16, 16)
+        control_layout.setSpacing(8)
 
         self.language_label = QLabel()
         self.language_combo = QComboBox()
@@ -1096,6 +1399,19 @@ class MSLauncherWindow(QMainWindow):
         self.version_label = QLabel()
         self.version_combo = QComboBox()
 
+        self.loader_label = QLabel()
+        self.loader_group = QButtonGroup(self)
+        self.loader_vanilla_button = QPushButton("Vanilla")
+        self.loader_vanilla_button.setObjectName("loaderSegment")
+        self.loader_vanilla_button.setCheckable(True)
+        self.loader_fabric_button = QPushButton("Fabric")
+        self.loader_fabric_button.setObjectName("loaderSegment")
+        self.loader_fabric_button.setCheckable(True)
+        self.loader_group.addButton(self.loader_vanilla_button)
+        self.loader_group.addButton(self.loader_fabric_button)
+        self.loader_fabric_button.setChecked(self.loader_setting_combo.currentText() == "fabric")
+        self.loader_vanilla_button.setChecked(self.loader_setting_combo.currentText() != "fabric")
+
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
@@ -1110,37 +1426,44 @@ class MSLauncherWindow(QMainWindow):
 
         self.play_button = QPushButton()
         self.play_button.setObjectName("playButton")
-        self.play_button.setMinimumHeight(42)
-        self.play_button.setMinimumWidth(96)
+        self.play_button.setMinimumHeight(66)
+        self.play_button.setMinimumWidth(145)
+        self.play_button.setMaximumWidth(170)
         self.mods_button = QPushButton()
-        self.mods_button.setObjectName("playButton")
-        self.mods_button.setMinimumHeight(42)
-        self.mods_button.setMinimumWidth(96)
-        action_layout = QHBoxLayout()
-        action_layout.setContentsMargins(0, 0, 0, 0)
-        action_layout.setSpacing(6)
-        action_layout.addWidget(self.play_button, 1)
-        action_layout.addWidget(self.mods_button, 1)
+        self.mods_button.setObjectName("modsButton")
+        self.mods_button.setMinimumHeight(66)
+        self.mods_button.setMinimumWidth(165)
+        self.mods_button.setMaximumWidth(190)
 
         self.feedback_button = QPushButton()
         self.feedback_button.setObjectName("panelButton")
-        self.feedback_button.setMinimumHeight(26)
-        self.feedback_button.setMaximumHeight(30)
+        self.feedback_button.setMinimumHeight(34)
 
-        control_layout.addWidget(self.username_label, 0, 0)
-        control_layout.addWidget(self.profile_label, 0, 1)
-        control_layout.addWidget(self.build_label, 0, 2)
-        control_layout.addWidget(self.version_label, 0, 3)
-        control_layout.addWidget(self.language_label, 0, 4)
-        control_layout.addWidget(self.username_input, 1, 0)
-        control_layout.addWidget(self.profile_combo, 1, 1)
-        control_layout.addWidget(self.build_combo, 1, 2)
-        control_layout.addWidget(self.version_combo, 1, 3)
-        control_layout.addWidget(self.language_combo, 1, 4)
-        control_layout.addLayout(action_layout, 0, 5, 2, 1)
-        control_layout.addWidget(self.status_label, 2, 0, 1, 5)
-        control_layout.addWidget(self.progress_bar, 2, 5)
-        control_layout.addWidget(self.feedback_button, 3, 5)
+        username_group = self.create_control_group(self.username_label, self.username_input)
+        build_group = self.create_control_group(self.build_label, self.build_combo)
+        version_group = self.create_control_group(self.version_label, self.version_combo)
+        username_group.setMaximumWidth(170)
+        build_group.setMaximumWidth(180)
+        version_group.setMaximumWidth(160)
+        control_layout.addWidget(username_group, 2)
+        control_layout.addWidget(build_group, 2)
+        control_layout.addWidget(version_group, 2)
+        control_layout.addWidget(self.create_loader_group(), 2)
+        control_layout.addWidget(self.mods_button, 0)
+        control_layout.addWidget(self.play_button, 0)
+
+        hidden_controls = QFrame()
+        hidden_controls.hide()
+        hidden_layout = QVBoxLayout(hidden_controls)
+        hidden_layout.addWidget(self.profile_label)
+        hidden_layout.addWidget(self.profile_combo)
+        hidden_layout.addWidget(self.language_label)
+        hidden_layout.addWidget(self.language_combo)
+        hidden_layout.addWidget(self.status_label)
+        hidden_layout.addWidget(self.progress_bar)
+        hidden_layout.addWidget(self.feedback_button)
+        hero_layout.addWidget(hidden_controls)
+
         for widget in (
             self.username_input,
             self.profile_combo,
@@ -1148,21 +1471,80 @@ class MSLauncherWindow(QMainWindow):
             self.version_combo,
             self.language_combo,
         ):
-            widget.setMinimumWidth(112)
-        control_layout.setColumnStretch(0, 2)
-        control_layout.setColumnStretch(1, 1)
-        control_layout.setColumnStretch(2, 2)
-        control_layout.setColumnStretch(3, 2)
-        control_layout.setColumnStretch(4, 1)
-        control_layout.setColumnStretch(5, 2)
+            widget.setMinimumWidth(106)
 
+        hero_layout.addWidget(control_frame, 0)
         root_layout.addWidget(hero_frame, 1)
-        root_layout.addWidget(control_frame, 0)
 
         self.setCentralWidget(central_widget)
-        self.setMinimumSize(960, 520)
-        self.resize(1040, 560)
+        self.setMinimumSize(960, 540)
+        self.resize(1280, 720)
         self.apply_styles()
+
+    def create_project_tab(self, badge: str, label: str) -> QPushButton:
+        button = QPushButton(f"{badge}  {label}")
+        button.setObjectName("projectTab")
+        button.setProperty("badge", badge)
+        button.setProperty("label", label)
+        button.setFixedSize(54, 52)
+        button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        return button
+
+    def get_project_icon_path(self, project_key: str) -> Path:
+        icon_name = PROJECT_ICON_FILES.get(project_key, PROJECT_ICON_FILES[CLIENT_MODE_INDEPENDENT])
+        return PROJECT_ICON_DIR / icon_name
+
+    def create_control_group(self, label: QLabel, field: QWidget) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("controlGroup")
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
+        layout.addWidget(label)
+        layout.addWidget(field)
+        return frame
+
+    def create_loader_group(self) -> QFrame:
+        frame = QFrame()
+        frame.setObjectName("controlGroup")
+        frame.setMinimumWidth(138)
+        frame.setMaximumWidth(155)
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
+        layout.addWidget(self.loader_label)
+        segment_frame = QFrame()
+        segment_frame.setObjectName("loaderSegmentFrame")
+        segment_layout = QHBoxLayout(segment_frame)
+        segment_layout.setContentsMargins(4, 4, 4, 4)
+        segment_layout.setSpacing(4)
+        segment_layout.addWidget(self.loader_vanilla_button)
+        segment_layout.addWidget(self.loader_fabric_button)
+        layout.addWidget(segment_frame)
+        return frame
+
+    def create_status_row(self, glyph: str, title: str, body: str) -> tuple[QLabel, QLabel, QFrame, QFrame]:
+        row = QFrame()
+        row.setObjectName("statusRow")
+        layout = QHBoxLayout(row)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(20)
+        icon = StatusGlyph(glyph, 56)
+        text_layout = QVBoxLayout()
+        text_layout.setContentsMargins(0, 0, 0, 0)
+        text_layout.setSpacing(3)
+        title_label = QLabel(title)
+        title_label.setObjectName("statusTitle")
+        body_label = QLabel(body)
+        body_label.setObjectName("statusBody")
+        body_label.setWordWrap(True)
+        text_layout.addWidget(title_label)
+        text_layout.addWidget(body_label)
+        check = StatusGlyph("check", 42)
+        layout.addWidget(icon)
+        layout.addLayout(text_layout, 1)
+        layout.addWidget(check)
+        return title_label, body_label, check, row
 
     def create_side_button(self, icon_name: str, fallback_text: str = "") -> QPushButton:
         button = QPushButton()
@@ -1170,26 +1552,35 @@ class MSLauncherWindow(QMainWindow):
         icon_path = ICON_DIR / f"{icon_name}.svg"
         if icon_path.is_file():
             button.setIcon(QIcon(str(icon_path)))
-            button.setIconSize(QSize(21, 21))
+            button.setIconSize(QSize(26, 26))
         else:
             button.setText(fallback_text or icon_name[:2].upper())
+        button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         return button
 
     def _connect_signals(self) -> None:
         self.language_combo.currentTextChanged.connect(self.change_language)
         self.profile_combo.currentIndexChanged.connect(self.on_profile_changed)
         self.build_combo.currentIndexChanged.connect(self.on_build_changed)
+        self.mslaunch_tab.clicked.connect(lambda: self.set_client_mode(CLIENT_MODE_INDEPENDENT))
+        self.nukem_tab.clicked.connect(lambda: self.set_client_mode(CLIENT_MODE_NUKEM))
+        self.language_toggle_button.clicked.connect(self.toggle_language)
+        self.minimize_button.clicked.connect(self.showMinimized)
+        self.close_button.clicked.connect(self.close)
         self.mode_button.clicked.connect(self.toggle_client_mode)
         self.play_button.clicked.connect(self.check_mods_and_play)
         self.mods_button.clicked.connect(self.check_mods_only)
         self.feedback_button.clicked.connect(self.show_feedback_panel)
         self.open_profile_button.clicked.connect(self.open_current_profile_folder)
         self.open_game_button.clicked.connect(self.open_profiles_root_folder)
-        self.open_crash_reports_button.clicked.connect(self.open_crash_reports_folder)
+        self.open_crash_reports_button.clicked.connect(self.handle_panel_report_action)
         self.download_update_button.clicked.connect(self.open_launcher_update_url)
         self.java_browse_button.clicked.connect(self.browse_java_path)
         self.skin_browse_button.clicked.connect(self.browse_skin_file)
         self.loader_setting_combo.currentTextChanged.connect(lambda *_: self.save_user_preferences())
+        self.loader_setting_combo.currentTextChanged.connect(self.sync_loader_segments)
+        self.loader_vanilla_button.clicked.connect(lambda: self.set_loader_mode("vanilla"))
+        self.loader_fabric_button.clicked.connect(lambda: self.set_loader_mode("fabric"))
         self.memory_min_input.editingFinished.connect(self.save_user_preferences)
         self.memory_max_input.editingFinished.connect(self.save_user_preferences)
         self.java_path_input.editingFinished.connect(self.save_user_preferences)
@@ -1201,17 +1592,56 @@ class MSLauncherWindow(QMainWindow):
             self.apply_translations()
             self.save_user_preferences()
 
+    def toggle_language(self) -> None:
+        self.change_language("EN" if self.language == "RU" else "RU")
+
+    def set_loader_mode(self, loader: str) -> None:
+        if loader not in ("vanilla", "fabric"):
+            return
+        if self.loader_setting_combo.currentText() != loader:
+            self.loader_setting_combo.setCurrentText(loader)
+        self.sync_loader_segments(loader)
+        self.save_user_preferences()
+
+    def sync_loader_segments(self, loader: str = "") -> None:
+        active_loader = loader or self.loader_setting_combo.currentText().strip() or "vanilla"
+        self.loader_vanilla_button.setChecked(active_loader != "fabric")
+        self.loader_fabric_button.setChecked(active_loader == "fabric")
+
     def toggle_client_mode(self) -> None:
-        self.client_mode = (
+        next_mode = (
             CLIENT_MODE_NUKEM
             if self.client_mode == CLIENT_MODE_INDEPENDENT
             else CLIENT_MODE_INDEPENDENT
         )
+        self.set_client_mode(next_mode)
+
+    def set_client_mode(self, client_mode: str) -> None:
+        if client_mode not in CLIENT_MODES or client_mode == self.client_mode:
+            self.update_project_tabs()
+            return
+        self.client_mode = client_mode
         self.project_access_unlocked = False
         self.social_links = get_social_links(self.config, self.client_mode)
+        self.refresh_project_backgrounds()
         self.refresh_social_buttons()
         self.apply_translations()
         self.save_user_preferences()
+
+    def get_project_background_paths(self) -> list[Path]:
+        if self.client_mode == CLIENT_MODE_NUKEM:
+            return [
+                NUKEM_BACKGROUND_DIR / name
+                for name in NUKEM_BACKGROUND_FILES
+                if (NUKEM_BACKGROUND_DIR / name).is_file()
+            ]
+        return [BACKGROUND_DIR / name for name in BACKGROUND_FILES if (BACKGROUND_DIR / name).is_file()]
+
+    def refresh_project_backgrounds(self) -> None:
+        self.hero_frame.set_background_files(
+            self.get_project_background_paths(),
+            slideshow_enabled=self.client_mode == CLIENT_MODE_NUKEM,
+        )
 
     def refresh_social_buttons(self) -> None:
         for button in self.social_buttons:
@@ -1219,15 +1649,58 @@ class MSLauncherWindow(QMainWindow):
             button.deleteLater()
         self.social_buttons = []
 
-        for offset, (link_name, url) in enumerate(self.social_links.items()):
+        visible_links = self.get_visible_social_links()
+        for offset, (link_name, url) in enumerate(visible_links):
             icon_name = SOCIAL_ICON_NAMES.get(link_name, "link")
             fallback_text = SOCIAL_FALLBACK_LABELS.get(link_name, "WB")
             button = self.create_side_button(icon_name, fallback_text)
             button.clicked.connect(lambda checked=False, link=url: self.open_external_link(link))
-            info_panel = getattr(self, "info_panel", None)
-            button.setVisible(bool(info_panel and info_panel.isVisible()))
+            button.setVisible(True)
             self.social_buttons.append(button)
             self.sidebar_layout.insertWidget(2 + offset, button)
+
+    def get_visible_social_links(self) -> list[tuple[str, str]]:
+        if len(self.social_links) <= 3:
+            return list(self.social_links.items())
+
+        direct_links: list[tuple[str, str]] = []
+        for key in ("youtube", "discord"):
+            url = self.social_links.get(key)
+            if url:
+                direct_links.append((key, url))
+
+        for key in ("vk_group", "vk", "rutube", "website", "link"):
+            url = self.social_links.get(key)
+            if url:
+                direct_links.append(("link" if key != "vk" else "vk", url))
+                break
+
+        return direct_links[:3]
+
+    def update_project_tabs(self) -> None:
+        tab_states = (
+            (self.mslaunch_tab, CLIENT_MODE_INDEPENDENT, self.client_mode == CLIENT_MODE_INDEPENDENT),
+            (self.nukem_tab, CLIENT_MODE_NUKEM, self.client_mode == CLIENT_MODE_NUKEM),
+            (self.vibecraft_tab, "vibecraft", False),
+        )
+        active_icon = self.get_project_icon_path(self.client_mode)
+        if active_icon.is_file():
+            self.logo_label.setPixmap(QPixmap(str(active_icon)))
+
+        for tab, project_key, active in tab_states:
+            tab.setProperty("active", active)
+            badge = str(tab.property("badge") or "")
+            label = str(tab.property("label") or "")
+            icon_path = self.get_project_icon_path(project_key)
+            if icon_path.is_file():
+                tab.setIcon(QIcon(str(icon_path)))
+                tab.setIconSize(QSize(28 if active else 32, 28 if active else 32))
+            tab.setText(label if active else "")
+            tab.setToolTip(label)
+            tab.setFixedSize(158 if active else 58, 52)
+            tab.style().unpolish(tab)
+            tab.style().polish(tab)
+            tab.update()
 
     def get_mode_credit_key(self) -> str:
         return "brand_credit_nukem" if self.client_mode == CLIENT_MODE_NUKEM else "brand_credit"
@@ -1238,6 +1711,9 @@ class MSLauncherWindow(QMainWindow):
             if self.client_mode == CLIENT_MODE_NUKEM
             else "brand_subtitle_independent"
         )
+
+    def get_mods_action_key(self) -> str:
+        return "download_mods" if self.client_mode == CLIENT_MODE_NUKEM else "game_folder"
 
     def apply_translations(self) -> None:
         self.setWindowTitle(self.translate("app_title"))
@@ -1264,9 +1740,11 @@ class MSLauncherWindow(QMainWindow):
         self.build_label.setText(self.translate("build"))
         self.username_label.setText(self.translate("username"))
         self.version_label.setText(self.translate("version"))
+        self.loader_label.setText(self.translate("loader"))
         self.play_button.setText(self.translate(self.action_phrase_key))
-        self.mods_button.setText(self.translate("mods_idle"))
+        self.mods_button.setText(self.translate(self.get_mods_action_key()))
         self.feedback_button.setText(self.translate("feedback_ok"))
+        self.language_toggle_button.setText(self.language)
         self.mode_button.setText("NK" if self.client_mode == CLIENT_MODE_INDEPENDENT else "MS")
         self.mode_button.setToolTip(
             self.translate(
@@ -1275,6 +1753,7 @@ class MSLauncherWindow(QMainWindow):
                 else "mode_independent"
             )
         )
+        self.update_project_tabs()
 
         status_key = self.status_label.property("status_key")
         status_detail = self.status_label.property("status_detail")
@@ -1289,141 +1768,277 @@ class MSLauncherWindow(QMainWindow):
         self.setStyleSheet(
             """
             QMainWindow {
-                background: #07140f;
+                background: #030607;
+                font-family: "Segoe UI", "Arial";
             }
             #heroFrame {
-                background: #07140f;
+                background: #030607;
                 border: 0;
             }
-            #brandPanel {
-                background: rgba(14, 18, 18, 188);
+            #brandLockup {
+                background: transparent;
+                border: 0;
+            }
+            #logoBadge {
+                color: #dffcf0;
+                border: 2px solid rgba(116, 231, 186, 190);
+                border-radius: 8px;
+                font-size: 20px;
+                font-weight: 900;
+            }
+            #brandIcon {
+                background: transparent;
+                border: 0;
+            }
+            #projectSwitcher {
+                background: rgba(8, 11, 15, 128);
                 border: 1px solid rgba(255, 255, 255, 26);
                 border-radius: 8px;
             }
-            #sidebarFrame {
-                background: rgba(8, 12, 12, 138);
-                border: 1px solid rgba(255, 255, 255, 12);
+            #windowControls {
+                background: transparent;
+                border: 0;
+            }
+            #topRightControls {
+                background: transparent;
+                border: 0;
+            }
+            QPushButton#windowButton {
+                background: rgba(8, 11, 15, 88);
+                color: rgba(255, 255, 255, 190);
+                border: 1px solid rgba(255, 255, 255, 26);
                 border-radius: 8px;
-                min-width: 54px;
-                max-width: 54px;
+                font-size: 15px;
+                font-weight: 800;
+            }
+            QPushButton#windowButton:hover {
+                background: rgba(255, 255, 255, 22);
+                color: #ffffff;
+            }
+            #sidebarFrame {
+                background: rgba(8, 10, 12, 148);
+                border: 1px solid rgba(255, 255, 255, 30);
+                border-radius: 8px;
+                min-width: 78px;
+                max-width: 78px;
             }
             #infoPanel {
-                background: rgba(14, 18, 18, 188);
-                border: 1px solid rgba(255, 255, 255, 22);
+                background: rgba(10, 10, 10, 182);
+                border: 1px solid rgba(255, 255, 255, 36);
                 border-radius: 8px;
             }
             #controlFrame {
-                background: #111917;
-                border-top: 1px solid #263a31;
+                background: rgba(11, 13, 14, 190);
+                border: 1px solid rgba(255, 255, 255, 36);
+                border-radius: 8px;
             }
             QLabel {
-                color: #dceee4;
-                font-size: 12px;
+                color: #f3f6f2;
+                font-size: 14px;
             }
             #titleLabel {
                 color: #ffffff;
-                font-size: 30px;
+                font-size: 28px;
                 font-weight: 800;
             }
             #subtitleLabel {
-                color: #b8c9bf;
-                font-size: 12px;
+                color: #9ff4cf;
+                font-size: 13px;
+                font-weight: 700;
             }
             #creditLabel {
-                color: #e5f2ea;
+                color: #bcc4c1;
                 font-size: 12px;
-                font-weight: 700;
             }
             #infoTitle {
                 color: #ffffff;
-                font-size: 18px;
+                font-size: 22px;
                 font-weight: 800;
             }
             #infoBody {
-                color: #b5c8bd;
-                font-size: 13px;
+                color: #d5d8d5;
+                font-size: 14px;
             }
             #statusLabel {
-                color: #b9d4c4;
+                color: #9ff4cf;
+            }
+            #statusRow {
+                border-bottom: 1px solid rgba(255, 255, 255, 36);
+                min-height: 68px;
+            }
+            #statusIcon {
+                color: #9ff4cf;
+                background: rgba(116, 231, 186, 20);
+                border: 1px solid rgba(116, 231, 186, 70);
+                border-radius: 8px;
+                font-size: 18px;
+                font-weight: 900;
+            }
+            #statusTitle {
+                color: #ffffff;
+                font-size: 19px;
+                font-weight: 800;
+            }
+            #statusBody {
+                color: #c8ccca;
+                font-size: 13px;
+            }
+            #statusCheck {
+                color: #9ff4cf;
+                border: 2px solid #5fe6ac;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: 900;
+            }
+            QPushButton#projectTab {
+                background: transparent;
+                color: #f3f6f2;
+                border: 1px solid transparent;
+                border-radius: 8px;
+                padding: 0 8px;
+                text-align: left;
+                font-size: 14px;
+                font-weight: 700;
+            }
+            QPushButton#projectTab:hover {
+                background: rgba(255, 255, 255, 22);
+                border: 1px solid rgba(255, 255, 255, 42);
+            }
+            QPushButton#projectTab[active="true"] {
+                background: rgba(255, 255, 255, 16);
+                border: 1px solid rgba(255, 255, 255, 48);
+                color: #ffffff;
+            }
+            QPushButton#projectTab:disabled {
+                color: rgba(255, 255, 255, 105);
+                background: transparent;
+                border: 1px solid transparent;
+            }
+            QPushButton#languageToggle {
+                background: rgba(8, 11, 15, 168);
+                color: #dffcf0;
+                border: 1px solid rgba(255, 255, 255, 42);
+                border-radius: 8px;
+                font-size: 13px;
+                font-weight: 800;
+            }
+            QPushButton#languageToggle:hover {
+                background: rgba(116, 231, 186, 34);
+                border: 1px solid rgba(116, 231, 186, 110);
             }
             QPushButton#sideButton {
                 background: rgba(255, 255, 255, 14);
-                color: #dceee4;
-                border: 1px solid rgba(220, 238, 228, 28);
-                border-radius: 6px;
-                min-width: 36px;
-                min-height: 36px;
-                max-width: 36px;
-                max-height: 36px;
-                font-size: 10px;
+                color: #f3f6f2;
+                border: 1px solid rgba(255, 255, 255, 26);
+                border-radius: 8px;
+                min-width: 52px;
+                min-height: 52px;
+                max-width: 52px;
+                max-height: 52px;
+                font-size: 13px;
                 font-weight: 800;
             }
             QPushButton#sideButton:hover {
-                background: rgba(134, 184, 157, 70);
+                background: rgba(116, 231, 186, 44);
                 color: #ffffff;
-                border: 1px solid rgba(191, 223, 206, 120);
+                border: 1px solid rgba(116, 231, 186, 130);
             }
             QPushButton#panelButton {
-                background: rgba(255, 255, 255, 18);
-                color: #dceee4;
-                border: 1px solid rgba(255, 255, 255, 24);
-                border-radius: 6px;
-                min-height: 26px;
-                padding: 5px 9px;
-                font-size: 12px;
+                background: rgba(255, 255, 255, 20);
+                color: #f3f6f2;
+                border: 1px solid rgba(255, 255, 255, 36);
+                border-radius: 8px;
+                min-height: 32px;
+                padding: 7px 12px;
+                font-size: 13px;
                 font-weight: 700;
                 text-align: left;
             }
             QPushButton#panelButton:hover {
-                background: rgba(117, 152, 134, 58);
-                border: 1px solid rgba(191, 223, 206, 110);
+                background: rgba(116, 231, 186, 36);
+                border: 1px solid rgba(116, 231, 186, 110);
             }
             QLineEdit,
             QComboBox {
-                background: #eaf1ec;
-                color: #111917;
-                border: 1px solid #284b38;
-                border-radius: 4px;
-                padding: 5px 8px;
-                min-height: 24px;
+                background: rgba(3, 7, 9, 178);
+                color: #ffffff;
+                border: 1px solid rgba(255, 255, 255, 52);
+                border-radius: 8px;
+                padding: 8px 12px;
+                min-height: 36px;
+                font-size: 15px;
             }
             QLineEdit:focus,
             QComboBox:focus {
-                border: 1px solid #1ee06f;
+                border: 1px solid #74e7ba;
             }
             QComboBox::drop-down {
                 border: 0;
-                width: 22px;
+                width: 30px;
             }
-            QPushButton#playButton {
-                background: rgba(255, 255, 255, 14);
-                color: #dceee4;
-                border: 1px solid rgba(220, 238, 228, 78);
-                border-radius: 12px;
+            #loaderSegmentFrame {
+                background: rgba(3, 7, 9, 154);
+                border: 1px solid rgba(255, 255, 255, 42);
+                border-radius: 8px;
+            }
+            QPushButton#loaderSegment {
+                background: transparent;
+                color: rgba(255, 255, 255, 170);
+                border: 1px solid transparent;
+                border-radius: 7px;
+                min-height: 34px;
                 font-size: 13px;
-                font-weight: 700;
+                font-weight: 800;
+            }
+            QPushButton#loaderSegment:checked {
+                background: rgba(116, 231, 186, 32);
+                color: #ffffff;
+                border: 1px solid rgba(116, 231, 186, 120);
+            }
+            QPushButton#loaderSegment:hover {
+                background: rgba(255, 255, 255, 18);
+            }
+            QPushButton#playButton,
+            QPushButton#modsButton {
+                color: #ffffff;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 800;
                 letter-spacing: 0px;
-                padding: 8px 14px;
+                padding: 8px 12px;
             }
             QPushButton#playButton:hover {
-                background: rgba(117, 152, 134, 62);
-                color: #ffffff;
-                border: 1px solid rgba(191, 223, 206, 145);
+                background: #ff9a1f;
+                border: 2px solid #ffc36b;
             }
-            QPushButton#playButton:disabled {
-                background: rgba(117, 152, 134, 22);
-                color: #aab9b1;
-                border: 1px solid rgba(191, 223, 206, 48);
+            QPushButton#playButton {
+                background: #f08a16;
+                border: 2px solid #ffb24f;
+            }
+            QPushButton#modsButton {
+                background: rgba(6, 17, 24, 188);
+                border: 2px solid #3aa3d8;
+            }
+            QPushButton#modsButton:hover {
+                background: rgba(18, 44, 60, 218);
+                color: #ffffff;
+                border: 2px solid #66c6f2;
+            }
+            QPushButton#playButton:disabled,
+            QPushButton#modsButton:disabled {
+                background: rgba(255, 255, 255, 18);
+                color: rgba(255, 255, 255, 110);
+                border: 1px solid rgba(255, 255, 255, 44);
             }
             QProgressBar {
-                background: #25382e;
+                background: rgba(255, 255, 255, 24);
                 border: 0;
-                border-radius: 3px;
+                border-radius: 4px;
                 text-align: center;
             }
             QProgressBar::chunk {
-                background: #86b89d;
-                border-radius: 3px;
+                background: #74e7ba;
+                border-radius: 4px;
             }
             """
         )
@@ -1594,6 +2209,9 @@ class MSLauncherWindow(QMainWindow):
         self.start_mod_check(launch_after_sync=True)
 
     def check_mods_only(self) -> None:
+        if self.client_mode != CLIENT_MODE_NUKEM:
+            self.open_current_profile_folder()
+            return
         self.start_mod_check(launch_after_sync=False)
 
     def start_mod_check(self, launch_after_sync: bool) -> None:
@@ -1680,10 +2298,12 @@ class MSLauncherWindow(QMainWindow):
         if not self.selected_profile.server_sync_enabled:
             self.progress_bar.setValue(0)
             if self.launch_after_sync:
-                self.set_status("status_skipping_sync")
+                self.set_status("status_mods_no_sync")
+                self.show_success_status_card()
                 self.launch_game()
             else:
                 self.set_status("status_mods_no_sync")
+                self.show_success_status_card()
                 self.reset_action_buttons()
             return
 
@@ -1704,10 +2324,13 @@ class MSLauncherWindow(QMainWindow):
 
     def on_sync_finished(self) -> None:
         if self.launch_after_sync:
+            self.set_status("status_mods_ready")
+            self.show_success_status_card()
             self.launch_game()
             return
 
         self.set_status("status_mods_ready")
+        self.show_success_status_card()
         self.reset_action_buttons()
 
     def launch_game(self) -> None:
@@ -1771,17 +2394,21 @@ class MSLauncherWindow(QMainWindow):
             button.show()
 
     def toggle_info_panel(self) -> None:
-        should_show = not self.info_panel.isVisible()
-        if should_show and self.info_panel_mode not in ("crash", "error", "update"):
+        if self.info_panel_mode == "settings":
+            self.info_panel_mode = "status" if self.status_card_confirmed else "help"
+        elif self.info_panel_mode not in ("crash", "error", "update"):
             self.info_panel_mode = "settings"
-            self.refresh_info_panel()
-        self.info_panel.setVisible(should_show)
+        self.refresh_info_panel()
+        self.info_panel.show()
         for button in self.social_buttons:
-            button.setVisible(should_show)
+            button.show()
 
     def refresh_info_panel(self) -> None:
         if self.info_panel_mode == "crash" and self.last_crash_reason:
+            self.set_status_rows_visible(False)
             self.set_settings_widgets_visible(False)
+            self.info_title_label.show()
+            self.info_body_label.show()
             self.info_title_label.setText(self.translate("crash_panel_title"))
             self.info_body_label.setText(self.last_crash_reason)
             self.open_crash_reports_button.setText(self.translate("open_crash_reports"))
@@ -1790,7 +2417,10 @@ class MSLauncherWindow(QMainWindow):
             return
 
         if self.info_panel_mode == "error" and self.last_error_message:
+            self.set_status_rows_visible(False)
             self.set_settings_widgets_visible(False)
+            self.info_title_label.show()
+            self.info_body_label.show()
             self.info_title_label.setText(self.translate("error_panel_title"))
             self.info_body_label.setText(self.last_error_message)
             self.open_crash_reports_button.setText(self.translate("open_error_report"))
@@ -1799,7 +2429,10 @@ class MSLauncherWindow(QMainWindow):
             return
 
         if self.info_panel_mode == "update" and self.launcher_update_version:
+            self.set_status_rows_visible(False)
             self.set_settings_widgets_visible(False)
+            self.info_title_label.show()
+            self.info_body_label.show()
             self.info_title_label.setText(self.translate("update_available", version=self.launcher_update_version))
             body_parts = [self.translate("update_panel_body")]
             if self.launcher_update_notes:
@@ -1811,7 +2444,10 @@ class MSLauncherWindow(QMainWindow):
             return
 
         if self.info_panel_mode == "feedback":
+            self.set_status_rows_visible(False)
             self.set_settings_widgets_visible(False)
+            self.info_title_label.show()
+            self.info_body_label.show()
             self.info_title_label.setText(self.translate("feedback_panel_title"))
             self.info_body_label.setText(self.translate("feedback_panel_body"))
             self.open_crash_reports_button.setText(self.translate("open_error_report"))
@@ -1819,15 +2455,85 @@ class MSLauncherWindow(QMainWindow):
             self.download_update_button.hide()
             return
 
-        self.info_panel_mode = "settings"
-        self.set_settings_widgets_visible(True)
-        self.info_title_label.setText(self.translate("settings_title"))
-        self.info_body_label.setText(
-            f"{self.translate('settings_body')}\n{self.translate('update_disabled')}"
-        )
-        self.open_crash_reports_button.setText(self.translate("open_crash_reports"))
+        if self.info_panel_mode == "help":
+            self.set_status_rows_visible(False)
+            self.set_settings_widgets_visible(False)
+            self.info_title_label.show()
+            self.info_body_label.show()
+            self.info_title_label.setText(self.translate("feedback_card_title"))
+            self.info_body_label.setText(self.translate("feedback_card_body"))
+            self.open_profile_button.hide()
+            self.open_game_button.hide()
+            self.open_crash_reports_button.setText(self.translate("report_bug"))
+            self.open_crash_reports_button.show()
+            self.download_update_button.hide()
+            return
+
+        if self.info_panel_mode == "settings":
+            self.set_status_rows_visible(False)
+            self.set_settings_widgets_visible(True)
+            self.info_title_label.show()
+            self.info_body_label.show()
+            self.info_title_label.setText(self.translate("settings_title"))
+            self.info_body_label.setText(
+                f"{self.translate('settings_body')}\n{self.translate('update_disabled')}"
+            )
+            self.open_crash_reports_button.setText(self.translate("open_crash_reports"))
+            self.open_crash_reports_button.hide()
+            self.download_update_button.hide()
+            return
+
+        if not self.status_card_confirmed:
+            self.info_panel_mode = "help"
+            self.refresh_info_panel()
+            return
+
+        self.info_panel_mode = "status"
+        self.set_settings_widgets_visible(False)
+        self.set_status_rows_visible(True)
+        self.info_title_label.hide()
+        self.info_body_label.hide()
+        self.open_profile_button.hide()
+        self.open_game_button.hide()
         self.open_crash_reports_button.hide()
         self.download_update_button.hide()
+        self.mods_status_title.setText(self.translate("status_card_mods"))
+        status_text = self.status_label.text() if self.status_label.text() else self.translate("status_card_mods_body")
+        self.mods_status_body.setText(status_text)
+        self.fabric_status_title.setText(self.translate("status_card_fabric"))
+        self.fabric_status_body.setText(f"Loader {self.loader_setting_combo.currentText()}")
+        self.java_status_title.setText(self.translate("status_card_java"))
+        java_path = self.java_path_input.text().strip()
+        self.java_status_body.setText(java_path if java_path else self.translate("runtime_auto"))
+        return
+
+    def set_status_rows_visible(self, visible: bool) -> None:
+        for row in getattr(self, "status_rows", []):
+            row.setVisible(visible)
+        for widget in (
+            getattr(self, "mods_status_title", None),
+            getattr(self, "mods_status_body", None),
+            getattr(self, "mods_status_check", None),
+            getattr(self, "fabric_status_title", None),
+            getattr(self, "fabric_status_body", None),
+            getattr(self, "fabric_status_check", None),
+            getattr(self, "java_status_title", None),
+            getattr(self, "java_status_body", None),
+            getattr(self, "java_status_check", None),
+        ):
+            if widget is not None:
+                widget.setVisible(visible)
+
+    def show_settings_panel(self) -> None:
+        self.info_panel_mode = "settings"
+        self.refresh_info_panel()
+
+    def show_success_status_card(self) -> None:
+        if self.info_panel_mode in ("crash", "error", "update", "settings", "feedback"):
+            return
+        self.status_card_confirmed = True
+        self.info_panel_mode = "status"
+        self.refresh_info_panel()
 
     def set_settings_widgets_visible(self, visible: bool) -> None:
         for widget in getattr(self, "settings_widgets", []):
@@ -1840,6 +2546,14 @@ class MSLauncherWindow(QMainWindow):
         self.info_panel.show()
         for button in self.social_buttons:
             button.show()
+
+    def handle_panel_report_action(self) -> None:
+        if self.info_panel_mode in ("help", "feedback"):
+            support_url = get_support_url(self.config, self.client_mode)
+            if support_url and QDesktopServices.openUrl(QUrl(support_url)):
+                return
+            self.set_status_text(self.translate("support_offline"))
+        self.open_crash_reports_folder()
 
     def open_current_profile_folder(self) -> None:
         profile = self.profile_manager.get_profile(self.get_selected_profile_id())
@@ -1995,7 +2709,7 @@ class MSLauncherWindow(QMainWindow):
         self.set_action_buttons_enabled(True)
         self.action_phrase_key = "play_idle"
         self.play_button.setText(self.translate(self.action_phrase_key))
-        self.mods_button.setText(self.translate("mods_idle"))
+        self.mods_button.setText(self.translate(self.get_mods_action_key()))
 
     def set_status(self, key: str) -> None:
         self.status_label.setProperty("status_key", key)
@@ -2018,6 +2732,8 @@ class MSLauncherWindow(QMainWindow):
     def refresh_status_panel_text(self, text: str) -> None:
         if self.info_panel_mode == "settings" and self.info_panel.isVisible():
             self.info_body_label.setText(text)
+        if self.info_panel_mode == "status":
+            self.mods_status_body.setText(text)
 
     def show_error(self, message: str) -> None:
         QMessageBox.critical(self, self.translate("error"), message)
@@ -2029,7 +2745,7 @@ class MSLauncherWindow(QMainWindow):
         server = str(build.get("server", "")).strip()
         port = str(build.get("port", "")).strip()
 
-        if loader:
+        if loader and bool(build.get("force_loader", False)):
             launch_options["loader"] = loader
         if loader_version:
             launch_options["loader_version"] = loader_version
@@ -2088,6 +2804,24 @@ class MSLauncherWindow(QMainWindow):
                 "config_load",
             )
             self.show_error(self.with_report_path(self.translate("config_repaired", path=backup_path), report_path))
+
+    def mousePressEvent(self, event) -> None:
+        if event.button() == Qt.MouseButton.LeftButton and event.position().y() <= 92:
+            self._drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            event.accept()
+            return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event) -> None:
+        if self._drag_position is not None and event.buttons() & Qt.MouseButton.LeftButton:
+            self.move(event.globalPosition().toPoint() - self._drag_position)
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event) -> None:
+        self._drag_position = None
+        super().mouseReleaseEvent(event)
 
     def closeEvent(self, event) -> None:
         if self.launch_worker is not None and self.launch_worker.isRunning() and self.engine.is_game_process_running():
