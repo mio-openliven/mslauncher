@@ -50,6 +50,7 @@ from panel_client import (
     PanelClientError,
     get_panel_launcher_update,
     post_panel_report,
+    request_panel_build_access,
     resolve_panel_active_build,
 )
 from profile_manager import LauncherProfile, LauncherProfileManager, PROFILE_IDS, PROFILE_SERVER
@@ -222,9 +223,12 @@ TRANSLATIONS = {
         "status_mods_ready": "Mod files are ready.",
         "status_mods_no_sync": "This profile does not use server mod sync.",
         "update_disabled": "No launcher update notice.",
-        "access_password_prompt": "Enter project access password.",
-        "access_password_failed": "You do not know the current project password. Ask the Nukem admin for the details.",
-        "access_password_missing": "Project password hash is not configured. Ask the admin to fill password_hash_sha256.",
+        "access_password_title": "Build access",
+        "access_password_body": "Enter the code for {build}. The code unlocks mod download for this build only.",
+        "access_password_prompt": "Build password",
+        "access_password_download": "Download mods",
+        "access_password_failed": "Wrong build password. Ask the Nukem admin for the current code.",
+        "access_password_missing": "Build password is not configured. Ask the admin to add a password for this build.",
         "access_granted": "Project access granted.",
         "action_motor": "Rolling!",
         "action_go": "Action!",
@@ -336,9 +340,12 @@ TRANSLATIONS = {
         "status_mods_ready": "\u0424\u0430\u0439\u043b\u044b \u043c\u043e\u0434\u043e\u0432 \u0433\u043e\u0442\u043e\u0432\u044b.",
         "status_mods_no_sync": "\u042d\u0442\u043e\u0442 \u043f\u0440\u043e\u0444\u0438\u043b\u044c \u043d\u0435 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0435\u0442 \u0441\u0435\u0440\u0432\u0435\u0440\u043d\u0443\u044e \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u044e \u043c\u043e\u0434\u043e\u0432.",
         "update_disabled": "\u041d\u0435\u0442 \u0443\u0432\u0435\u0434\u043e\u043c\u043b\u0435\u043d\u0438\u044f \u043e\u0431 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0438.",
-        "access_password_prompt": "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u043f\u0430\u0440\u043e\u043b\u044c \u0434\u043e\u0441\u0442\u0443\u043f\u0430 \u043a \u043f\u0440\u043e\u0435\u043a\u0442\u0443.",
-        "access_password_failed": "\u0412\u044b \u043d\u0435 \u0437\u043d\u0430\u0435\u0442\u0435 \u0430\u043a\u0442\u0443\u0430\u043b\u044c\u043d\u044b\u0439 \u043f\u0430\u0440\u043e\u043b\u044c. \u0423\u0442\u043e\u0447\u043d\u0438\u0442\u0435 \u0434\u0435\u0442\u0430\u043b\u0438 \u0443 \u0430\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0446\u0438\u0438 \u041d\u044e\u043a\u0435\u043c\u0430.",
-        "access_password_missing": "\u0425\u044d\u0448 \u043f\u0430\u0440\u043e\u043b\u044f \u043f\u0440\u043e\u0435\u043a\u0442\u0430 \u043d\u0435 \u0437\u0430\u0434\u0430\u043d. \u0410\u0434\u043c\u0438\u043d \u0434\u043e\u043b\u0436\u0435\u043d \u0437\u0430\u043f\u043e\u043b\u043d\u0438\u0442\u044c password_hash_sha256.",
+        "access_password_title": "\u0414\u043e\u0441\u0442\u0443\u043f \u043a \u0441\u0431\u043e\u0440\u043a\u0435",
+        "access_password_body": "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u043a\u043e\u0434 \u0434\u043b\u044f \u00ab{build}\u00bb. \u041a\u043e\u0434 \u043e\u0442\u043a\u0440\u044b\u0432\u0430\u0435\u0442 \u0441\u043a\u0430\u0447\u0438\u0432\u0430\u043d\u0438\u0435 \u043c\u043e\u0434\u043e\u0432 \u0442\u043e\u043b\u044c\u043a\u043e \u044d\u0442\u043e\u0439 \u0441\u0431\u043e\u0440\u043a\u0438.",
+        "access_password_prompt": "\u041f\u0430\u0440\u043e\u043b\u044c \u0441\u0431\u043e\u0440\u043a\u0438",
+        "access_password_download": "\u0421\u043a\u0430\u0447\u0430\u0442\u044c \u043c\u043e\u0434\u044b",
+        "access_password_failed": "\u041d\u0435\u0432\u0435\u0440\u043d\u044b\u0439 \u043f\u0430\u0440\u043e\u043b\u044c \u0441\u0431\u043e\u0440\u043a\u0438. \u0423\u0442\u043e\u0447\u043d\u0438\u0442\u0435 \u0430\u043a\u0442\u0443\u0430\u043b\u044c\u043d\u044b\u0439 \u043a\u043e\u0434 \u0443 \u0430\u0434\u043c\u0438\u043d\u0430 Nukem.",
+        "access_password_missing": "\u041f\u0430\u0440\u043e\u043b\u044c \u044d\u0442\u043e\u0439 \u0441\u0431\u043e\u0440\u043a\u0438 \u043d\u0435 \u0437\u0430\u0434\u0430\u043d. \u0410\u0434\u043c\u0438\u043d \u0434\u043e\u043b\u0436\u0435\u043d \u0437\u0430\u0434\u0430\u0442\u044c \u043a\u043e\u0434 \u0434\u043b\u044f \u0441\u0431\u043e\u0440\u043a\u0438.",
         "access_granted": "\u0414\u043e\u0441\u0442\u0443\u043f \u043a \u043f\u0440\u043e\u0435\u043a\u0442\u0443 \u043e\u0442\u043a\u0440\u044b\u0442.",
         "action_motor": "\u041c\u043e\u0442\u043e\u0440!",
         "action_go": "\u041f\u043e\u0435\u0445\u0430\u043b\u0438!",
@@ -417,6 +424,7 @@ def load_launcher_config(config_path: str | Path = CONFIG_FILE) -> dict[str, obj
             CLIENT_MODE_NUKEM: {
                 "password_enabled": False,
                 "password_hash_sha256": "",
+                "build_passwords": {},
                 "password_hint": "Ask the project admin for the access password.",
             }
         },
@@ -1226,6 +1234,7 @@ class MSLauncherWindow(QMainWindow):
         self.selected_version = ""
         self.selected_manifest_url = ""
         self.selected_launch_options: dict[str, object] = {}
+        self.action_requires_mod_access = False
         self.last_crash_reason = ""
         self.last_crash_report_path: Path | None = None
         self.last_error_message = ""
@@ -1238,6 +1247,8 @@ class MSLauncherWindow(QMainWindow):
         self.status_card_confirmed = True
         self._drag_position = None
         self.project_access_unlocked = False
+        self.unlocked_build_ids: set[str] = set()
+        self.project_switcher_expanded = False
         self.brand_subtitle_key = random.choice(self.get_brand_subtitle_keys())
         self.action_phrase_key = "play_idle"
         self.launch_after_sync = True
@@ -1692,8 +1703,9 @@ class MSLauncherWindow(QMainWindow):
         self.language_combo.currentTextChanged.connect(self.change_language)
         self.profile_combo.currentIndexChanged.connect(self.on_profile_changed)
         self.build_combo.currentIndexChanged.connect(self.on_build_changed)
-        self.mslaunch_tab.clicked.connect(lambda: self.set_client_mode(CLIENT_MODE_INDEPENDENT))
-        self.nukem_tab.clicked.connect(lambda: self.set_client_mode(CLIENT_MODE_NUKEM))
+        self.mslaunch_tab.clicked.connect(lambda: self.handle_project_tab(CLIENT_MODE_INDEPENDENT))
+        self.nukem_tab.clicked.connect(lambda: self.handle_project_tab(CLIENT_MODE_NUKEM))
+        self.vibecraft_tab.clicked.connect(lambda: self.handle_project_tab("vibecraft"))
         self.language_toggle_button.clicked.connect(self.toggle_language)
         self.minimize_button.clicked.connect(self.showMinimized)
         self.close_button.clicked.connect(self.close)
@@ -1741,6 +1753,18 @@ class MSLauncherWindow(QMainWindow):
         self.loader_vanilla_button.setChecked(active_loader != "fabric")
         self.loader_fabric_button.setChecked(active_loader == "fabric")
 
+    def handle_project_tab(self, client_mode: str) -> None:
+        if client_mode not in CLIENT_MODES:
+            self.project_switcher_expanded = False
+            self.update_project_tabs()
+            return
+        if client_mode == self.client_mode:
+            self.project_switcher_expanded = not self.project_switcher_expanded
+            self.update_project_tabs()
+            return
+        self.project_switcher_expanded = False
+        self.set_client_mode(client_mode)
+
     def toggle_client_mode(self) -> None:
         next_mode = (
             CLIENT_MODE_NUKEM
@@ -1755,6 +1779,8 @@ class MSLauncherWindow(QMainWindow):
             return
         self.client_mode = client_mode
         self.project_access_unlocked = False
+        self.unlocked_build_ids.clear()
+        self.project_switcher_expanded = False
         self.social_links = get_social_links(self.config, self.client_mode)
         self.refresh_project_backgrounds()
         self.refresh_social_buttons()
@@ -1817,6 +1843,9 @@ class MSLauncherWindow(QMainWindow):
             (self.nukem_tab, CLIENT_MODE_NUKEM, self.client_mode == CLIENT_MODE_NUKEM),
             (self.vibecraft_tab, "vibecraft", False),
         )
+        self.project_switcher.setProperty("expanded", self.project_switcher_expanded)
+        self.project_switcher.style().unpolish(self.project_switcher)
+        self.project_switcher.style().polish(self.project_switcher)
         active_icon = self.get_project_icon_path(self.client_mode)
         if active_icon.is_file():
             self.logo_label.setPixmap(QPixmap(str(active_icon)))
@@ -1828,10 +1857,11 @@ class MSLauncherWindow(QMainWindow):
             icon_path = self.get_project_icon_path(project_key)
             if icon_path.is_file():
                 tab.setIcon(QIcon(str(icon_path)))
-                tab.setIconSize(QSize(28 if active else 32, 28 if active else 32))
-            tab.setText(label if active else "")
+                tab.setIconSize(QSize(30, 30))
+            tab.setText(label if self.project_switcher_expanded and active else "")
             tab.setToolTip(label)
-            tab.setFixedSize(158 if active else 58, 52)
+            tab.setVisible(active or self.project_switcher_expanded)
+            tab.setFixedSize(158 if self.project_switcher_expanded and active else 54, 48)
             tab.style().unpolish(tab)
             tab.style().polish(tab)
             tab.update()
@@ -1929,9 +1959,13 @@ class MSLauncherWindow(QMainWindow):
                 border: 0;
             }
             #projectSwitcher {
-                background: rgba(8, 11, 15, 128);
-                border: 1px solid rgba(255, 255, 255, 26);
+                background: rgba(8, 11, 15, 92);
+                border: 1px solid rgba(255, 255, 255, 18);
                 border-radius: 8px;
+            }
+            #projectSwitcher[expanded="true"] {
+                background: rgba(8, 11, 15, 150);
+                border: 1px solid rgba(255, 255, 255, 32);
             }
             #windowControls {
                 background: transparent;
@@ -1966,8 +2000,8 @@ class MSLauncherWindow(QMainWindow):
                 border-radius: 8px;
             }
             #controlFrame {
-                background: rgba(11, 13, 14, 190);
-                border: 1px solid rgba(255, 255, 255, 36);
+                background: rgba(7, 10, 11, 176);
+                border: 1px solid rgba(255, 255, 255, 26);
                 border-radius: 8px;
             }
             QLabel {
@@ -2033,18 +2067,18 @@ class MSLauncherWindow(QMainWindow):
                 color: #f3f6f2;
                 border: 1px solid transparent;
                 border-radius: 8px;
-                padding: 0 8px;
+                padding: 0 7px;
                 text-align: left;
                 font-size: 14px;
                 font-weight: 700;
             }
             QPushButton#projectTab:hover {
-                background: rgba(255, 255, 255, 22);
-                border: 1px solid rgba(255, 255, 255, 42);
+                background: rgba(255, 255, 255, 16);
+                border: 1px solid rgba(255, 255, 255, 34);
             }
             QPushButton#projectTab[active="true"] {
-                background: rgba(255, 255, 255, 16);
-                border: 1px solid rgba(255, 255, 255, 48);
+                background: rgba(255, 255, 255, 12);
+                border: 1px solid rgba(255, 255, 255, 34);
                 color: #ffffff;
             }
             QPushButton#projectTab:disabled {
@@ -2098,9 +2132,9 @@ class MSLauncherWindow(QMainWindow):
             }
             QLineEdit,
             QComboBox {
-                background: rgba(3, 7, 9, 178);
+                background: rgba(3, 7, 9, 156);
                 color: #ffffff;
-                border: 1px solid rgba(255, 255, 255, 52);
+                border: 1px solid rgba(255, 255, 255, 34);
                 border-radius: 8px;
                 padding: 8px 12px;
                 min-height: 36px;
@@ -2116,7 +2150,7 @@ class MSLauncherWindow(QMainWindow):
             }
             #loaderSegmentFrame {
                 background: rgba(3, 7, 9, 154);
-                border: 1px solid rgba(255, 255, 255, 42);
+                border: 1px solid rgba(255, 255, 255, 30);
                 border-radius: 8px;
             }
             QPushButton#loaderSegment {
@@ -2147,20 +2181,20 @@ class MSLauncherWindow(QMainWindow):
             }
             QPushButton#playButton:hover {
                 background: #ff9a1f;
-                border: 2px solid #ffc36b;
+                border: 1px solid #ffc36b;
             }
             QPushButton#playButton {
                 background: #f08a16;
-                border: 2px solid #ffb24f;
+                border: 1px solid #ffb24f;
             }
             QPushButton#modsButton {
                 background: rgba(6, 17, 24, 188);
-                border: 2px solid #3aa3d8;
+                border: 1px solid #3aa3d8;
             }
             QPushButton#modsButton:hover {
                 background: rgba(18, 44, 60, 218);
                 color: #ffffff;
-                border: 2px solid #66c6f2;
+                border: 1px solid #66c6f2;
             }
             QPushButton#playButton:disabled,
             QPushButton#modsButton:disabled {
@@ -2292,6 +2326,9 @@ class MSLauncherWindow(QMainWindow):
         index = self.version_combo.findText(configured_version)
         if index >= 0:
             self.version_combo.setCurrentIndex(index)
+        elif self.client_mode == CLIENT_MODE_NUKEM:
+            self.version_combo.addItem(configured_version)
+            self.version_combo.setCurrentText(configured_version)
 
         self.save_user_preferences()
         self.refresh_nukem_control_policy()
@@ -2326,29 +2363,165 @@ class MSLauncherWindow(QMainWindow):
         project_config = access_config.get(self.client_mode)
         return project_config if isinstance(project_config, dict) else {}
 
-    def ensure_project_access(self) -> bool:
-        if self.client_mode != CLIENT_MODE_NUKEM or self.project_access_unlocked:
-            return True
+    def get_build_access_key(self, build: dict[str, object]) -> str:
+        project = str(build.get("project") or self.client_mode).strip() or self.client_mode
+        build_id = str(build.get("build_id") or build.get("id") or self.get_selected_build_id()).strip()
+        return f"{project}:{build_id}"
+
+    def get_build_access_hash(self, build: dict[str, object]) -> str:
+        for key in ("access_hash_sha256", "access_password_hash_sha256", "password_hash_sha256"):
+            value = str(build.get(key, "")).strip().lower()
+            if value:
+                return value
 
         access_config = self.get_project_access_config()
-        if not bool(access_config.get("password_enabled", False)):
+        build_id = str(build.get("build_id") or build.get("id") or self.get_selected_build_id()).strip()
+        build_passwords = access_config.get("build_passwords")
+        if isinstance(build_passwords, dict) and build_id:
+            value = str(build_passwords.get(build_id, "")).strip().lower()
+            if value:
+                return value
+
+        if bool(access_config.get("password_enabled", False)):
+            return str(access_config.get("password_hash_sha256", "")).strip().lower()
+        return ""
+
+    def build_access_required(self, build: dict[str, object]) -> bool:
+        raw_required = build.get("access_required")
+        if isinstance(raw_required, bool):
+            return raw_required
+        if str(raw_required).strip().lower() in {"1", "true", "yes", "required"}:
+            return True
+        if bool(self.get_project_access_config().get("password_enabled", False)):
+            return True
+        return bool(self.get_build_access_hash(build))
+
+    def request_build_password(self, build: dict[str, object]) -> str | None:
+        build_name = str(build.get("name") or build.get("build_id") or build.get("id") or "Nukem build").strip()
+        dialog = QDialog(self)
+        dialog.setObjectName("accessDialog")
+        dialog.setWindowTitle(self.translate("access_password_title"))
+        dialog.setModal(True)
+        dialog.setMinimumWidth(420)
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(24, 22, 24, 22)
+        layout.setSpacing(14)
+
+        title = QLabel(self.translate("access_password_title"))
+        title.setObjectName("accessTitle")
+        body = QLabel(self.translate("access_password_body", build=build_name))
+        body.setObjectName("accessBody")
+        body.setWordWrap(True)
+        input_field = QLineEdit()
+        input_field.setObjectName("accessInput")
+        input_field.setEchoMode(QLineEdit.EchoMode.Password)
+        input_field.setPlaceholderText(self.translate("access_password_prompt"))
+
+        button_row = QHBoxLayout()
+        button_row.addStretch()
+        cancel_button = QPushButton(self.translate("cancel_close"))
+        cancel_button.setObjectName("accessCancelButton")
+        download_button = QPushButton(self.translate("access_password_download"))
+        download_button.setObjectName("accessDownloadButton")
+        button_row.addWidget(cancel_button)
+        button_row.addWidget(download_button)
+
+        layout.addWidget(title)
+        layout.addWidget(body)
+        layout.addWidget(input_field)
+        layout.addLayout(button_row)
+
+        dialog.setStyleSheet(
+            """
+            QDialog#accessDialog {
+                background: #081012;
+                border: 1px solid rgba(116, 231, 186, 80);
+                font-family: "Segoe UI", "Arial";
+            }
+            QLabel#accessTitle {
+                color: #ffffff;
+                font-size: 22px;
+                font-weight: 800;
+            }
+            QLabel#accessBody {
+                color: #d8e0dc;
+                font-size: 14px;
+            }
+            QLineEdit#accessInput {
+                background: rgba(0, 0, 0, 150);
+                color: #ffffff;
+                border: 1px solid rgba(116, 231, 186, 95);
+                border-radius: 8px;
+                padding: 10px 12px;
+                min-height: 38px;
+                font-size: 15px;
+            }
+            QPushButton#accessCancelButton,
+            QPushButton#accessDownloadButton {
+                border-radius: 8px;
+                min-height: 38px;
+                padding: 8px 14px;
+                font-size: 14px;
+                font-weight: 800;
+            }
+            QPushButton#accessCancelButton {
+                color: rgba(255, 255, 255, 190);
+                background: rgba(255, 255, 255, 18);
+                border: 1px solid rgba(255, 255, 255, 42);
+            }
+            QPushButton#accessDownloadButton {
+                color: #ffffff;
+                background: rgba(12, 38, 52, 230);
+                border: 1px solid #46b8ee;
+            }
+            """
+        )
+
+        cancel_button.clicked.connect(dialog.reject)
+        download_button.clicked.connect(dialog.accept)
+        input_field.returnPressed.connect(dialog.accept)
+        input_field.setFocus()
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return None
+        return input_field.text()
+
+    def ensure_build_access(self, build: dict[str, object]) -> bool:
+        if self.client_mode != CLIENT_MODE_NUKEM:
             return True
 
-        expected_hash = str(access_config.get("password_hash_sha256", "")).strip().lower()
-        if not expected_hash:
+        access_key = self.get_build_access_key(build)
+        if access_key in self.unlocked_build_ids:
+            return True
+        if not self.build_access_required(build):
+            return True
+
+        panel_required = (
+            str(build.get("source", "")).strip().lower() == "panel"
+            and str(build.get("access_required", "")).strip()
+        )
+        expected_hash = "" if panel_required else self.get_build_access_hash(build)
+        if not panel_required and not expected_hash:
             self.show_error(self.translate("access_password_missing"))
             self.set_status("ready")
             return False
 
-        dialog = QInputDialog(self)
-        dialog.setWindowTitle(APP_DISPLAY_NAME)
-        dialog.setLabelText(self.translate("access_password_prompt"))
-        dialog.setTextEchoMode(QLineEdit.EchoMode.Password)
-        dialog.setStyleSheet(SYSTEM_DIALOG_STYLESHEET)
-        accepted = dialog.exec() == QDialog.DialogCode.Accepted
-        password = dialog.textValue()
-        if not accepted:
+        password = self.request_build_password(build)
+        if password is None:
+            self.set_status("ready")
             return False
+
+        if panel_required:
+            try:
+                unlocked_build = request_panel_build_access(self.config, self.client_mode, build, password)
+            except PanelClientError:
+                self.show_error(self.translate("access_password_failed"))
+                self.set_status("ready")
+                return False
+            build.update(unlocked_build)
+            self.unlocked_build_ids.add(access_key)
+            self.project_access_unlocked = True
+            self.set_status("access_granted")
+            return True
 
         actual_hash = hashlib.sha256(password.encode("utf-8")).hexdigest()
         if not hmac.compare_digest(actual_hash, expected_hash):
@@ -2357,8 +2530,13 @@ class MSLauncherWindow(QMainWindow):
             return False
 
         self.project_access_unlocked = True
+        self.unlocked_build_ids.add(access_key)
         self.set_status("access_granted")
         return True
+
+    def ensure_project_access(self) -> bool:
+        build = self.get_selected_build() or {}
+        return self.ensure_build_access(dict(build))
 
     def check_mods_and_play(self) -> None:
         self.start_mod_check(launch_after_sync=True)
@@ -2379,8 +2557,6 @@ class MSLauncherWindow(QMainWindow):
         if build is None:
             self.show_error(self.translate("empty_build"))
             return
-        if not self.ensure_project_access():
-            return
 
         self.selected_profile = self.profile_manager.get_profile(self.get_selected_profile_id())
         self.active_profile = self.selected_profile
@@ -2388,20 +2564,23 @@ class MSLauncherWindow(QMainWindow):
         self.engine.minecraft_directory = self.selected_profile.directory
         self.selected_username = username
         self.launch_after_sync = launch_after_sync
+        self.action_requires_mod_access = self.client_mode == CLIENT_MODE_NUKEM and not launch_after_sync
         self.action_phrase_key = random.choice(self.get_action_phrase_keys()) if launch_after_sync else "mods_idle"
         if launch_after_sync:
             self.play_button.setText(self.translate(self.action_phrase_key))
         self.set_action_buttons_enabled(False)
         self.progress_bar.setValue(0)
         sync_enabled = should_sync_profile(self.client_mode, self.selected_profile)
+        if self.client_mode == CLIENT_MODE_NUKEM and launch_after_sync:
+            sync_enabled = False
 
-        if sync_enabled:
+        if sync_enabled or self.client_mode == CLIENT_MODE_NUKEM:
             self.set_status("status_loading_build")
             self.build_config_worker = BuildConfigWorker(
                 build,
                 config=self.config,
                 client_mode=self.client_mode,
-                require_manifest=True,
+                require_manifest=sync_enabled,
             )
             self.build_config_worker.build_loaded.connect(self.on_build_config_loaded)
             self.build_config_worker.error_occurred.connect(self.on_build_config_failed)
@@ -2421,9 +2600,17 @@ class MSLauncherWindow(QMainWindow):
             index = self.version_combo.findText(configured_version)
             if index >= 0:
                 self.version_combo.setCurrentIndex(index)
+            elif self.client_mode == CLIENT_MODE_NUKEM:
+                self.version_combo.addItem(configured_version)
+                self.version_combo.setCurrentText(configured_version)
 
         if not version:
             self.show_error(self.translate("empty_version"))
+            self.reset_action_buttons()
+            self.set_status("ready")
+            return
+
+        if self.action_requires_mod_access and not self.ensure_build_access(resolved_build):
             self.reset_action_buttons()
             self.set_status("ready")
             return
@@ -2432,6 +2619,8 @@ class MSLauncherWindow(QMainWindow):
         self.selected_version = version
         self.selected_manifest_url = manifest_url
         sync_enabled = should_sync_profile(self.client_mode, self.selected_profile)
+        if self.client_mode == CLIENT_MODE_NUKEM and self.launch_after_sync:
+            sync_enabled = False
         if requires_server_manifest(self.selected_profile, manifest_url, self.client_mode):
             self.reset_action_buttons()
             user_error = explain_user_error(

@@ -13,6 +13,7 @@ except Exception:  # pragma: no cover - dev fallback when optional dependency is
 
 
 SESSION_MAX_AGE_SECONDS = 60 * 60 * 12
+BUILD_ACCESS_MAX_AGE_SECONDS = 60 * 20
 
 
 def hash_password(password: str) -> str:
@@ -66,6 +67,38 @@ def verify_session_token(token: str, secret: str, *, now: int | None = None) -> 
     return username
 
 
+def create_build_access_token(project: str, build_id: str, secret: str, *, now: int | None = None) -> str:
+    expires_at = int(now or time.time()) + BUILD_ACCESS_MAX_AGE_SECONDS
+    payload = f"{project}:{build_id}:{expires_at}"
+    signature = hmac.new(secret.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
+    token = f"{payload}:{signature}".encode("utf-8")
+    return base64.urlsafe_b64encode(token).decode("ascii")
+
+
+def verify_build_access_token(
+    token: str,
+    project: str,
+    build_id: str,
+    secret: str,
+    *,
+    now: int | None = None,
+) -> bool:
+    try:
+        decoded = base64.urlsafe_b64decode(token.encode("ascii")).decode("utf-8")
+        token_project, token_build_id, expires_at_text, signature = decoded.rsplit(":", 3)
+        expires_at = int(expires_at_text)
+    except Exception:
+        return False
+
+    if token_project != project or token_build_id != build_id:
+        return False
+    if int(now or time.time()) > expires_at:
+        return False
+
+    payload = f"{token_project}:{token_build_id}:{expires_at}"
+    expected = hmac.new(secret.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(signature, expected)
+
+
 def generate_password(length: int = 18) -> str:
     return secrets.token_urlsafe(length)
-

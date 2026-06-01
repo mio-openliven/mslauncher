@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import shutil
 import tempfile
+import hashlib
+import hmac
 from pathlib import Path
 from sqlite3 import Row
 from typing import Annotated
@@ -21,7 +23,14 @@ from .modpack import (
     safe_manifest_path,
     safe_segment,
 )
-from .security import create_session_token, hash_password, verify_password, verify_session_token
+from .security import (
+    create_build_access_token,
+    create_session_token,
+    hash_password,
+    verify_build_access_token,
+    verify_password,
+    verify_session_token,
+)
 from .settings import APP_NAME, DEFAULT_HOST, DEFAULT_PORT, get_public_base_url, get_session_secret, get_storage_root
 
 
@@ -178,6 +187,7 @@ def builds_page(request: Request):
           <div><label>Loader version</label><input name="loader_version" value="latest"></div>
           <div><label>Server</label><input name="server"></div>
           <div><label>Port</label><input name="port"></div>
+          <div><label>Build password</label><input name="access_password" type="password" placeholder="optional per-build code"></div>
         </div>
         <label>Modpack ZIP with mods/config/resourcepacks</label><input name="archive" type="file" accept=".zip">
         <p><label><input name="make_active" type="checkbox" value="1" style="width:auto"> Make active today</label></p>
@@ -186,7 +196,7 @@ def builds_page(request: Request):
     </div>
     <div class="card">
       <h2>Builds</h2>
-      <table><tr><th>Project</th><th>ID</th><th>Name</th><th>MC</th><th>Loader</th><th>Files</th><th>Status</th><th></th></tr>{build_rows}</table>
+      <table><tr><th>Project</th><th>ID</th><th>Name</th><th>MC</th><th>Loader</th><th>Files</th><th>Access</th><th>Status</th><th></th></tr>{build_rows}</table>
     </div>
     """
     return HTMLResponse(page("Builds", body, user=user))
@@ -204,6 +214,7 @@ def render_build_row(row: Row) -> str:
       <td>{esc(row["minecraft_version"])}</td>
       <td>{esc(row["loader"])}</td>
       <td>{esc(row["file_count"])}</td>
+      <td>{'locked' if row['access_hash_sha256'] else 'open'}</td>
       <td><span class="status {esc(row["status"])}">{esc(row["status"])}</span></td>
       <td>{activate}</td>
     </tr>
@@ -222,6 +233,7 @@ def create_build(
     loader_version: str = Form("latest"),
     server: str = Form(""),
     port: str = Form(""),
+    access_password: str = Form(""),
     make_active: str = Form(""),
     archive: UploadFile | None = File(None),
 ) -> RedirectResponse:
@@ -249,6 +261,7 @@ def create_build(
 
         file_count, total_size = calculate_file_stats(files_root)
         status = "active" if make_active else "draft"
+        access_hash = hash_build_access_password(access_password)
         with connect() as connection:
             if status == "active":
                 connection.execute("UPDATE builds SET status='archived' WHERE project_slug=? AND status='active'", (project,))
@@ -256,9 +269,9 @@ def create_build(
                 """
                 INSERT INTO builds (
                     project_slug, build_id, name, minecraft_version, loader, loader_version,
-                    server, port, status, file_count, total_size, created_by, activated_at
+                    server, port, access_hash_sha256, status, file_count, total_size, created_by, activated_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ?='active' THEN CURRENT_TIMESTAMP ELSE '' END)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ?='active' THEN CURRENT_TIMESTAMP ELSE '' END)
                 ON CONFLICT(project_slug, build_id) DO UPDATE SET
                     name=excluded.name,
                     minecraft_version=excluded.minecraft_version,
@@ -266,6 +279,10 @@ def create_build(
                     loader_version=excluded.loader_version,
                     server=excluded.server,
                     port=excluded.port,
+                    access_hash_sha256=CASE
+                        WHEN excluded.access_hash_sha256 != '' THEN excluded.access_hash_sha256
+                        ELSE builds.access_hash_sha256
+                    END,
                     status=excluded.status,
                     file_count=excluded.file_count,
                     total_size=excluded.total_size,
@@ -281,6 +298,7 @@ def create_build(
                     loader_version.strip() or "latest",
                     server.strip(),
                     port.strip(),
+                    access_hash,
                     status,
                     file_count,
                     total_size,
@@ -303,6 +321,31 @@ def activate_build(project: str, build_id: str, user: Annotated[Row, Depends(req
             (project, build_id),
         )
     return RedirectResponse("/builds", status_code=303)
+
+
+def hash_build_access_password(password: str) -> str:
+    password = password.strip()
+    if not password:
+        return ""
+    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
+
+def get_build_access_hash(project: str, build_id: str) -> str:
+    with connect() as connection:
+        row = connection.execute(
+            "SELECT access_hash_sha256 FROM builds WHERE project_slug=? AND build_id=?",
+            (project, build_id),
+        ).fetchone()
+    return str(row["access_hash_sha256"] or "") if row is not None else ""
+
+
+def assert_build_file_access(project: str, build_id: str, access: str) -> None:
+    access_hash = get_build_access_hash(project, build_id)
+    if not access_hash:
+        return
+    if verify_build_access_token(access, project, build_id, get_session_secret()):
+        return
+    raise HTTPException(status_code=403, detail="Build access password required.")
 
 
 @app.get("/updates", response_class=HTMLResponse)
@@ -492,6 +535,7 @@ def build_api_payload(row: Row, manifest_url: str) -> dict[str, str]:
         "manifest_url": manifest_url,
         "server": row["server"],
         "port": row["port"],
+        "access_required": "true" if row["access_hash_sha256"] else "",
         "source": "panel",
         "launcher_version": "",
         "launcher_download_url": "",
@@ -500,15 +544,45 @@ def build_api_payload(row: Row, manifest_url: str) -> dict[str, str]:
     }
 
 
+@app.post("/api/projects/{project}/builds/{build_id}/access")
+async def api_build_access(project: str, build_id: str, request: Request) -> JSONResponse:
+    payload = await request.json()
+    password = clean_text(payload.get("password"), 400)
+    with connect() as connection:
+        row = connection.execute(
+            "SELECT * FROM builds WHERE project_slug=? AND build_id=?",
+            (project, build_id),
+        ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Build not found.")
+
+    access_hash = str(row["access_hash_sha256"] or "")
+    if access_hash:
+        actual_hash = hash_build_access_password(password)
+        if not hmac.compare_digest(actual_hash, access_hash):
+            raise HTTPException(status_code=403, detail="Wrong build password.")
+
+    token = create_build_access_token(project, build_id, get_session_secret())
+    manifest_url = str(request.url_for("api_manifest", project=project, build_id=build_id)) + f"?access={token}"
+    return JSONResponse({"manifest_url": manifest_url, "access_token": token})
+
+
 @app.get("/api/projects/{project}/builds/{build_id}/manifest.json", name="api_manifest")
-def api_manifest(project: str, build_id: str, request: Request) -> JSONResponse:
+def api_manifest(project: str, build_id: str, request: Request, access: str = "") -> JSONResponse:
+    assert_build_file_access(project, build_id, access)
     files_root = build_storage_path(get_storage_root(), project, build_id)
     files_base_url = str(request.url_for("file_download", project=project, build_id=build_id, file_path="")).rstrip("/")
-    return JSONResponse(generate_manifest(files_root, files_base_url))
+    manifest = generate_manifest(files_root, files_base_url)
+    if access:
+        for item in manifest.get("files", []):
+            if isinstance(item, dict) and item.get("url"):
+                item["url"] = f"{item['url']}?access={access}"
+    return JSONResponse(manifest)
 
 
 @app.get("/files/{project}/{build_id}/{file_path:path}", name="file_download")
-def file_download(project: str, build_id: str, file_path: str) -> FileResponse:
+def file_download(project: str, build_id: str, file_path: str, access: str = "") -> FileResponse:
+    assert_build_file_access(project, build_id, access)
     relative_path = safe_manifest_path(file_path)
     target = build_storage_path(get_storage_root(), project, build_id) / Path(relative_path)
     if not target.is_file():

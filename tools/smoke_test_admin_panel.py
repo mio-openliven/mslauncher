@@ -47,6 +47,7 @@ def main() -> None:
                         "loader_version": "latest",
                         "server": "",
                         "port": "",
+                        "access_password": "pack-secret",
                         "make_active": "1",
                     },
                     files={"archive": ("pack.zip", file, "application/zip")},
@@ -59,14 +60,34 @@ def main() -> None:
             active_data = active.json()
             assert active_data["build_id"] == "nukem-test"
             assert active_data["minecraft_version"] == "1.20.1"
+            assert active_data["access_required"] == "true"
 
             manifest = client.get("/api/projects/nukem/builds/nukem-test/manifest.json")
+            assert manifest.status_code == 403
+
+            wrong_access = client.post(
+                "/api/projects/nukem/builds/nukem-test/access",
+                json={"password": "wrong"},
+            )
+            assert wrong_access.status_code == 403
+
+            access = client.post(
+                "/api/projects/nukem/builds/nukem-test/access",
+                json={"password": "pack-secret"},
+            )
+            assert access.status_code == 200
+            access_data = access.json()
+            token = access_data["access_token"]
+            assert token
+
+            manifest = client.get(f"/api/projects/nukem/builds/nukem-test/manifest.json?access={token}")
             assert manifest.status_code == 200
             files = manifest.json()["files"]
             assert len(files) == 2
             assert {item["path"] for item in files} == {"mods/example.jar", "config/settings.toml"}
+            assert all("access=" in item["url"] for item in files)
 
-            downloaded = client.get("/files/nukem/nukem-test/mods/example.jar")
+            downloaded = client.get(f"/files/nukem/nukem-test/mods/example.jar?access={token}")
             assert downloaded.status_code == 200
             assert downloaded.content == b"jar-data"
 
@@ -107,4 +128,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS builds (
     loader_version TEXT NOT NULL DEFAULT 'latest',
     server TEXT NOT NULL DEFAULT '',
     port TEXT NOT NULL DEFAULT '',
+    access_hash_sha256 TEXT NOT NULL DEFAULT '',
     status TEXT NOT NULL CHECK(status IN ('draft', 'active', 'archived')) DEFAULT 'draft',
     file_count INTEGER NOT NULL DEFAULT 0,
     total_size INTEGER NOT NULL DEFAULT 0,
@@ -103,7 +104,17 @@ def init_db(database_path: Path | None = None) -> None:
     get_storage_root().mkdir(parents=True, exist_ok=True)
     with connect(database_path) as connection:
         connection.executescript(SCHEMA)
+        ensure_build_columns(connection)
         seed_projects(connection, DEFAULT_PROJECTS)
+
+
+def ensure_build_columns(connection: sqlite3.Connection) -> None:
+    columns = {
+        str(row["name"])
+        for row in connection.execute("PRAGMA table_info(builds)").fetchall()
+    }
+    if "access_hash_sha256" not in columns:
+        connection.execute("ALTER TABLE builds ADD COLUMN access_hash_sha256 TEXT NOT NULL DEFAULT ''")
 
 
 def seed_projects(connection: sqlite3.Connection, projects: Iterable[tuple[str, str, str, str]]) -> None:

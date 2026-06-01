@@ -11,7 +11,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from panel_client import get_panel_launcher_update, post_panel_report, resolve_panel_active_build
+from panel_client import (
+    get_panel_launcher_update,
+    post_panel_report,
+    request_panel_build_access,
+    resolve_panel_active_build,
+)
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -28,6 +33,7 @@ class Handler(SimpleHTTPRequestHandler):
                     "loader": "fabric",
                     "loader_version": "latest",
                     "manifest_url": f"http://127.0.0.1:{self.server.server_port}/manifest.json",
+                    "access_required": "true",
                     "server": "",
                     "port": "",
                 }
@@ -56,6 +62,20 @@ class Handler(SimpleHTTPRequestHandler):
             payload = json.loads(self.rfile.read(length).decode("utf-8"))
             Handler.reports.append(payload)
             self.send_json({"ok": True})
+            return
+        if self.path == "/api/projects/nukem/builds/panel-build/access":
+            length = int(self.headers.get("content-length", "0"))
+            payload = json.loads(self.rfile.read(length).decode("utf-8"))
+            if payload.get("password") != "pack-secret":
+                self.send_response(403)
+                self.end_headers()
+                return
+            self.send_json(
+                {
+                    "manifest_url": f"http://127.0.0.1:{self.server.server_port}/manifest.json?access=ok",
+                    "access_token": "ok",
+                }
+            )
             return
         self.send_response(404)
         self.end_headers()
@@ -89,6 +109,10 @@ def main() -> None:
         build = resolve_panel_active_build(config, "nukem", require_manifest=True)
         assert build["id"] == "panel-build"
         assert build["manifest_url"].startswith(base_url)
+        assert build["access_required"] == "true"
+
+        unlocked = request_panel_build_access(config, "nukem", build, "pack-secret")
+        assert unlocked["manifest_url"].endswith("access=ok")
 
         update = get_panel_launcher_update(config)
         assert update["launcher_version"] == "1.9.1"
@@ -107,4 +131,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

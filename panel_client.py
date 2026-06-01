@@ -114,6 +114,57 @@ def get_panel_launcher_update(config: dict[str, object]) -> dict[str, str]:
     }
 
 
+def request_panel_build_access(
+    config: dict[str, object],
+    project: str,
+    build: dict[str, object],
+    password: str,
+) -> dict[str, object]:
+    if not is_panel_enabled(config):
+        return {}
+
+    build_id = str(build.get("build_id") or build.get("id") or "").strip()
+    if not build_id:
+        raise PanelClientError("Panel build id is missing.")
+
+    base_url = get_panel_base_url(config)
+    panel_project = get_panel_project(config, project)
+    url = f"{base_url}/api/projects/{panel_project}/builds/{build_id}/access"
+    try:
+        response = requests.post(
+            url,
+            json={"password": password},
+            timeout=get_panel_timeout(config),
+        )
+        if response.status_code == 403:
+            raise PanelClientError("Wrong build password.")
+        response.raise_for_status()
+        data = response.json()
+    except PanelClientError:
+        raise
+    except requests.RequestException as exc:
+        raise PanelClientError(f"Could not unlock panel build: {exc}") from exc
+    except ValueError as exc:
+        raise PanelClientError("Panel build access response is not valid JSON.") from exc
+
+    if not isinstance(data, dict):
+        raise PanelClientError("Panel build access response must be a JSON object.")
+
+    unlocked = dict(build)
+    manifest_url = str(data.get("manifest_url", "")).strip()
+    if manifest_url:
+        unlocked["manifest_url"] = manifest_url
+
+    try:
+        return validate_build_config(
+            unlocked,
+            allow_insecure_local=allow_insecure_panel_url(base_url),
+            require_manifest=True,
+        )
+    except RemoteBuildConfigError as exc:
+        raise PanelClientError(str(exc)) from exc
+
+
 def post_panel_report(config: dict[str, object], payload: dict[str, Any]) -> bool:
     if not is_panel_enabled(config):
         return False
@@ -129,4 +180,3 @@ def post_panel_report(config: dict[str, object], payload: dict[str, Any]) -> boo
         return True
     except requests.RequestException:
         return False
-

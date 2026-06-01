@@ -19,6 +19,8 @@
 
 Для модов лаунчер сначала запрашивает активную сборку панели. Если панель выключена, недоступна или активной сборки нет, он использует текущий GitHub `source_key`.
 
+Пароль не блокирует визуальный режим MS Nuckem. Игрок может выбрать Nukem и видеть дизайн/соцссылки, но секретные моды скачиваются только после нажатия `Скачать моды` и ввода кода конкретной активной сборки. `Играть` не должен тихо скачивать секретные файлы без кода.
+
 Для обновления самого лаунчера логика такая же: panel update notice, затем fallback из build config/GitHub.
 
 ## API для лаунчера
@@ -38,6 +40,7 @@
   "manifest_url": "https://panel.example/api/projects/nukem/builds/nukem-1-20-1/manifest.json",
   "server": "",
   "port": "",
+  "access_required": true,
   "launcher_version": "",
   "launcher_download_url": "",
   "launcher_sha256": "",
@@ -46,6 +49,25 @@
 ```
 
 Если активной сборки нет, API возвращает `404`, а лаунчер переключается на GitHub fallback.
+
+### `POST /api/projects/{project}/builds/{build_id}/access`
+
+Проверяет пароль конкретной сборки и возвращает временную ссылку на manifest:
+
+```json
+{
+  "password": "build-code"
+}
+```
+
+Ответ:
+
+```json
+{
+  "manifest_url": "https://panel.example/api/projects/nukem/builds/nukem-1-20-1/manifest.json?access=...",
+  "access_token": "..."
+}
+```
 
 ### `GET /api/projects/{project}/builds/{build_id}/manifest.json`
 
