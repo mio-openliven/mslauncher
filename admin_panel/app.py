@@ -94,14 +94,14 @@ def base_url_for(request: Request) -> str:
 @app.get("/client", response_class=HTMLResponse)
 def client_page(request: Request) -> HTMLResponse:
     base_url = base_url_for(request)
-    download_url = f"{base_url}/downloads/MSLaunch-1.9.0-beta.zip"
+    download_url = f"{base_url}/downloads/MSLaunchSetup.exe"
     body = f"""
     <section class="hero">
       <div>
         <div class="eyebrow">MS Nuckem beta</div>
         <h1>Скачать лаунчер</h1>
-        <p>Для актёров: скачайте лаунчер, откройте MS Nuckem, введите ник и пароль сборки. Моды подтянутся автоматически.</p>
-        <p><a class="button primary" href="{esc(download_url)}">Скачать лаунчер</a></p>
+        <p>Для актёров: скачайте один файл, запустите его, откройте MS Nuckem, введите ник и пароль сборки. Моды подтянутся автоматически.</p>
+        <p><a class="button primary" href="{esc(download_url)}">Скачать и запустить</a></p>
         <p class="muted">Если Windows спросит подтверждение, запускайте только файл, полученный с этой страницы.</p>
       </div>
     </section>
@@ -112,7 +112,7 @@ def client_page(request: Request) -> HTMLResponse:
 @app.get("/downloads/{filename}")
 def download_launcher(filename: str) -> FileResponse:
     safe_name = Path(filename).name
-    if safe_name != filename or not safe_name.lower().endswith((".zip", ".txt", ".cer")):
+    if safe_name != filename or not safe_name.lower().endswith((".exe", ".zip", ".txt", ".cer")):
         raise HTTPException(status_code=404, detail="File not found.")
     target = get_downloads_root() / safe_name
     if not target.is_file():
