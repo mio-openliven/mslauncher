@@ -9,6 +9,7 @@ env/
 *.log
 _reference/
 data/
+panel_data/
 build/
 dist/
 release/*.zip

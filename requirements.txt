@@ -2,3 +2,8 @@ minecraft-launcher-lib
 PyQt6
 requests
 pyinstaller
+fastapi
+uvicorn
+python-multipart
+bcrypt
+httpx2

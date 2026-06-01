@@ -46,6 +46,12 @@ from app_paths import (
 from launcher_core import MinecraftEngine
 from launcher_update import APP_DISPLAY_NAME, APP_VERSION, get_launcher_update_notice, parse_version_numbers
 from manifest_validator import normalize_download_url, normalize_manifest_path
+from panel_client import (
+    PanelClientError,
+    get_panel_launcher_update,
+    post_panel_report,
+    resolve_panel_active_build,
+)
 from profile_manager import LauncherProfile, LauncherProfileManager, PROFILE_IDS, PROFILE_SERVER
 from remote_config import resolve_build_config
 from settings_validator import LaunchSettingsError, validate_launch_settings
@@ -395,6 +401,12 @@ def load_launcher_config(config_path: str | Path = CONFIG_FILE) -> dict[str, obj
         },
         "support_url": "https://github.com/mio-openliven/mslauncher/issues/new",
         "support_urls": {},
+        "panel": {
+            "enabled": False,
+            "base_url": "",
+            "project": CLIENT_MODE_NUKEM,
+            "timeout_seconds": 8,
+        },
         "admin_links": {
             CLIENT_MODE_NUKEM: {
                 "repo_url": "https://github.com/mio-openliven/MSNukem",
@@ -475,6 +487,12 @@ def load_launcher_config(config_path: str | Path = CONFIG_FILE) -> dict[str, obj
     support_urls = loaded_config.get("support_urls")
     if isinstance(support_urls, dict):
         default_config["support_urls"] = support_urls
+
+    panel_config = loaded_config.get("panel")
+    if isinstance(panel_config, dict):
+        merged_panel = dict(default_config["panel"])
+        merged_panel.update(panel_config)
+        default_config["panel"] = merged_panel
 
     for key in ("admin_links", "project_access"):
         value = loaded_config.get(key)
@@ -636,13 +654,34 @@ class BuildConfigWorker(QThread):
     build_loaded = pyqtSignal(dict)
     error_occurred = pyqtSignal(str)
 
-    def __init__(self, build: dict[str, object], *, require_manifest: bool = False) -> None:
+    def __init__(
+        self,
+        build: dict[str, object],
+        *,
+        config: dict[str, object] | None = None,
+        client_mode: str = CLIENT_MODE_INDEPENDENT,
+        require_manifest: bool = False,
+    ) -> None:
         super().__init__()
         self.build = build
+        self.config = config or {}
+        self.client_mode = client_mode
         self.require_manifest = require_manifest
 
     def run(self) -> None:
         try:
+            if self.client_mode == CLIENT_MODE_NUKEM:
+                try:
+                    panel_build = resolve_panel_active_build(
+                        self.config,
+                        CLIENT_MODE_NUKEM,
+                        require_manifest=self.require_manifest,
+                    )
+                except PanelClientError:
+                    panel_build = {}
+                if panel_build:
+                    self.build_loaded.emit(panel_build)
+                    return
             self.build_loaded.emit(resolve_build_config(self.build, require_manifest=self.require_manifest))
         except Exception as exc:
             self.error_occurred.emit(str(exc))
@@ -1528,14 +1567,14 @@ class MSLauncherWindow(QMainWindow):
         self.feedback_button.setMinimumHeight(34)
 
         username_group = self.create_control_group(self.username_label, self.username_input)
-        build_group = self.create_control_group(self.build_label, self.build_combo)
-        version_group = self.create_control_group(self.version_label, self.version_combo)
+        self.build_group = self.create_control_group(self.build_label, self.build_combo)
+        self.version_group = self.create_control_group(self.version_label, self.version_combo)
         username_group.setMaximumWidth(170)
-        build_group.setMaximumWidth(180)
-        version_group.setMaximumWidth(160)
+        self.build_group.setMaximumWidth(180)
+        self.version_group.setMaximumWidth(160)
         control_layout.addWidget(username_group, 2)
-        control_layout.addWidget(build_group, 2)
-        control_layout.addWidget(version_group, 2)
+        control_layout.addWidget(self.build_group, 2)
+        control_layout.addWidget(self.version_group, 2)
         control_layout.addWidget(self.create_loader_group(), 2)
         control_layout.addWidget(self.mods_button, 0)
         control_layout.addWidget(self.play_button, 0)
@@ -1840,6 +1879,7 @@ class MSLauncherWindow(QMainWindow):
         self.mods_button.setText(self.translate(self.get_mods_action_key()))
         self.feedback_button.setText(self.translate("feedback_ok"))
         self.language_toggle_button.setText(self.language)
+        self.refresh_nukem_control_policy()
         self.mode_button.setText("NK" if self.client_mode == CLIENT_MODE_INDEPENDENT else "MS")
         self.mode_button.setToolTip(
             self.translate(
@@ -2226,10 +2266,12 @@ class MSLauncherWindow(QMainWindow):
 
         self.version_combo.setEnabled(True)
         self.on_build_changed()
+        self.refresh_nukem_control_policy()
         self.set_status("ready")
 
     def on_versions_failed(self, error: str) -> None:
         self.version_combo.setEnabled(True)
+        self.refresh_nukem_control_policy()
         user_error = explain_user_error(error, language=self.language, context="versions")
         report_path = self.write_launcher_error_report(user_error, error, "versions")
         self.show_error(self.with_report_path(self.translate("versions_failed", error=user_error), report_path))
@@ -2249,6 +2291,20 @@ class MSLauncherWindow(QMainWindow):
             self.version_combo.setCurrentIndex(index)
 
         self.save_user_preferences()
+        self.refresh_nukem_control_policy()
+
+    def refresh_nukem_control_policy(self) -> None:
+        nukem_locked = self.client_mode == CLIENT_MODE_NUKEM
+        self.build_combo.setEnabled(not nukem_locked)
+        self.version_combo.setEnabled(not nukem_locked and self.version_combo.count() > 0)
+        if hasattr(self, "build_group"):
+            self.build_group.setToolTip(
+                "Build is selected by the Nukem admin panel." if nukem_locked else ""
+            )
+        if hasattr(self, "version_group"):
+            self.version_group.setToolTip(
+                "Minecraft version comes from the active Nukem build." if nukem_locked else ""
+            )
 
     def get_selected_build(self) -> dict[str, object] | None:
         build = self.build_combo.currentData()
@@ -2338,7 +2394,12 @@ class MSLauncherWindow(QMainWindow):
 
         if sync_enabled:
             self.set_status("status_loading_build")
-            self.build_config_worker = BuildConfigWorker(build, require_manifest=True)
+            self.build_config_worker = BuildConfigWorker(
+                build,
+                config=self.config,
+                client_mode=self.client_mode,
+                require_manifest=True,
+            )
             self.build_config_worker.build_loaded.connect(self.on_build_config_loaded)
             self.build_config_worker.error_occurred.connect(self.on_build_config_failed)
             self.build_config_worker.start()
@@ -2454,6 +2515,14 @@ class MSLauncherWindow(QMainWindow):
         self.set_status("ready")
 
     def evaluate_launcher_update(self, resolved_build: dict) -> None:
+        try:
+            panel_update = get_panel_launcher_update(self.config)
+        except PanelClientError as exc:
+            self.write_launcher_warning_report(str(exc), "launcher_update")
+            panel_update = {}
+        if panel_update:
+            resolved_build = {**resolved_build, **panel_update}
+
         remote_version = str(resolved_build.get("launcher_version", "")).strip()
         if remote_version and not parse_version_numbers(remote_version):
             self.write_launcher_warning_report(
@@ -2813,6 +2882,18 @@ class MSLauncherWindow(QMainWindow):
 
         self.last_error_message = user_message
         self.last_error_report_path = report_path
+        post_panel_report(
+            self.config,
+            {
+                "project": self.client_mode,
+                "build_id": self.get_selected_build_id(),
+                "username": self.get_current_username(),
+                "launcher_version": APP_VERSION,
+                "error_type": context,
+                "user_message": user_message,
+                "technical_details": technical_details,
+            },
+        )
         self.info_panel_mode = "error"
         self.refresh_info_panel()
         self.info_panel.show()

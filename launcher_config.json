@@ -21,6 +21,12 @@
   "support_urls": {
     "nukem": "https://github.com/mio-openliven/MSNukem/issues/new"
   },
+  "panel": {
+    "enabled": false,
+    "base_url": "",
+    "project": "nukem",
+    "timeout_seconds": 8
+  },
   "default_build": "main",
   "launch": {
     "memory_min": "512M",
