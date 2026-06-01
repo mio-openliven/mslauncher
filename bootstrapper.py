@@ -23,7 +23,7 @@ DESKTOP = Path(os.environ.get("USERPROFILE", str(Path.home()))) / "Desktop"
 SHORTCUT_PATH = DESKTOP / "MSLaunch.lnk"
 EXE_NAME = "MSLauncher.exe"
 PACKAGE_NAME = "MSLaunch-1.9.0-beta.zip"
-PACKAGE_SHA256 = "f35506f57226d4beca56b453f1d9a79ee4011887c6c42dae09f828a8ad46c475"
+PACKAGE_SHA256 = "885a99ecb8fa8c6e29ed071ddb64542249dfa492476fe96318861e9f500553ab"
 BOOTSTRAP_MANIFESTS = [
     "https://mslaunch.186.246.12.238.sslip.io/downloads/bootstrap.json",
     "https://github.com/mio-openliven/MSNukem/releases/download/v1.9.0-beta.1/bootstrap.json",

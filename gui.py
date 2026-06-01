@@ -259,7 +259,7 @@ TRANSLATIONS = {
         "status_mods_no_sync": "This profile does not use server mod sync.",
         "update_disabled": "No launcher update notice.",
         "access_password_title": "Build access",
-        "access_password_body": "Enter the code for {build}. The code unlocks mod download for this build only.",
+        "access_password_body": "Enter the code for {build}. It unlocks mods for this build only. The admin will also give you the right server and exact game version so you can join without guesswork.",
         "access_password_prompt": "Build password",
         "access_password_download": "Download mods",
         "access_password_failed": "Wrong build password. Ask the Nukem admin for the current code.",
@@ -402,7 +402,7 @@ TRANSLATIONS = {
         "status_mods_no_sync": "\u042d\u0442\u043e\u0442 \u043f\u0440\u043e\u0444\u0438\u043b\u044c \u043d\u0435 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0435\u0442 \u0441\u0435\u0440\u0432\u0435\u0440\u043d\u0443\u044e \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u044e \u043c\u043e\u0434\u043e\u0432.",
         "update_disabled": "\u041d\u0435\u0442 \u0443\u0432\u0435\u0434\u043e\u043c\u043b\u0435\u043d\u0438\u044f \u043e\u0431 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0438.",
         "access_password_title": "\u0414\u043e\u0441\u0442\u0443\u043f \u043a \u0441\u0431\u043e\u0440\u043a\u0435",
-        "access_password_body": "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u043a\u043e\u0434 \u0434\u043b\u044f \u00ab{build}\u00bb. \u041a\u043e\u0434 \u043e\u0442\u043a\u0440\u044b\u0432\u0430\u0435\u0442 \u0441\u043a\u0430\u0447\u0438\u0432\u0430\u043d\u0438\u0435 \u043c\u043e\u0434\u043e\u0432 \u0442\u043e\u043b\u044c\u043a\u043e \u044d\u0442\u043e\u0439 \u0441\u0431\u043e\u0440\u043a\u0438.",
+        "access_password_body": "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u043a\u043e\u0434 \u0434\u043b\u044f \u00ab{build}\u00bb. \u041e\u043d \u043e\u0442\u043a\u0440\u044b\u0432\u0430\u0435\u0442 \u043c\u043e\u0434\u044b \u0442\u043e\u043b\u044c\u043a\u043e \u044d\u0442\u043e\u0439 \u0441\u0431\u043e\u0440\u043a\u0438. \u0410\u0434\u043c\u0438\u043d \u043f\u043e\u0434\u0441\u043a\u0430\u0436\u0435\u0442 \u043d\u0443\u0436\u043d\u044b\u0439 \u0441\u0435\u0440\u0432\u0435\u0440 \u0438 \u0442\u043e\u0447\u043d\u0443\u044e \u0432\u0435\u0440\u0441\u0438\u044e \u0438\u0433\u0440\u044b, \u0447\u0442\u043e\u0431\u044b \u0432\u044b \u0441\u043f\u043e\u043a\u043e\u0439\u043d\u043e \u0437\u0430\u0448\u043b\u0438 \u0431\u0435\u0437 \u043b\u0438\u0448\u043d\u0435\u0439 \u0432\u043e\u0437\u043d\u0438.",
         "access_password_prompt": "\u041f\u0430\u0440\u043e\u043b\u044c \u0441\u0431\u043e\u0440\u043a\u0438",
         "access_password_download": "\u0421\u043a\u0430\u0447\u0430\u0442\u044c \u043c\u043e\u0434\u044b",
         "access_password_failed": "\u041d\u0435\u0432\u0435\u0440\u043d\u044b\u0439 \u043f\u0430\u0440\u043e\u043b\u044c \u0441\u0431\u043e\u0440\u043a\u0438. \u0423\u0442\u043e\u0447\u043d\u0438\u0442\u0435 \u0430\u043a\u0442\u0443\u0430\u043b\u044c\u043d\u044b\u0439 \u043a\u043e\u0434 \u0443 \u0430\u0434\u043c\u0438\u043d\u0430 Nukem.",
@@ -1359,6 +1359,7 @@ class MSLauncherWindow(QMainWindow):
         self.admin_access_unlocked = False
         self.unlocked_build_ids: set[str] = set()
         self.project_switcher_expanded = False
+        self.large_window_enabled = False
         self.update_check_state = "ok"
         self.update_pulse_on = False
         self.update_mascot_dismissed = False
@@ -1451,16 +1452,22 @@ class MSLauncherWindow(QMainWindow):
         self.project_switcher = QFrame()
         self.project_switcher.setObjectName("projectSwitcher")
         self.project_switcher.setToolTip(self.translate("project_switcher_tooltip"))
-        project_layout = QHBoxLayout(self.project_switcher)
-        project_layout.setContentsMargins(6, 6, 6, 6)
-        project_layout.setSpacing(4)
+        self.project_switcher.installEventFilter(self)
+        self.project_layout = QHBoxLayout(self.project_switcher)
+        self.project_layout.setContentsMargins(6, 6, 6, 6)
+        self.project_layout.setSpacing(4)
         self.mslaunch_tab = self.create_project_tab("MS", "MSLaunch")
         self.nukem_tab = self.create_project_tab("KH", "MS Nuckem")
         self.vibecraft_tab = self.create_project_tab("VC", "VibeCraft")
         self.vibecraft_tab.setEnabled(False)
-        project_layout.addWidget(self.mslaunch_tab)
-        project_layout.addWidget(self.nukem_tab)
-        project_layout.addWidget(self.vibecraft_tab)
+        self.project_tabs = {
+            CLIENT_MODE_INDEPENDENT: self.mslaunch_tab,
+            CLIENT_MODE_NUKEM: self.nukem_tab,
+            "vibecraft": self.vibecraft_tab,
+        }
+        for tab in self.project_tabs.values():
+            tab.installEventFilter(self)
+            self.project_layout.addWidget(tab)
 
         self.language_toggle_button = QPushButton()
         self.language_toggle_button.setObjectName("languageToggle")
@@ -1486,11 +1493,16 @@ class MSLauncherWindow(QMainWindow):
         self.minimize_button.setObjectName("windowButton")
         self.minimize_button.setFixedSize(34, 34)
         self.minimize_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.size_toggle_button = QPushButton("\u25a1")
+        self.size_toggle_button.setObjectName("windowButton")
+        self.size_toggle_button.setFixedSize(34, 34)
+        self.size_toggle_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.close_button = QPushButton("x")
         self.close_button.setObjectName("windowButton")
         self.close_button.setFixedSize(34, 34)
         self.close_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         title_controls_layout.addWidget(self.minimize_button)
+        title_controls_layout.addWidget(self.size_toggle_button)
         title_controls_layout.addWidget(self.close_button)
         right_controls_layout.addWidget(self.update_check_button)
         right_controls_layout.addWidget(self.language_toggle_button)
@@ -1976,6 +1988,7 @@ class MSLauncherWindow(QMainWindow):
         self.language_toggle_button.clicked.connect(self.toggle_language)
         self.update_check_button.clicked.connect(self.manual_check_launcher_update)
         self.minimize_button.clicked.connect(self.showMinimized)
+        self.size_toggle_button.clicked.connect(self.toggle_window_size)
         self.close_button.clicked.connect(self.close)
         self.mode_button.clicked.connect(self.toggle_client_mode)
         self.play_button.clicked.connect(self.check_mods_and_play)
@@ -2016,7 +2029,45 @@ class MSLauncherWindow(QMainWindow):
             self.update_mascot_dismissed = True
             self.refresh_update_mascot()
             return True
+        if watched in (getattr(self, "project_switcher", None), *getattr(self, "project_tabs", {}).values()):
+            if event.type() == QEvent.Type.Leave:
+                QTimer.singleShot(80, self.collapse_project_switcher_if_cursor_left)
         return super().eventFilter(watched, event)
+
+    def collapse_project_switcher_if_cursor_left(self) -> None:
+        if not self.project_switcher_expanded:
+            return
+        local_cursor = self.project_switcher.mapFromGlobal(QCursor.pos())
+        if self.project_switcher.rect().contains(local_cursor):
+            return
+        self.collapse_project_switcher()
+
+    def collapse_project_switcher(self) -> None:
+        if not self.project_switcher_expanded:
+            return
+        self.project_switcher_expanded = False
+        self.update_project_tabs()
+
+    def toggle_window_size(self) -> None:
+        self.large_window_enabled = not self.large_window_enabled
+        if self.large_window_enabled:
+            screen_geometry = self.screen().availableGeometry() if self.screen() else self.geometry()
+            width = min(1600, max(1280, screen_geometry.width() - 80))
+            height = min(900, max(720, screen_geometry.height() - 80))
+            self.resize(width, height)
+            self.size_toggle_button.setText("\u25a3")
+        else:
+            self.resize(1280, 720)
+            self.size_toggle_button.setText("\u25a1")
+        self.center_on_screen()
+
+    def center_on_screen(self) -> None:
+        screen_geometry = self.screen().availableGeometry() if self.screen() else None
+        if screen_geometry is None:
+            return
+        frame = self.frameGeometry()
+        frame.moveCenter(screen_geometry.center())
+        self.move(frame.topLeft())
 
     def toggle_language(self) -> None:
         self.change_language("EN" if self.language == "RU" else "RU")
@@ -2178,9 +2229,24 @@ class MSLauncherWindow(QMainWindow):
             self.news_timer.stop()
 
     def update_project_tabs(self) -> None:
+        active_key = self.client_mode if self.client_mode in CLIENT_MODES else CLIENT_MODE_INDEPENDENT
+        if self.project_switcher_expanded:
+            ordered_keys = (
+                (CLIENT_MODE_NUKEM, CLIENT_MODE_INDEPENDENT, "vibecraft")
+                if active_key == CLIENT_MODE_INDEPENDENT
+                else (CLIENT_MODE_INDEPENDENT, CLIENT_MODE_NUKEM, "vibecraft")
+            )
+        else:
+            ordered_keys = (active_key,)
+
+        for tab in self.project_tabs.values():
+            self.project_layout.removeWidget(tab)
+        for project_key in ordered_keys:
+            self.project_layout.addWidget(self.project_tabs[project_key])
+
         tab_states = (
-            (self.mslaunch_tab, CLIENT_MODE_INDEPENDENT, self.client_mode == CLIENT_MODE_INDEPENDENT),
-            (self.nukem_tab, CLIENT_MODE_NUKEM, self.client_mode == CLIENT_MODE_NUKEM),
+            (self.mslaunch_tab, CLIENT_MODE_INDEPENDENT, active_key == CLIENT_MODE_INDEPENDENT),
+            (self.nukem_tab, CLIENT_MODE_NUKEM, active_key == CLIENT_MODE_NUKEM),
             (self.vibecraft_tab, "vibecraft", False),
         )
         self.project_switcher.setProperty("expanded", self.project_switcher_expanded)
@@ -2200,7 +2266,7 @@ class MSLauncherWindow(QMainWindow):
                 tab.setIconSize(QSize(30, 30))
             tab.setText(label if self.project_switcher_expanded and active else "")
             tab.setToolTip(label)
-            tab.setVisible(active or self.project_switcher_expanded)
+            tab.setVisible(project_key in ordered_keys)
             tab.setFixedSize(158 if self.project_switcher_expanded and active else 54, 48)
             tab.style().unpolish(tab)
             tab.style().polish(tab)

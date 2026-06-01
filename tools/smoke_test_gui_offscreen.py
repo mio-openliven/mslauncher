@@ -42,6 +42,29 @@ def main() -> None:
         assert window.update_check_button.text() == "OK"
         assert window.update_poll_timer.interval() == 15_000
         assert window.update_poll_timer.isActive()
+        assert window.project_switcher_expanded is False
+        active_project_tab = window.project_tabs[window.client_mode]
+        inactive_project_tabs = [
+            tab for key, tab in window.project_tabs.items() if key != window.client_mode
+        ]
+        assert active_project_tab.isVisible()
+        assert all(tab.isHidden() for tab in inactive_project_tabs)
+        window.handle_project_tab(window.client_mode)
+        assert window.project_switcher_expanded is True
+        assert window.nukem_tab.isVisible()
+        assert window.mslaunch_tab.isVisible()
+        window.project_switcher_expanded = True
+        window.eventFilter(window.project_switcher, QEvent(QEvent.Type.Leave))
+        window.collapse_project_switcher()
+        assert window.project_switcher_expanded is False
+        assert all(tab.isHidden() for tab in inactive_project_tabs)
+        window.resize(1280, 720)
+        normal_size = window.size()
+        window.toggle_window_size()
+        assert window.width() >= normal_size.width()
+        assert window.size_toggle_button.text()
+        window.toggle_window_size()
+        assert window.size() == normal_size
         next_version = f"{gui.APP_VERSION.rsplit('.', 1)[0]}.{int(gui.APP_VERSION.rsplit('.', 1)[1]) + 1}"
         window.on_launcher_update_loaded(
             {
