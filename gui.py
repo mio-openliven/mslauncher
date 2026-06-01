@@ -181,6 +181,7 @@ TRANSLATIONS = {
         "admin_password_title": "Admin password",
         "admin_password_body": "Enter admin password for this launcher.",
         "admin_password_open": "Open admin",
+        "admin_password_disabled": "Admin access is not configured in this launcher.",
         "admin_create_news": "Create news",
         "admin_view_builds": "Builds",
         "admin_change_password": "Passwords",
@@ -322,6 +323,7 @@ TRANSLATIONS = {
         "admin_password_title": "\u041f\u0430\u0440\u043e\u043b\u044c \u0430\u0434\u043c\u0438\u043d\u0430",
         "admin_password_body": "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u043f\u0430\u0440\u043e\u043b\u044c \u0430\u0434\u043c\u0438\u043d\u0430 \u044d\u0442\u043e\u0433\u043e \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430.",
         "admin_password_open": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0430\u0434\u043c\u0438\u043d\u043a\u0443",
+        "admin_password_disabled": "\u0410\u0434\u043c\u0438\u043d-\u0432\u0445\u043e\u0434 \u0432 \u044d\u0442\u043e\u043c \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0435 \u043d\u0435 \u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d.",
         "admin_create_news": "\u0421\u043e\u0437\u0434\u0430\u0442\u044c \u043d\u043e\u0432\u043e\u0441\u0442\u044c",
         "admin_view_builds": "\u0421\u0431\u043e\u0440\u043a\u0438",
         "admin_change_password": "\u041f\u0430\u0440\u043e\u043b\u0438",
@@ -2694,7 +2696,9 @@ class MSLauncherWindow(QMainWindow):
         self.build_combo.setEditable(not nukem_locked)
         self.version_combo.setEnabled(not nukem_locked and self.version_combo.count() > 0)
         if hasattr(self, "admin_unlock_button"):
-            self.admin_unlock_button.setVisible(self.client_mode == CLIENT_MODE_NUKEM)
+            self.admin_unlock_button.setVisible(
+                self.client_mode == CLIENT_MODE_NUKEM and self.is_admin_access_configured()
+            )
         if hasattr(self, "build_group"):
             self.build_group.setToolTip(
                 "Build is selected by the Nukem admin panel." if nukem_locked else ""
@@ -2768,9 +2772,12 @@ class MSLauncherWindow(QMainWindow):
         value = self.get_project_access_config().get("admin_password_hash_sha256", "")
         return str(value).strip().lower()
 
+    def is_admin_access_configured(self) -> bool:
+        return len(self.get_admin_access_hash()) == 64
+
     def is_admin_password(self, password: str) -> bool:
         expected_hash = self.get_admin_access_hash()
-        if not expected_hash:
+        if not self.is_admin_access_configured():
             return False
         actual_hash = hashlib.sha256(password.encode("utf-8")).hexdigest()
         return hmac.compare_digest(actual_hash, expected_hash)
@@ -2869,6 +2876,11 @@ class MSLauncherWindow(QMainWindow):
             if show_panel:
                 self.show_admin_panel(require_auth=False)
             return True
+
+        if not self.is_admin_access_configured():
+            self.show_error(self.translate("admin_password_disabled"))
+            self.set_status("ready")
+            return False
 
         expected_hash = self.get_admin_access_hash()
         if expected_hash:
@@ -2998,11 +3010,6 @@ class MSLauncherWindow(QMainWindow):
         password = self.request_build_password(build)
         if password is None:
             self.set_status("ready")
-            return False
-        if self.is_admin_password(password):
-            self.admin_access_unlocked = True
-            self.set_status("admin_access_granted")
-            self.show_admin_panel(require_auth=False)
             return False
 
         if panel_required:
@@ -3412,7 +3419,9 @@ class MSLauncherWindow(QMainWindow):
             self.set_status_rows_visible(False)
             self.set_settings_widgets_visible(True)
             self.set_launch_settings_visible(True)
-            self.admin_unlock_button.setVisible(self.client_mode == CLIENT_MODE_NUKEM)
+            self.admin_unlock_button.setVisible(
+                self.client_mode == CLIENT_MODE_NUKEM and self.is_admin_access_configured()
+            )
             self.info_title_label.show()
             self.info_body_label.hide()
             self.info_title_label.setText(self.translate("settings_title"))

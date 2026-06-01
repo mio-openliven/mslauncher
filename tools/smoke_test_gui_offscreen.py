@@ -82,10 +82,23 @@ def main() -> None:
         window.info_panel_mode = "status"
         window.refresh_news_items()
         assert window.news_frame.isVisible()
+        window.config["project_access"] = {
+            "nukem": {
+                "password_enabled": True,
+                "password_hash_sha256": hashlib.sha256(b"secret").hexdigest(),
+                "admin_password_hash_sha256": "",
+            }
+        }
         window.info_panel_mode = "settings"
         window.refresh_info_panel()
         assert window.news_frame.isHidden()
-        assert not window.admin_unlock_button.isHidden()
+        assert window.admin_unlock_button.isHidden()
+        errors: list[str] = []
+        original_show_error = window.show_error
+        window.show_error = lambda message: errors.append(str(message))
+        window.show_admin_panel()
+        assert window.info_panel_mode == "settings"
+        assert errors and window.translate("admin_password_disabled") in errors[-1]
         window.toggle_info_panel()
         assert window.info_panel_mode == "status"
         assert window.news_frame.isVisible()
@@ -105,24 +118,34 @@ def main() -> None:
                 "admin_password_hash_sha256": hashlib.sha256(b"admin").hexdigest(),
             }
         }
+        window.info_panel_mode = "settings"
+        window.refresh_info_panel()
+        assert not window.admin_unlock_button.isHidden()
         original_admin_prompt = window.request_admin_password
         window.request_admin_password = lambda: "admin"
         try:
             assert window.request_admin_access(show_panel=False)
         finally:
             window.request_admin_password = original_admin_prompt
-        window.show_error = lambda message: None
+        window.show_error = lambda message: errors.append(str(message))
         window.project_access_unlocked = False
         assert not window.ensure_project_access()
         window.config["project_access"]["nukem"]["password_hash_sha256"] = hashlib.sha256(
             b"secret"
         ).hexdigest()
         original_password_prompt = window.request_build_password
+        window.request_build_password = lambda build: "admin"
+        try:
+            assert not window.ensure_project_access()
+            assert window.info_panel_mode != "admin"
+        finally:
+            window.request_build_password = original_password_prompt
         window.request_build_password = lambda build: "secret"
         try:
             assert window.ensure_project_access()
         finally:
             window.request_build_password = original_password_prompt
+            window.show_error = original_show_error
 
         window.info_panel_mode = "settings"
         window.refresh_info_panel()
