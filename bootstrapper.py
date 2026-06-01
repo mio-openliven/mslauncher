@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import hashlib
 import json
@@ -23,7 +23,7 @@ DESKTOP = Path(os.environ.get("USERPROFILE", str(Path.home()))) / "Desktop"
 SHORTCUT_PATH = DESKTOP / "MSLaunch.lnk"
 EXE_NAME = "MSLauncher.exe"
 PACKAGE_NAME = "MSLaunch-1.9.0-beta.zip"
-PACKAGE_SHA256 = "6ee7eb6217fb531c0d1c6c47f97159b2ead1598d8d51e83eb0b4f472b8f533f7"
+PACKAGE_SHA256 = "f35506f57226d4beca56b453f1d9a79ee4011887c6c42dae09f828a8ad46c475"
 BOOTSTRAP_MANIFESTS = [
     "https://mslaunch.186.246.12.238.sslip.io/downloads/bootstrap.json",
     "https://github.com/mio-openliven/MSNukem/releases/download/v1.9.0-beta.1/bootstrap.json",
@@ -295,3 +295,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

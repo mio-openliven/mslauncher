@@ -5,7 +5,7 @@ from typing import Any
 
 
 APP_DISPLAY_NAME = "MSLaunch"
-APP_VERSION = "1.9.3"
+APP_VERSION = "1.9.4"
 
 
 def parse_version_numbers(version: object) -> list[int]:

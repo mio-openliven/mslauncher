@@ -13,8 +13,8 @@ import traceback
 from pathlib import Path
 
 import requests
-from PyQt6.QtCore import QPointF, QSize, QTimer, QThread, Qt, QUrl, pyqtSignal
-from PyQt6.QtGui import QColor, QCursor, QDesktopServices, QIcon, QPainter, QPainterPath, QPen, QPixmap
+from PyQt6.QtCore import QEvent, QPointF, QSize, QTimer, QThread, Qt, QUrl, pyqtSignal
+from PyQt6.QtGui import QColor, QCursor, QDesktopServices, QIcon, QMovie, QPainter, QPainterPath, QPen, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
     QButtonGroup,
@@ -71,6 +71,7 @@ BACKGROUND_DIR = get_asset_path("backgrounds")
 ICON_DIR = get_asset_path("icons")
 PROJECT_ICON_DIR = get_asset_path("project_icons")
 APP_ICON_PATH = get_asset_path("app_icon.ico")
+UPDATE_MASCOT_PATH = get_asset_path("shigure-ui-dance.gif")
 BACKGROUND_FILES = (
     "bg_01.jpg",
     "bg_02.jpg",
@@ -247,6 +248,7 @@ TRANSLATIONS = {
         "status_card_java": "Java OK",
         "runtime_auto": "Runtime auto",
         "update_available": "Launcher update available: {version}",
+        "update_mascot_found": "Found an update!",
         "manual_update_tooltip": "Check updates",
         "manual_update_checking": "Checking launcher updates...",
         "manual_update_ok": "Launcher is up to date.",
@@ -389,6 +391,7 @@ TRANSLATIONS = {
         "status_card_java": "Java OK",
         "runtime_auto": "\u0410\u0432\u0442\u043e Java",
         "update_available": "\u0412\u044b\u0448\u043b\u043e \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435 \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430: {version}",
+        "update_mascot_found": "\u041d\u0430\u0448\u043b\u0430 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435!",
         "manual_update_tooltip": "\u041f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u044f",
         "manual_update_checking": "\u041f\u0440\u043e\u0432\u0435\u0440\u043a\u0430 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0439...",
         "manual_update_ok": "\u041e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0439 \u043d\u0435\u0442",
@@ -758,6 +761,39 @@ class BuildConfigWorker(QThread):
                     self.build_loaded.emit(panel_build)
                     return
             self.build_loaded.emit(resolve_build_config(self.build, require_manifest=self.require_manifest))
+        except Exception as exc:
+            self.error_occurred.emit(str(exc))
+
+
+class LauncherUpdateWorker(QThread):
+    update_loaded = pyqtSignal(dict)
+    error_occurred = pyqtSignal(str)
+
+    def __init__(
+        self,
+        build: dict[str, object],
+        *,
+        config: dict[str, object],
+        client_mode: str,
+    ) -> None:
+        super().__init__()
+        self.build = dict(build)
+        self.config = config
+        self.client_mode = client_mode
+
+    def run(self) -> None:
+        try:
+            resolved_build = dict(self.build)
+            try:
+                panel_update = get_panel_launcher_update(self.config)
+            except PanelClientError:
+                panel_update = {}
+            if panel_update:
+                self.update_loaded.emit({**resolved_build, **panel_update})
+                return
+            if resolved_build:
+                resolved_build = resolve_build_config(resolved_build, require_manifest=False)
+            self.update_loaded.emit(resolved_build)
         except Exception as exc:
             self.error_occurred.emit(str(exc))
 
@@ -1300,7 +1336,8 @@ class MSLauncherWindow(QMainWindow):
         self.launch_worker: LaunchWorker | None = None
         self.versions_worker: VersionsWorker | None = None
         self.build_config_worker: BuildConfigWorker | None = None
-        self.update_check_worker: BuildConfigWorker | None = None
+        self.update_check_worker: LauncherUpdateWorker | None = None
+        self.update_check_manual = False
         self.selected_profile: LauncherProfile = self.active_profile
         self.selected_username = ""
         self.selected_version = ""
@@ -1324,9 +1361,13 @@ class MSLauncherWindow(QMainWindow):
         self.project_switcher_expanded = False
         self.update_check_state = "ok"
         self.update_pulse_on = False
+        self.update_mascot_dismissed = False
         self.update_pulse_timer = QTimer(self)
         self.update_pulse_timer.setInterval(650)
         self.update_pulse_timer.timeout.connect(self.toggle_update_pulse)
+        self.update_poll_timer = QTimer(self)
+        self.update_poll_timer.setInterval(15_000)
+        self.update_poll_timer.timeout.connect(self.auto_check_launcher_update)
         self.news_items: list[dict[str, str]] = []
         self.news_index = 0
         self.news_timer = QTimer(self)
@@ -1343,6 +1384,8 @@ class MSLauncherWindow(QMainWindow):
         self.refresh_project_backgrounds()
         self._connect_signals()
         self.apply_translations()
+        self.update_poll_timer.start()
+        QTimer.singleShot(1_000, self.auto_check_launcher_update)
         self.show_config_repair_warning_if_needed()
         self.load_versions()
 
@@ -1658,10 +1701,38 @@ class MSLauncherWindow(QMainWindow):
         self.news_frame.setMinimumWidth(260)
         self.news_frame.setMaximumWidth(330)
 
+        self.update_mascot_frame = QFrame()
+        self.update_mascot_frame.setObjectName("updateMascot")
+        self.update_mascot_frame.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.update_mascot_frame.installEventFilter(self)
+        mascot_layout = QVBoxLayout(self.update_mascot_frame)
+        mascot_layout.setContentsMargins(14, 10, 14, 12)
+        mascot_layout.setSpacing(4)
+        self.update_mascot_title = QLabel(self.translate("update_mascot_found"))
+        self.update_mascot_title.setObjectName("updateMascotTitle")
+        self.update_mascot_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.update_mascot_gif = QLabel()
+        self.update_mascot_gif.setObjectName("updateMascotGif")
+        self.update_mascot_gif.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.update_mascot_movie: QMovie | None = None
+        if UPDATE_MASCOT_PATH.is_file():
+            self.update_mascot_movie = QMovie(str(UPDATE_MASCOT_PATH))
+            self.update_mascot_movie.setScaledSize(QSize(150, 116))
+            self.update_mascot_gif.setMovie(self.update_mascot_movie)
+            self.update_mascot_movie.start()
+        else:
+            self.update_mascot_gif.setText("!")
+        mascot_layout.addWidget(self.update_mascot_title)
+        mascot_layout.addWidget(self.update_mascot_gif)
+        self.update_mascot_frame.setFixedSize(196, 166)
+        self.update_mascot_frame.hide()
+
         stage_layout = QHBoxLayout()
         stage_layout.setSpacing(18)
         stage_layout.addWidget(self.sidebar_frame, 0, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         stage_layout.addWidget(self.news_frame, 0, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        stage_layout.addStretch(1)
+        stage_layout.addWidget(self.update_mascot_frame, 0, Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
         stage_layout.addStretch(1)
         stage_layout.addWidget(self.info_panel, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         hero_layout.addLayout(stage_layout, 1)
@@ -1940,6 +2011,13 @@ class MSLauncherWindow(QMainWindow):
             self.apply_translations()
             self.save_user_preferences()
 
+    def eventFilter(self, watched: object, event: QEvent) -> bool:
+        if watched is getattr(self, "update_mascot_frame", None) and event.type() == QEvent.Type.Enter:
+            self.update_mascot_dismissed = True
+            self.refresh_update_mascot()
+            return True
+        return super().eventFilter(watched, event)
+
     def toggle_language(self) -> None:
         self.change_language("EN" if self.language == "RU" else "RU")
 
@@ -2158,6 +2236,7 @@ class MSLauncherWindow(QMainWindow):
         self.admin_builds_button.setText(self.translate("admin_view_builds"))
         self.admin_password_button.setText(self.translate("admin_change_password"))
         self.admin_unlock_button.setText(self.translate("admin_password_open"))
+        self.update_mascot_title.setText(self.translate("update_mascot_found"))
         self.update_check_button.setToolTip(self.translate("manual_update_tooltip"))
         self.project_switcher.setToolTip(self.translate("project_switcher_tooltip"))
         self.skin_quick_button.setToolTip(self.translate("skin_button_tooltip"))
@@ -2291,6 +2370,23 @@ class MSLauncherWindow(QMainWindow):
             #newsCounter {
                 color: rgba(255, 255, 255, 130);
                 font-size: 11px;
+            }
+            #updateMascot {
+                background: rgba(8, 11, 15, 120);
+                border: 1px solid rgba(116, 231, 186, 68);
+                border-radius: 10px;
+            }
+            #updateMascotTitle {
+                color: #ffffff;
+                font-size: 17px;
+                font-weight: 900;
+            }
+            #updateMascotGif {
+                background: transparent;
+                border: 0;
+                color: #9ff4cf;
+                font-size: 34px;
+                font-weight: 900;
             }
             #infoPanel {
                 background: rgba(10, 10, 10, 182);
@@ -3214,26 +3310,24 @@ class MSLauncherWindow(QMainWindow):
         self.show_error(self.with_report_path(self.translate(error_key, error=user_error), report_path))
         self.set_status("ready")
 
-    def evaluate_launcher_update(self, resolved_build: dict) -> None:
-        try:
-            panel_update = get_panel_launcher_update(self.config)
-        except PanelClientError as exc:
-            self.write_launcher_warning_report(str(exc), "launcher_update")
-            panel_update = {}
-        if panel_update:
-            resolved_build = {**resolved_build, **panel_update}
-
+    def evaluate_launcher_update(self, resolved_build: dict, *, show_panel: bool = True) -> bool:
         remote_version = str(resolved_build.get("launcher_version", "")).strip()
         if remote_version and not parse_version_numbers(remote_version):
             self.write_launcher_warning_report(
                 f"Malformed launcher_version in build config: {remote_version}",
                 "launcher_update",
             )
-            return
+            return False
 
         update_notice = get_launcher_update_notice(resolved_build, APP_VERSION)
         if not update_notice:
-            return
+            self.launcher_update_version = ""
+            self.launcher_update_url = ""
+            self.launcher_update_notes = ""
+            if self.info_panel_mode == "update":
+                self.info_panel_mode = "status"
+                self.refresh_info_panel()
+            return False
 
         download_url = update_notice["download_url"]
         if download_url:
@@ -3246,44 +3340,59 @@ class MSLauncherWindow(QMainWindow):
         self.launcher_update_version = update_notice["version"]
         self.launcher_update_url = download_url
         self.launcher_update_notes = update_notice["notes"]
+        self.update_mascot_dismissed = False
         self.set_status_text(self.translate("update_available", version=self.launcher_update_version))
         self.set_update_check_state("available")
-        self.show_launcher_update_panel()
+        if show_panel:
+            self.show_launcher_update_panel()
+        return True
 
     def manual_check_launcher_update(self) -> None:
+        if self.update_check_state == "available" and self.launcher_update_version:
+            self.show_launcher_update_panel()
+            return
+        self.start_launcher_update_check(manual=True)
+
+    def auto_check_launcher_update(self) -> None:
+        self.start_launcher_update_check(manual=False)
+
+    def start_launcher_update_check(self, *, manual: bool) -> None:
         if self.update_check_worker is not None and self.update_check_worker.isRunning():
             return
         build = self.get_selected_build() or {}
-        self.set_update_check_state("checking")
-        self.set_status("manual_update_checking")
-        self.update_check_worker = BuildConfigWorker(
+        self.update_check_manual = manual
+        if manual:
+            self.set_update_check_state("checking")
+            self.set_status("manual_update_checking")
+        self.update_check_worker = LauncherUpdateWorker(
             dict(build),
             config=self.config,
             client_mode=self.client_mode,
-            require_manifest=False,
         )
-        self.update_check_worker.build_loaded.connect(self.on_manual_update_loaded)
-        self.update_check_worker.error_occurred.connect(self.on_manual_update_failed)
+        self.update_check_worker.update_loaded.connect(self.on_launcher_update_loaded)
+        self.update_check_worker.error_occurred.connect(self.on_launcher_update_failed)
         self.update_check_worker.start()
 
-    def on_manual_update_loaded(self, resolved_build: dict) -> None:
-        self.launcher_update_version = ""
-        self.launcher_update_url = ""
-        self.launcher_update_notes = ""
-        self.evaluate_launcher_update(resolved_build)
-        if self.launcher_update_version:
+    def on_launcher_update_loaded(self, resolved_build: dict) -> None:
+        found_update = self.evaluate_launcher_update(resolved_build, show_panel=True)
+        if found_update:
             self.set_update_check_state("available")
             return
         self.set_update_check_state("ok")
-        self.set_status("manual_update_ok")
+        if self.update_check_manual:
+            self.set_status("manual_update_ok")
 
-    def on_manual_update_failed(self, error: str) -> None:
-        self.set_update_check_state("error")
-        self.set_status_text(self.translate("manual_update_failed", error=error))
+    def on_launcher_update_failed(self, error: str) -> None:
+        if self.update_check_manual:
+            self.set_update_check_state("error")
+            self.set_status_text(self.translate("manual_update_failed", error=error))
 
     def set_update_check_state(self, state: str) -> None:
         self.update_check_state = state if state in {"available", "checking", "error", "ok"} else "ok"
+        if self.update_check_state != "available":
+            self.update_mascot_dismissed = False
         self.refresh_update_check_button()
+        self.refresh_update_mascot()
 
     def toggle_update_pulse(self) -> None:
         self.update_pulse_on = not self.update_pulse_on
@@ -3313,6 +3422,21 @@ class MSLauncherWindow(QMainWindow):
         else:
             self.update_pulse_timer.stop()
             self.update_pulse_on = False
+
+    def refresh_update_mascot(self) -> None:
+        if not hasattr(self, "update_mascot_frame"):
+            return
+        visible = (
+            self.update_check_state == "available"
+            and bool(self.launcher_update_version)
+            and not self.update_mascot_dismissed
+        )
+        self.update_mascot_frame.setVisible(visible)
+        if self.update_mascot_movie is not None:
+            if visible and self.update_mascot_movie.state() != QMovie.MovieState.Running:
+                self.update_mascot_movie.start()
+            elif not visible:
+                self.update_mascot_movie.stop()
 
     def show_launcher_update_panel(self) -> None:
         if not self.launcher_update_version:

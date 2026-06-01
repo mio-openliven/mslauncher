@@ -12,6 +12,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import gui
+from PyQt6.QtCore import QEvent
 from PyQt6.QtWidgets import QApplication
 
 
@@ -38,6 +39,24 @@ def main() -> None:
         assert window.height() >= 520
         assert window.info_panel_mode == "status"
         assert all(not row.isHidden() for row in window.status_rows)
+        assert window.update_check_button.text() == "OK"
+        assert window.update_poll_timer.interval() == 15_000
+        assert window.update_poll_timer.isActive()
+        next_version = f"{gui.APP_VERSION.rsplit('.', 1)[0]}.{int(gui.APP_VERSION.rsplit('.', 1)[1]) + 1}"
+        window.on_launcher_update_loaded(
+            {
+                "launcher_version": next_version,
+                "launcher_download_url": "https://example.com/MSLaunchSetup.exe",
+                "launcher_sha256": "a" * 64,
+                "launcher_notes": "Smoke update",
+            }
+        )
+        assert window.update_check_button.text() == "!"
+        assert window.info_panel_mode == "update"
+        assert window.update_mascot_frame.isVisible()
+        window.eventFilter(window.update_mascot_frame, QEvent(QEvent.Type.Enter))
+        assert window.update_mascot_frame.isHidden()
+        window.on_launcher_update_loaded({"launcher_version": gui.APP_VERSION})
         assert window.update_check_button.text() == "OK"
         window.show_success_status_card()
         assert window.info_panel_mode == "status"
