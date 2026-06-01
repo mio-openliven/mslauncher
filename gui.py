@@ -123,6 +123,8 @@ ACTION_ICON_FILES = {
     "play": "play.svg",
     "download_mods": "download.svg",
     "game_folder": "folder.svg",
+    "report_bug": "report.svg",
+    "open_error_report": "report.svg",
 }
 
 SYSTEM_DIALOG_STYLESHEET = """
@@ -215,12 +217,13 @@ TRANSLATIONS = {
         "feedback_card_title": "Problems?",
         "feedback_card_body": "Report a bug or open logs if something does not launch cleanly.",
         "report_bug": "Report a bug",
-        "support_offline": "Could not open the report page. Open logs and send the latest report to the admin.",
+        "support_offline": "Could not open the report page. Opening local reports instead.",
         "feedback_panel_title": "Need help?",
-        "feedback_panel_body": "If something broke, open the reports folder and send the latest report to the server admin.",
+        "feedback_panel_body": "Opens the bug report page for this project. If GitHub or the browser is unavailable, the launcher opens local reports instead.",
         "status_card_mods": "Mods ready",
         "status_card_mods_body": "Files checked successfully.",
-        "status_card_fabric": "Fabric OK",
+        "status_card_fabric": "Loader OK",
+        "status_card_loader_body": "Loader {loader}",
         "status_card_java": "Java OK",
         "runtime_auto": "Runtime auto",
         "update_available": "Launcher update available: {version}",
@@ -332,12 +335,13 @@ TRANSLATIONS = {
         "feedback_card_title": "\u041f\u0440\u043e\u0431\u043b\u0435\u043c\u044b?",
         "feedback_card_body": "\u0421\u043e\u043e\u0431\u0449\u0438\u0442\u0435 \u043e \u0431\u0430\u0433\u0435 \u0438\u043b\u0438 \u043e\u0442\u043a\u0440\u043e\u0439\u0442\u0435 \u043e\u0442\u0447\u0435\u0442\u044b, \u0435\u0441\u043b\u0438 \u0447\u0442\u043e-\u0442\u043e \u043d\u0435 \u0437\u0430\u043f\u0443\u0441\u043a\u0430\u0435\u0442\u0441\u044f.",
         "report_bug": "\u0421\u043e\u043e\u0431\u0449\u0438\u0442\u044c \u043e \u0431\u0430\u0433\u0435",
-        "support_offline": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043a\u0440\u044b\u0442\u044c \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0443 report. \u041e\u0442\u043a\u0440\u043e\u0439\u0442\u0435 \u043e\u0442\u0447\u0435\u0442\u044b \u0438 \u043e\u0442\u043f\u0440\u0430\u0432\u044c\u0442\u0435 \u0441\u0432\u0435\u0436\u0438\u0439 report \u0430\u0434\u043c\u0438\u043d\u0443.",
+        "support_offline": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043a\u0440\u044b\u0442\u044c \u0431\u0430\u0433-\u0440\u0435\u043f\u043e\u0440\u0442. \u041e\u0442\u043a\u0440\u044b\u0432\u0430\u044e \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u044b\u0435 \u043e\u0442\u0447\u0435\u0442\u044b.",
         "feedback_panel_title": "\u041d\u0443\u0436\u043d\u0430 \u043f\u043e\u043c\u043e\u0449\u044c?",
-        "feedback_panel_body": "\u0415\u0441\u043b\u0438 \u0447\u0442\u043e-\u0442\u043e \u0441\u043b\u043e\u043c\u0430\u043b\u043e\u0441\u044c, \u043e\u0442\u043a\u0440\u043e\u0439\u0442\u0435 \u043f\u0430\u043f\u043a\u0443 \u043e\u0442\u0447\u0435\u0442\u043e\u0432 \u0438 \u043e\u0442\u043f\u0440\u0430\u0432\u044c\u0442\u0435 \u0441\u0430\u043c\u044b\u0439 \u0441\u0432\u0435\u0436\u0438\u0439 report \u0430\u0434\u043c\u0438\u043d\u0443 \u0441\u0435\u0440\u0432\u0435\u0440\u0430.",
+        "feedback_panel_body": "\u041e\u0442\u043a\u0440\u043e\u0435\u0442 \u0431\u0430\u0433-\u0440\u0435\u043f\u043e\u0440\u0442 \u0434\u043b\u044f \u044d\u0442\u043e\u0433\u043e \u043f\u0440\u043e\u0435\u043a\u0442\u0430. \u0415\u0441\u043b\u0438 GitHub \u0438\u043b\u0438 \u0431\u0440\u0430\u0443\u0437\u0435\u0440 \u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u0435\u043d, \u043b\u0430\u0443\u043d\u0447\u0435\u0440 \u043e\u0442\u043a\u0440\u043e\u0435\u0442 \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u044b\u0435 \u043e\u0442\u0447\u0435\u0442\u044b.",
         "status_card_mods": "\u041c\u043e\u0434\u044b \u0433\u043e\u0442\u043e\u0432\u044b",
         "status_card_mods_body": "\u0424\u0430\u0439\u043b\u044b \u0443\u0441\u043f\u0435\u0448\u043d\u043e \u043f\u0440\u043e\u0432\u0435\u0440\u0435\u043d\u044b.",
-        "status_card_fabric": "Fabric OK",
+        "status_card_fabric": "\u0417\u0430\u0433\u0440\u0443\u0437\u0447\u0438\u043a OK",
+        "status_card_loader_body": "\u0417\u0430\u0433\u0440\u0443\u0437\u0447\u0438\u043a {loader}",
         "status_card_java": "Java OK",
         "runtime_auto": "\u0410\u0432\u0442\u043e Java",
         "update_available": "\u0412\u044b\u0448\u043b\u043e \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435 \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430: {version}",
@@ -1418,7 +1422,7 @@ class MSLauncherWindow(QMainWindow):
             "shield", "Mods ready", "All mods loaded and compatible."
         )
         self.fabric_status_title, self.fabric_status_body, self.fabric_status_check, fabric_row = self.create_status_row(
-            "fabric", "Fabric OK", "Loader ready"
+            "fabric", "Loader OK", "Loader ready"
         )
         self.java_status_title, self.java_status_body, self.java_status_check, java_row = self.create_status_row(
             "java", "Java OK", "Runtime ready"
@@ -2823,6 +2827,7 @@ class MSLauncherWindow(QMainWindow):
             self.info_title_label.setText(self.translate("crash_panel_title"))
             self.info_body_label.setText(self.last_crash_reason)
             self.open_crash_reports_button.setText(self.translate("open_crash_reports"))
+            self.set_button_icon(self.open_crash_reports_button, "open_error_report", 18)
             self.open_crash_reports_button.show()
             self.download_update_button.hide()
             return
@@ -2835,6 +2840,7 @@ class MSLauncherWindow(QMainWindow):
             self.info_title_label.setText(self.translate("error_panel_title"))
             self.info_body_label.setText(self.last_error_message)
             self.open_crash_reports_button.setText(self.translate("open_error_report"))
+            self.set_button_icon(self.open_crash_reports_button, "open_error_report", 18)
             self.open_crash_reports_button.show()
             self.download_update_button.hide()
             return
@@ -2861,7 +2867,8 @@ class MSLauncherWindow(QMainWindow):
             self.info_body_label.show()
             self.info_title_label.setText(self.translate("feedback_panel_title"))
             self.info_body_label.setText(self.translate("feedback_panel_body"))
-            self.open_crash_reports_button.setText(self.translate("open_error_report"))
+            self.open_crash_reports_button.setText(self.translate("report_bug"))
+            self.set_button_icon(self.open_crash_reports_button, "report_bug", 18)
             self.open_crash_reports_button.show()
             self.download_update_button.hide()
             return
@@ -2876,6 +2883,7 @@ class MSLauncherWindow(QMainWindow):
             self.open_profile_button.hide()
             self.open_game_button.hide()
             self.open_crash_reports_button.setText(self.translate("report_bug"))
+            self.set_button_icon(self.open_crash_reports_button, "report_bug", 18)
             self.open_crash_reports_button.show()
             self.download_update_button.hide()
             return
@@ -2926,7 +2934,9 @@ class MSLauncherWindow(QMainWindow):
         status_text = self.status_label.text() if self.status_label.text() else self.translate("status_card_mods_body")
         self.mods_status_body.setText(status_text)
         self.fabric_status_title.setText(self.translate("status_card_fabric"))
-        self.fabric_status_body.setText(f"Loader {self.loader_setting_combo.currentText()}")
+        self.fabric_status_body.setText(
+            self.translate("status_card_loader_body", loader=self.loader_setting_combo.currentText())
+        )
         self.java_status_title.setText(self.translate("status_card_java"))
         java_path = self.java_path_input.text().strip()
         self.java_status_body.setText(java_path if java_path else self.translate("runtime_auto"))

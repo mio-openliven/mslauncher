@@ -39,9 +39,13 @@ def main() -> None:
         window.show_success_status_card()
         assert window.info_panel_mode == "status"
         assert all(not row.isHidden() for row in window.status_rows)
+        assert window.fabric_status_title.text() == window.translate("status_card_fabric")
+        assert window.loader_setting_combo.currentText() in window.fabric_status_body.text()
         window.info_panel_mode = "feedback"
         window.refresh_info_panel()
         assert all(row.isHidden() for row in window.status_rows)
+        assert window.open_crash_reports_button.text() == window.translate("report_bug")
+        assert not window.open_crash_reports_button.icon().isNull()
         window.client_mode = gui.CLIENT_MODE_INDEPENDENT
         window.social_links = gui.get_social_links(window.config, window.client_mode)
         window.refresh_project_backgrounds()
