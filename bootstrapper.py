@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import shutil
 import subprocess
@@ -17,11 +18,12 @@ from tkinter import BOTH, LEFT, RIGHT, Tk, StringVar, ttk
 
 APP_NAME = "MSLaunch"
 INSTALL_ROOT = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local")) / "MSLaunch" / "Launcher"
+USER_CONFIG_PATH = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming")) / "MSLauncher" / "launcher_config.json"
 DESKTOP = Path(os.environ.get("USERPROFILE", str(Path.home()))) / "Desktop"
 SHORTCUT_PATH = DESKTOP / "MSLaunch.lnk"
 EXE_NAME = "MSLauncher.exe"
 PACKAGE_NAME = "MSLaunch-1.9.0-beta.zip"
-PACKAGE_SHA256 = "e8b500c38402dabf1df76b9ec97ad5de5a1e85bdd2b9c11bded1fc758b052df2"
+PACKAGE_SHA256 = "9e04fa7864dddb1f7a8b966f49c62cbf62d83b112b9a597557db6d133fb1ac7c"
 PROBE_BYTES = 64 * 1024
 CHUNK_SIZE = 1024 * 256
 
@@ -29,8 +31,8 @@ SOURCES = [
     ("Host", f"https://mslaunch.186.246.12.238.sslip.io/downloads/{PACKAGE_NAME}", PACKAGE_SHA256),
     (
         "GitHub",
-        "https://github.com/mio-openliven/MSNukem/releases/download/v1.9.0-beta.1/MSLaunch-1.9.0-beta.zip",
-        "3195339b6f7e69a2d1a97b6bc2c95f7cc3ccfdea8c8d9235b88050d26cfa79e5",
+        "https://github.com/mio-openliven/MSNukem/releases/download/v1.9.0-beta.1/MSLaunchPayload.dat",
+        PACKAGE_SHA256,
     ),
 ]
 
@@ -157,6 +159,60 @@ def create_shortcut(exe_path: Path) -> None:
     subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command], check=False)
 
 
+def update_user_config() -> None:
+    bundled_config_path = INSTALL_ROOT / "launcher_config.json"
+    if not bundled_config_path.is_file():
+        return
+
+    bundled = read_json_object(bundled_config_path)
+    current = read_json_object(USER_CONFIG_PATH)
+    preserve_keys = (
+        "game_directory",
+        "profiles_directory",
+        "default_profile",
+        "default_username",
+        "recent_usernames",
+        "skin_path",
+        "launch",
+    )
+    merged = dict(bundled)
+    for key in preserve_keys:
+        if key in current:
+            merged[key] = current[key]
+
+    # Distribution-owned fields must stay fresh, otherwise old beta configs keep stale passwords.
+    for key in (
+        "panel",
+        "builds",
+        "default_build",
+        "client_mode",
+        "default_language",
+        "project_access",
+        "support_url",
+        "support_urls",
+        "admin_links",
+        "social_links",
+        "news",
+    ):
+        if key in bundled:
+            merged[key] = bundled[key]
+
+    USER_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    if USER_CONFIG_PATH.exists():
+        backup_path = USER_CONFIG_PATH.with_name(f"launcher_config.before-setup-{int(time.time())}.json")
+        shutil.copyfile(USER_CONFIG_PATH, backup_path)
+    USER_CONFIG_PATH.write_text(json.dumps(merged, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def read_json_object(path: Path) -> dict[str, object]:
+    try:
+        with path.open("r", encoding="utf-8") as file:
+            data = json.load(file)
+        return data if isinstance(data, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
 def launch(exe_path: Path) -> None:
     subprocess.Popen([str(exe_path)], cwd=str(exe_path.parent), close_fds=True)
 
@@ -179,6 +235,8 @@ def install(ui: SetupUi) -> None:
                 if not exe_path.is_file():
                     raise RuntimeError("MSLauncher.exe не найден после распаковки.")
                 ui.set_progress(92)
+                ui.set_text("Обновление настроек...", str(USER_CONFIG_PATH))
+                update_user_config()
                 ui.set_text("Создание ярлыка...", str(SHORTCUT_PATH))
                 create_shortcut(exe_path)
                 launch(exe_path)

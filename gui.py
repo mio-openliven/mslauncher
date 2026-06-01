@@ -1660,9 +1660,12 @@ class MSLauncherWindow(QMainWindow):
 
         control_frame = QFrame()
         control_frame.setObjectName("controlFrame")
-        control_frame.setMinimumHeight(96)
-        control_layout = QHBoxLayout(control_frame)
-        control_layout.setContentsMargins(12, 12, 12, 12)
+        control_frame.setMinimumHeight(116)
+        outer_control_layout = QVBoxLayout(control_frame)
+        outer_control_layout.setContentsMargins(12, 12, 12, 10)
+        outer_control_layout.setSpacing(6)
+        control_layout = QHBoxLayout()
+        control_layout.setContentsMargins(0, 0, 0, 0)
         control_layout.setSpacing(6)
 
         self.language_label = QLabel()
@@ -1727,6 +1730,15 @@ class MSLauncherWindow(QMainWindow):
         self.status_label.setObjectName("statusLabel")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         self.status_label.setWordWrap(True)
+        self.status_label.setMinimumHeight(18)
+
+        sync_status_frame = QFrame()
+        sync_status_frame.setObjectName("syncStatusFrame")
+        sync_status_layout = QHBoxLayout(sync_status_frame)
+        sync_status_layout.setContentsMargins(10, 0, 10, 0)
+        sync_status_layout.setSpacing(10)
+        sync_status_layout.addWidget(self.status_label, 1)
+        sync_status_layout.addWidget(self.progress_bar, 0)
 
         self.play_button = QPushButton()
         self.play_button.setObjectName("playButton")
@@ -1759,6 +1771,8 @@ class MSLauncherWindow(QMainWindow):
         control_layout.addWidget(self.create_loader_group(), 2)
         control_layout.addWidget(self.mods_button, 0)
         control_layout.addWidget(self.play_button, 0)
+        outer_control_layout.addLayout(control_layout, 1)
+        outer_control_layout.addWidget(sync_status_frame, 0)
 
         hidden_controls = QFrame()
         hidden_controls.hide()
@@ -1767,8 +1781,6 @@ class MSLauncherWindow(QMainWindow):
         hidden_layout.addWidget(self.profile_combo)
         hidden_layout.addWidget(self.language_label)
         hidden_layout.addWidget(self.language_combo)
-        hidden_layout.addWidget(self.status_label)
-        hidden_layout.addWidget(self.progress_bar)
         hidden_layout.addWidget(self.feedback_button)
         hero_layout.addWidget(hidden_controls)
 

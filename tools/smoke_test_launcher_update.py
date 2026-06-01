@@ -20,7 +20,7 @@ def expect_remote_error(callback) -> None:
 
 
 def main() -> None:
-    assert APP_VERSION == "1.9.0"
+    assert APP_VERSION == "1.9.1"
     assert is_remote_version_newer("1.9.0", "1.9.1")
     assert is_remote_version_newer("1.9.9", "1.10.0")
     assert is_remote_version_newer("1.9.0", "1.9.1-beta")
@@ -28,19 +28,20 @@ def main() -> None:
     assert not is_remote_version_newer("1.9.0", "1.8.9")
     assert not is_remote_version_newer("1.9.0", "bad-version")
 
+    assert get_launcher_update_notice({"launcher_version": "1.9.1"}) == {}
     assert get_launcher_update_notice({"launcher_version": "1.9.0"}) == {}
     assert get_launcher_update_notice({"launcher_version": "1.8.9"}) == {}
     assert get_launcher_update_notice({}) == {}
 
     update_notice = get_launcher_update_notice(
         {
-            "launcher_version": "1.9.1",
-            "launcher_download_url": "https://github.com/OWNER/REPO/releases/download/v1.9.1/MSLauncher.zip",
+            "launcher_version": "1.9.2",
+            "launcher_download_url": "https://github.com/OWNER/REPO/releases/download/v1.9.2/MSLaunchSetup.exe",
             "launcher_sha256": "a" * 64,
             "launcher_notes": "Small update",
         }
     )
-    assert update_notice["version"] == "1.9.1"
+    assert update_notice["version"] == "1.9.2"
     assert update_notice["download_url"].startswith("https://github.com/")
     assert update_notice["sha256"] == "a" * 64
     assert update_notice["notes"] == "Small update"
@@ -49,13 +50,13 @@ def main() -> None:
         {
             "loader": "fabric",
             "manifest_url": "https://example.com/manifest.json",
-            "launcher_version": "1.9.1",
-            "launcher_download_url": "https://github.com/OWNER/REPO/releases/download/v1.9.1/MSLauncher.zip",
+            "launcher_version": "1.9.2",
+            "launcher_download_url": "https://github.com/OWNER/REPO/releases/download/v1.9.2/MSLaunchSetup.exe",
             "launcher_sha256": "A" * 64,
             "launcher_notes": "Update note",
         }
     )
-    assert accepted["launcher_version"] == "1.9.1"
+    assert accepted["launcher_version"] == "1.9.2"
     assert accepted["launcher_download_url"].startswith("https://github.com/")
     assert accepted["launcher_sha256"] == "a" * 64
     assert accepted["launcher_notes"] == "Update note"
