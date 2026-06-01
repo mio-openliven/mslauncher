@@ -51,6 +51,8 @@ def main() -> None:
     assert nukem_template["social_links"]["nukem"]["discord"] == "https://discord.com/invite/P35nvXQ"
     assert nukem_template["project_access"]["nukem"]["password_enabled"] is True
     assert nukem_template["project_access"]["nukem"]["password_hash_sha256"] == ""
+    assert "admin_password_hash_sha256" in nukem_template["project_access"]["nukem"]
+    assert len(nukem_template["news"]["nukem"]) <= 5
     assert nukem_builds[0]["id"] == "nukem"
     assert nukem_builds[0]["name"] == "Nukem Project"
     assert nukem_builds[0]["source_key"] == "https://raw.githubusercontent.com/OWNER/REPO/BRANCH/mslauncher/build.json"

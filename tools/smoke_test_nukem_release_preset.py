@@ -26,6 +26,8 @@ def main() -> None:
     assert preset["social_links"]["nukem"]["discord"] == "https://discord.com/invite/P35nvXQ"
     assert preset["project_access"]["nukem"]["password_enabled"] is True
     assert preset["project_access"]["nukem"]["password_hash_sha256"] == ""
+    assert "admin_password_hash_sha256" in preset["project_access"]["nukem"]
+    assert len(preset["news"]["nukem"]) <= 5
 
     builds = preset["builds"]
     assert len(builds) == 1

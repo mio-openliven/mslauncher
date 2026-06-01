@@ -18,8 +18,18 @@
     "nukem": {
       "password_enabled": true,
       "password_hash_sha256": "",
+      "admin_password_hash_sha256": "",
+      "build_passwords": {},
       "password_hint": "Ask the project admin for the access password."
     }
+  },
+  "news": {
+    "nukem": [
+      {
+        "title": "MS Nuckem",
+        "body": "Новости отдела появятся здесь. До пяти сообщений, автопереключение каждые 30 секунд."
+      }
+    ]
   },
   "default_build": "nukem",
   "launch": {

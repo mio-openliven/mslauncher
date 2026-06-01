@@ -52,6 +52,7 @@
     "nukem": {
       "password_enabled": true,
       "password_hash_sha256": "10f3a8236795a20cc7fb769c7ec0a0f5412042a66819a753cef7ea7cabce7ff2",
+      "admin_password_hash_sha256": "",
       "build_passwords": {
         "main": "10f3a8236795a20cc7fb769c7ec0a0f5412042a66819a753cef7ea7cabce7ff2"
       },
@@ -63,5 +64,14 @@
       "repo_url": "https://github.com/mio-openliven/MSNukem",
       "manifest_url": "https://raw.githubusercontent.com/mio-openliven/MSNukem/main/manifest.json"
     }
+  },
+  "news": {
+    "nukem": [
+      {
+        "title": "MS Nuckem",
+        "body": "Новости отдела появятся здесь. До пяти сообщений, автопереключение каждые 30 секунд."
+      }
+    ],
+    "independent": []
   }
 }

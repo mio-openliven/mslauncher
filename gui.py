@@ -165,8 +165,8 @@ TRANSLATIONS = {
     "EN": {
         "app_title": APP_DISPLAY_NAME,
         "brand_title": APP_DISPLAY_NAME,
-        "brand_credit": f"Beta {APP_VERSION} independent launcher",
-        "brand_credit_nukem": f"Beta {APP_VERSION} for MS Nuckem",
+        "brand_credit": f"Beta {APP_VERSION}",
+        "brand_credit_nukem": f"Beta {APP_VERSION}",
         "brand_subtitle_project": "Project entry point",
         "brand_subtitle_crew": "Built for the crew",
         "brand_subtitle_places": "Everything in its place",
@@ -176,7 +176,13 @@ TRANSLATIONS = {
         "settings_title": "Launcher Panel",
         "settings_body": "Sync status, Java checks and crash reports will appear here.",
         "admin_panel_title": "Nukem admin",
-        "admin_panel_body": "Modpack source, manifest and customer support entry points.",
+        "admin_panel_body": "Customer panel: news, builds, passwords and reports. GitHub remains the fallback until the server database is connected.",
+        "admin_password_title": "Admin password",
+        "admin_password_body": "Enter admin password for this launcher.",
+        "admin_password_open": "Open admin",
+        "admin_create_news": "Create news",
+        "admin_view_builds": "Builds",
+        "admin_change_password": "Passwords",
         "open_modpack_repo": "Open modpack repo",
         "open_modpack_manifest": "Open manifest",
         "open_support_queue": "Open support queue",
@@ -196,7 +202,15 @@ TRANSLATIONS = {
         "skin_invalid": "Choose a PNG skin file.",
         "skin_saved": "Skin file saved. Server support depends on server plugins.",
         "skin_empty": "No skin file selected.",
+        "skin_url": "Skin URL",
+        "skin_url_apply": "Save URL",
+        "skin_url_invalid": "Paste HTTPS skin URL.",
+        "open_player_panel": "Player",
+        "player_panel_title": "Player profile",
+        "player_panel_body": "Skin and player settings. The nickname field keeps the last five names in its list.",
+        "skin_button_tooltip": "Player skin",
         "language": "Language",
+        "project_switcher_tooltip": "Switch launcher",
         "mode_independent": "Independent mode",
         "mode_nukem": "Nukem mode",
         "profile": "Mods",
@@ -220,6 +234,8 @@ TRANSLATIONS = {
         "support_offline": "Could not open the report page. Opening local reports instead.",
         "feedback_panel_title": "Need help?",
         "feedback_panel_body": "Opens the bug report page for this project. If GitHub or the browser is unavailable, the launcher opens local reports instead.",
+        "news_title": "News",
+        "news_empty": "No news yet.",
         "status_card_mods": "Mods ready",
         "status_card_mods_body": "Files checked successfully.",
         "status_card_fabric": "Loader OK",
@@ -227,6 +243,10 @@ TRANSLATIONS = {
         "status_card_java": "Java OK",
         "runtime_auto": "Runtime auto",
         "update_available": "Launcher update available: {version}",
+        "manual_update_tooltip": "Check updates",
+        "manual_update_checking": "Checking launcher updates...",
+        "manual_update_ok": "Launcher is up to date.",
+        "manual_update_failed": "Could not check launcher updates: {error}",
         "download_update": "Download update",
         "update_panel_body": "Manual update only. Download the new package and replace launcher files after closing the game.",
         "status_mods_ready": "Mod files are ready.",
@@ -239,6 +259,7 @@ TRANSLATIONS = {
         "access_password_failed": "Wrong build password. Ask the Nukem admin for the current code.",
         "access_password_missing": "Build password is not configured. Ask the admin to add a password for this build.",
         "access_granted": "Project access granted.",
+        "admin_access_granted": "Admin panel unlocked.",
         "action_motor": "Rolling!",
         "action_go": "Action!",
         "action_scene": "Scene up!",
@@ -283,8 +304,8 @@ TRANSLATIONS = {
     "RU": {
         "app_title": APP_DISPLAY_NAME,
         "brand_title": APP_DISPLAY_NAME,
-        "brand_credit": f"Beta {APP_VERSION} MSLaunch",
-        "brand_credit_nukem": f"Beta {APP_VERSION} MS Nuckem",
+        "brand_credit": f"Beta {APP_VERSION}",
+        "brand_credit_nukem": f"Beta {APP_VERSION}",
         "brand_subtitle_project": "\u0422\u043e\u0447\u043a\u0430 \u0432\u0445\u043e\u0434\u0430 \u0432 \u043f\u0440\u043e\u0435\u043a\u0442",
         "brand_subtitle_crew": "\u0421\u043e\u0431\u0440\u0430\u043d\u043e \u0434\u043b\u044f \u0441\u0432\u043e\u0435\u0439 \u043a\u043e\u043c\u0430\u043d\u0434\u044b",
         "brand_subtitle_places": "\u0412\u0441\u0435 \u043d\u0430 \u0441\u0432\u043e\u0438\u0445 \u043c\u0435\u0441\u0442\u0430\u0445",
@@ -294,7 +315,13 @@ TRANSLATIONS = {
         "settings_title": "\u041f\u0430\u043d\u0435\u043b\u044c \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430",
         "settings_body": "\u0417\u0434\u0435\u0441\u044c \u0431\u0443\u0434\u0443\u0442 \u0441\u0442\u0430\u0442\u0443\u0441 \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u0438, \u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0438 Java \u0438 \u043e\u0442\u0447\u0435\u0442\u044b \u043e\u0448\u0438\u0431\u043e\u043a.",
         "admin_panel_title": "\u0410\u0434\u043c\u0438\u043d Nukem",
-        "admin_panel_body": "\u0418\u0441\u0442\u043e\u0447\u043d\u0438\u043a \u0441\u0431\u043e\u0440\u043a\u0438, manifest \u0438 \u043e\u0447\u0435\u0440\u0435\u0434\u044c \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0439 \u0437\u0430\u043a\u0430\u0437\u0447\u0438\u043a\u0430.",
+        "admin_panel_body": "\u041f\u0430\u043d\u0435\u043b\u044c \u0437\u0430\u043a\u0430\u0437\u0447\u0438\u043a\u0430: \u043d\u043e\u0432\u043e\u0441\u0442\u0438, \u0441\u0431\u043e\u0440\u043a\u0438, \u043f\u0430\u0440\u043e\u043b\u0438 \u0438 \u043e\u0442\u0447\u0435\u0442\u044b. GitHub \u043e\u0441\u0442\u0430\u0435\u0442\u0441\u044f \u0437\u0430\u043f\u0430\u0441\u043d\u044b\u043c \u0438\u0441\u0442\u043e\u0447\u043d\u0438\u043a\u043e\u043c \u0434\u043e \u043f\u043e\u0434\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u044f \u0431\u0430\u0437\u044b.",
+        "admin_password_title": "\u041f\u0430\u0440\u043e\u043b\u044c \u0430\u0434\u043c\u0438\u043d\u0430",
+        "admin_password_body": "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u043f\u0430\u0440\u043e\u043b\u044c \u0430\u0434\u043c\u0438\u043d\u0430 \u044d\u0442\u043e\u0433\u043e \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430.",
+        "admin_password_open": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u0430\u0434\u043c\u0438\u043d\u043a\u0443",
+        "admin_create_news": "\u0421\u043e\u0437\u0434\u0430\u0442\u044c \u043d\u043e\u0432\u043e\u0441\u0442\u044c",
+        "admin_view_builds": "\u0421\u0431\u043e\u0440\u043a\u0438",
+        "admin_change_password": "\u041f\u0430\u0440\u043e\u043b\u0438",
         "open_modpack_repo": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c repo \u0441\u0431\u043e\u0440\u043a\u0438",
         "open_modpack_manifest": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c manifest",
         "open_support_queue": "\u041e\u0447\u0435\u0440\u0435\u0434\u044c report",
@@ -314,7 +341,15 @@ TRANSLATIONS = {
         "skin_invalid": "\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 PNG-\u0444\u0430\u0439\u043b \u0441\u043a\u0438\u043d\u0430.",
         "skin_saved": "\u0424\u0430\u0439\u043b \u0441\u043a\u0438\u043d\u0430 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d. \u041f\u043e\u0434\u0434\u0435\u0440\u0436\u043a\u0430 \u043d\u0430 \u0441\u0435\u0440\u0432\u0435\u0440\u0435 \u0437\u0430\u0432\u0438\u0441\u0438\u0442 \u043e\u0442 server plugins.",
         "skin_empty": "\u0424\u0430\u0439\u043b \u0441\u043a\u0438\u043d\u0430 \u043d\u0435 \u0432\u044b\u0431\u0440\u0430\u043d.",
+        "skin_url": "\u0421\u0441\u044b\u043b\u043a\u0430 \u043d\u0430 \u0441\u043a\u0438\u043d",
+        "skin_url_apply": "\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c URL",
+        "skin_url_invalid": "\u0412\u0441\u0442\u0430\u0432\u044c\u0442\u0435 HTTPS-\u0441\u0441\u044b\u043b\u043a\u0443 \u043d\u0430 \u0441\u043a\u0438\u043d.",
+        "open_player_panel": "\u041f\u0440\u043e\u0444\u0438\u043b\u044c",
+        "player_panel_title": "\u041f\u0440\u043e\u0444\u0438\u043b\u044c \u0438\u0433\u0440\u043e\u043a\u0430",
+        "player_panel_body": "\u0421\u043a\u0438\u043d \u0438 \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u0438\u0433\u0440\u043e\u043a\u0430. \u041d\u0438\u043a \u0432\u044b\u0431\u0438\u0440\u0430\u0435\u0442\u0441\u044f \u0441\u043d\u0438\u0437\u0443, \u043f\u043e\u0441\u043b\u0435\u0434\u043d\u0438\u0435 \u043d\u0438\u043a\u0438 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u044b \u0432 \u0441\u043f\u0438\u0441\u043a\u0435.",
+        "skin_button_tooltip": "\u0421\u043a\u0438\u043d \u0438\u0433\u0440\u043e\u043a\u0430",
         "language": "\u042f\u0437\u044b\u043a",
+        "project_switcher_tooltip": "\u0421\u043c\u0435\u043d\u0438\u0442\u044c \u043b\u0430\u0443\u043d\u0447\u0435\u0440",
         "mode_independent": "\u041d\u0435\u0437\u0430\u0432\u0438\u0441\u0438\u043c\u044b\u0439 \u0440\u0435\u0436\u0438\u043c",
         "mode_nukem": "Nukem mode",
         "profile": "\u041c\u043e\u0434\u044b",
@@ -338,6 +373,8 @@ TRANSLATIONS = {
         "support_offline": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043a\u0440\u044b\u0442\u044c \u0431\u0430\u0433-\u0440\u0435\u043f\u043e\u0440\u0442. \u041e\u0442\u043a\u0440\u044b\u0432\u0430\u044e \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u044b\u0435 \u043e\u0442\u0447\u0435\u0442\u044b.",
         "feedback_panel_title": "\u041d\u0443\u0436\u043d\u0430 \u043f\u043e\u043c\u043e\u0449\u044c?",
         "feedback_panel_body": "\u041e\u0442\u043a\u0440\u043e\u0435\u0442 \u0431\u0430\u0433-\u0440\u0435\u043f\u043e\u0440\u0442 \u0434\u043b\u044f \u044d\u0442\u043e\u0433\u043e \u043f\u0440\u043e\u0435\u043a\u0442\u0430. \u0415\u0441\u043b\u0438 GitHub \u0438\u043b\u0438 \u0431\u0440\u0430\u0443\u0437\u0435\u0440 \u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u0435\u043d, \u043b\u0430\u0443\u043d\u0447\u0435\u0440 \u043e\u0442\u043a\u0440\u043e\u0435\u0442 \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u044b\u0435 \u043e\u0442\u0447\u0435\u0442\u044b.",
+        "news_title": "\u041d\u043e\u0432\u043e\u0441\u0442\u0438",
+        "news_empty": "\u041d\u043e\u0432\u043e\u0441\u0442\u0435\u0439 \u043f\u043e\u043a\u0430 \u043d\u0435\u0442.",
         "status_card_mods": "\u041c\u043e\u0434\u044b \u0433\u043e\u0442\u043e\u0432\u044b",
         "status_card_mods_body": "\u0424\u0430\u0439\u043b\u044b \u0443\u0441\u043f\u0435\u0448\u043d\u043e \u043f\u0440\u043e\u0432\u0435\u0440\u0435\u043d\u044b.",
         "status_card_fabric": "\u0417\u0430\u0433\u0440\u0443\u0437\u0447\u0438\u043a OK",
@@ -345,6 +382,10 @@ TRANSLATIONS = {
         "status_card_java": "Java OK",
         "runtime_auto": "\u0410\u0432\u0442\u043e Java",
         "update_available": "\u0412\u044b\u0448\u043b\u043e \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435 \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430: {version}",
+        "manual_update_tooltip": "\u041f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u044f",
+        "manual_update_checking": "\u041f\u0440\u043e\u0432\u0435\u0440\u043a\u0430 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0439...",
+        "manual_update_ok": "\u041e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0439 \u043d\u0435\u0442",
+        "manual_update_failed": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u044f: {error}",
         "download_update": "\u0421\u043a\u0430\u0447\u0430\u0442\u044c \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435",
         "update_panel_body": "\u0410\u0432\u0442\u043e\u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u044f \u043f\u043e\u043a\u0430 \u043d\u0435\u0442. \u0421\u043a\u0430\u0447\u0430\u0439\u0442\u0435 \u043d\u043e\u0432\u044b\u0439 \u0430\u0440\u0445\u0438\u0432 \u0438 \u0437\u0430\u043c\u0435\u043d\u0438\u0442\u0435 \u0444\u0430\u0439\u043b\u044b \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430 \u043f\u043e\u0441\u043b\u0435 \u0437\u0430\u043a\u0440\u044b\u0442\u0438\u044f \u0438\u0433\u0440\u044b.",
         "status_mods_ready": "\u0424\u0430\u0439\u043b\u044b \u043c\u043e\u0434\u043e\u0432 \u0433\u043e\u0442\u043e\u0432\u044b.",
@@ -357,6 +398,7 @@ TRANSLATIONS = {
         "access_password_failed": "\u041d\u0435\u0432\u0435\u0440\u043d\u044b\u0439 \u043f\u0430\u0440\u043e\u043b\u044c \u0441\u0431\u043e\u0440\u043a\u0438. \u0423\u0442\u043e\u0447\u043d\u0438\u0442\u0435 \u0430\u043a\u0442\u0443\u0430\u043b\u044c\u043d\u044b\u0439 \u043a\u043e\u0434 \u0443 \u0430\u0434\u043c\u0438\u043d\u0430 Nukem.",
         "access_password_missing": "\u041f\u0430\u0440\u043e\u043b\u044c \u044d\u0442\u043e\u0439 \u0441\u0431\u043e\u0440\u043a\u0438 \u043d\u0435 \u0437\u0430\u0434\u0430\u043d. \u0410\u0434\u043c\u0438\u043d \u0434\u043e\u043b\u0436\u0435\u043d \u0437\u0430\u0434\u0430\u0442\u044c \u043a\u043e\u0434 \u0434\u043b\u044f \u0441\u0431\u043e\u0440\u043a\u0438.",
         "access_granted": "\u0414\u043e\u0441\u0442\u0443\u043f \u043a \u043f\u0440\u043e\u0435\u043a\u0442\u0443 \u043e\u0442\u043a\u0440\u044b\u0442.",
+        "admin_access_granted": "\u0410\u0434\u043c\u0438\u043d\u043a\u0430 \u043e\u0442\u043a\u0440\u044b\u0442\u0430.",
         "action_motor": "\u041c\u043e\u0442\u043e\u0440!",
         "action_go": "\u041f\u043e\u0435\u0445\u0430\u043b\u0438!",
         "action_scene": "\u042d\u043a\u0448\u0435\u043d\u0430!",
@@ -409,7 +451,7 @@ def load_launcher_config(config_path: str | Path = CONFIG_FILE) -> dict[str, obj
         "game_directory": "",
         "profiles_directory": "",
         "default_profile": PROFILE_SERVER,
-        "default_language": "EN",
+        "default_language": "RU",
         "default_username": "",
         "recent_usernames": [],
         "client_mode": CLIENT_MODE_INDEPENDENT,
@@ -434,11 +476,16 @@ def load_launcher_config(config_path: str | Path = CONFIG_FILE) -> dict[str, obj
             CLIENT_MODE_NUKEM: {
                 "password_enabled": False,
                 "password_hash_sha256": "",
+                "admin_password_hash_sha256": "",
                 "build_passwords": {},
                 "password_hint": "Ask the project admin for the access password.",
             }
         },
         "skin_path": "",
+        "news": {
+            CLIENT_MODE_NUKEM: [],
+            CLIENT_MODE_INDEPENDENT: [],
+        },
         "default_build": "",
         "launch": {},
         "builds": [],
@@ -485,7 +532,7 @@ def load_launcher_config(config_path: str | Path = CONFIG_FILE) -> dict[str, obj
             username.strip()
             for username in recent_usernames
             if isinstance(username, str) and username.strip()
-        ][:10]
+        ][:5]
 
     social_links = loaded_config.get("social_links")
     if isinstance(social_links, dict):
@@ -512,7 +559,7 @@ def load_launcher_config(config_path: str | Path = CONFIG_FILE) -> dict[str, obj
         merged_panel.update(panel_config)
         default_config["panel"] = merged_panel
 
-    for key in ("admin_links", "project_access"):
+    for key in ("admin_links", "project_access", "news"):
         value = loaded_config.get(key)
         if isinstance(value, dict):
             default_config[key] = value
@@ -1239,6 +1286,7 @@ class MSLauncherWindow(QMainWindow):
         self.launch_worker: LaunchWorker | None = None
         self.versions_worker: VersionsWorker | None = None
         self.build_config_worker: BuildConfigWorker | None = None
+        self.update_check_worker: BuildConfigWorker | None = None
         self.selected_profile: LauncherProfile = self.active_profile
         self.selected_username = ""
         self.selected_version = ""
@@ -1257,8 +1305,19 @@ class MSLauncherWindow(QMainWindow):
         self.status_card_confirmed = True
         self._drag_position = None
         self.project_access_unlocked = False
+        self.admin_access_unlocked = False
         self.unlocked_build_ids: set[str] = set()
         self.project_switcher_expanded = False
+        self.update_check_state = "ok"
+        self.update_pulse_on = False
+        self.update_pulse_timer = QTimer(self)
+        self.update_pulse_timer.setInterval(650)
+        self.update_pulse_timer.timeout.connect(self.toggle_update_pulse)
+        self.news_items: list[dict[str, str]] = []
+        self.news_index = 0
+        self.news_timer = QTimer(self)
+        self.news_timer.setInterval(30_000)
+        self.news_timer.timeout.connect(self.show_next_news_item)
         self.brand_subtitle_key = random.choice(self.get_brand_subtitle_keys())
         self.action_phrase_key = "play_idle"
         self.launch_after_sync = True
@@ -1284,7 +1343,7 @@ class MSLauncherWindow(QMainWindow):
         hero_frame.setObjectName("heroFrame")
         hero_frame.setMinimumHeight(540)
         hero_layout = QVBoxLayout(hero_frame)
-        hero_layout.setContentsMargins(30, 20, 30, 22)
+        hero_layout.setContentsMargins(42, 20, 30, 22)
         hero_layout.setSpacing(14)
 
         top_layout = QGridLayout()
@@ -1321,6 +1380,7 @@ class MSLauncherWindow(QMainWindow):
         self.subtitle_label.setObjectName("subtitleLabel")
         self.subtitle_label.setWordWrap(True)
         self.subtitle_label.setMaximumWidth(340)
+        self.subtitle_label.hide()
         self.credit_label = QLabel()
         self.credit_label.setObjectName("creditLabel")
         self.credit_label.setMaximumWidth(340)
@@ -1333,6 +1393,7 @@ class MSLauncherWindow(QMainWindow):
 
         self.project_switcher = QFrame()
         self.project_switcher.setObjectName("projectSwitcher")
+        self.project_switcher.setToolTip(self.translate("project_switcher_tooltip"))
         project_layout = QHBoxLayout(self.project_switcher)
         project_layout.setContentsMargins(6, 6, 6, 6)
         project_layout.setSpacing(4)
@@ -1348,6 +1409,10 @@ class MSLauncherWindow(QMainWindow):
         self.language_toggle_button.setObjectName("languageToggle")
         self.language_toggle_button.setFixedSize(52, 42)
         self.language_toggle_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.update_check_button = QPushButton("OK")
+        self.update_check_button.setObjectName("updateCheckButton")
+        self.update_check_button.setFixedSize(48, 42)
+        self.update_check_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
         right_controls = QFrame()
         right_controls.setObjectName("topRightControls")
@@ -1370,6 +1435,7 @@ class MSLauncherWindow(QMainWindow):
         self.close_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         title_controls_layout.addWidget(self.minimize_button)
         title_controls_layout.addWidget(self.close_button)
+        right_controls_layout.addWidget(self.update_check_button)
         right_controls_layout.addWidget(self.language_toggle_button)
         right_controls_layout.addWidget(title_controls)
 
@@ -1381,8 +1447,8 @@ class MSLauncherWindow(QMainWindow):
         self.sidebar_frame = QFrame()
         self.sidebar_frame.setObjectName("sidebarFrame")
         self.sidebar_layout = QVBoxLayout(self.sidebar_frame)
-        self.sidebar_layout.setContentsMargins(12, 14, 12, 14)
-        self.sidebar_layout.setSpacing(10)
+        self.sidebar_layout.setContentsMargins(9, 12, 9, 12)
+        self.sidebar_layout.setSpacing(8)
 
         self.settings_button = self.create_side_button("settings")
         self.settings_button.clicked.connect(self.toggle_info_panel)
@@ -1451,13 +1517,25 @@ class MSLauncherWindow(QMainWindow):
         self.open_modpack_manifest_button.setObjectName("panelButton")
         self.open_support_queue_button = QPushButton()
         self.open_support_queue_button.setObjectName("panelButton")
+        self.admin_news_button = QPushButton()
+        self.admin_news_button.setObjectName("panelButton")
+        self.admin_builds_button = QPushButton()
+        self.admin_builds_button.setObjectName("panelButton")
+        self.admin_password_button = QPushButton()
+        self.admin_password_button.setObjectName("panelButton")
         info_layout.addWidget(self.open_modpack_repo_button)
         info_layout.addWidget(self.open_modpack_manifest_button)
         info_layout.addWidget(self.open_support_queue_button)
+        info_layout.addWidget(self.admin_news_button)
+        info_layout.addWidget(self.admin_builds_button)
+        info_layout.addWidget(self.admin_password_button)
         self.admin_widgets = [
             self.open_modpack_repo_button,
             self.open_modpack_manifest_button,
             self.open_support_queue_button,
+            self.admin_news_button,
+            self.admin_builds_button,
+            self.admin_password_button,
         ]
 
         self.loader_setting_label = QLabel()
@@ -1477,6 +1555,12 @@ class MSLauncherWindow(QMainWindow):
         self.skin_status_label.setWordWrap(True)
         self.skin_browse_button = QPushButton()
         self.skin_browse_button.setObjectName("panelButton")
+        self.skin_url_label = QLabel()
+        self.skin_url_input = QLineEdit()
+        self.skin_url_button = QPushButton()
+        self.skin_url_button.setObjectName("panelButton")
+        self.admin_unlock_button = QPushButton()
+        self.admin_unlock_button.setObjectName("panelButton")
 
         launch_options = get_config_launch_options(self.config)
         self.loader_setting_combo.setCurrentText(str(launch_options.get("loader", "vanilla")))
@@ -1489,7 +1573,7 @@ class MSLauncherWindow(QMainWindow):
         self.settings_scroll_area.setWidgetResizable(True)
         self.settings_scroll_area.setFrameShape(QFrame.Shape.NoFrame)
         self.settings_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.settings_scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.settings_scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.settings_container = QFrame()
         self.settings_container.setObjectName("settingsContainer")
         settings_layout = QVBoxLayout(self.settings_container)
@@ -1508,29 +1592,71 @@ class MSLauncherWindow(QMainWindow):
             self.skin_label,
             self.skin_status_label,
             self.skin_browse_button,
+            self.skin_url_label,
+            self.skin_url_input,
+            self.skin_url_button,
         ):
             settings_layout.addWidget(widget)
         settings_layout.addStretch()
         self.settings_scroll_area.setWidget(self.settings_container)
+        info_layout.addWidget(self.admin_unlock_button)
         info_layout.addWidget(self.settings_scroll_area, 1)
         self.settings_widgets = [self.settings_scroll_area]
+        self.launch_settings_widgets = [
+            self.loader_setting_label,
+            self.loader_setting_combo,
+            self.memory_min_label,
+            self.memory_min_input,
+            self.memory_max_label,
+            self.memory_max_input,
+            self.java_path_label,
+            self.java_path_input,
+            self.java_browse_button,
+        ]
+        self.player_widgets = [
+            self.skin_label,
+            self.skin_status_label,
+            self.skin_browse_button,
+            self.skin_url_label,
+            self.skin_url_input,
+            self.skin_url_button,
+        ]
         info_layout.addStretch()
         self.info_panel.setMinimumWidth(390)
         self.info_panel.setMaximumWidth(430)
         self.info_panel.setMinimumHeight(220)
 
+        self.news_frame = QFrame()
+        self.news_frame.setObjectName("newsFrame")
+        news_layout = QVBoxLayout(self.news_frame)
+        news_layout.setContentsMargins(20, 16, 20, 16)
+        news_layout.setSpacing(8)
+        self.news_title_label = QLabel()
+        self.news_title_label.setObjectName("newsTitle")
+        self.news_body_label = QLabel()
+        self.news_body_label.setObjectName("newsBody")
+        self.news_body_label.setWordWrap(True)
+        self.news_counter_label = QLabel()
+        self.news_counter_label.setObjectName("newsCounter")
+        news_layout.addWidget(self.news_title_label)
+        news_layout.addWidget(self.news_body_label)
+        news_layout.addWidget(self.news_counter_label)
+        self.news_frame.setMinimumWidth(260)
+        self.news_frame.setMaximumWidth(330)
+
         stage_layout = QHBoxLayout()
-        stage_layout.setSpacing(24)
+        stage_layout.setSpacing(18)
         stage_layout.addWidget(self.sidebar_frame, 0, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        stage_layout.addWidget(self.news_frame, 0, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         stage_layout.addStretch(1)
         stage_layout.addWidget(self.info_panel, 0, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         hero_layout.addLayout(stage_layout, 1)
 
         control_frame = QFrame()
         control_frame.setObjectName("controlFrame")
-        control_frame.setMinimumHeight(108)
+        control_frame.setMinimumHeight(96)
         control_layout = QHBoxLayout(control_frame)
-        control_layout.setContentsMargins(12, 14, 12, 14)
+        control_layout.setContentsMargins(12, 12, 12, 12)
         control_layout.setSpacing(6)
 
         self.language_label = QLabel()
@@ -1545,10 +1671,27 @@ class MSLauncherWindow(QMainWindow):
         self.username_label = QLabel()
         self.username_input = QComboBox()
         self.username_input.setEditable(True)
+        self.username_input.setMaxVisibleItems(5)
         self.populate_usernames()
+        username_field = QFrame()
+        username_field.setObjectName("inlineFieldFrame")
+        username_field_layout = QHBoxLayout(username_field)
+        username_field_layout.setContentsMargins(0, 0, 0, 0)
+        username_field_layout.setSpacing(6)
+        self.skin_quick_button = QPushButton()
+        self.skin_quick_button.setObjectName("miniIconButton")
+        self.skin_quick_button.setFixedSize(42, 42)
+        self.skin_quick_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        skin_icon_path = ICON_DIR / "skin.svg"
+        if skin_icon_path.is_file():
+            self.skin_quick_button.setIcon(QIcon(str(skin_icon_path)))
+            self.skin_quick_button.setIconSize(QSize(20, 20))
+        username_field_layout.addWidget(self.username_input, 1)
+        username_field_layout.addWidget(self.skin_quick_button, 0)
 
         self.build_label = QLabel()
         self.build_combo = QComboBox()
+        self.build_combo.setEditable(True)
         self.populate_builds()
 
         self.version_label = QLabel()
@@ -1581,15 +1724,15 @@ class MSLauncherWindow(QMainWindow):
 
         self.play_button = QPushButton()
         self.play_button.setObjectName("playButton")
-        self.play_button.setMinimumHeight(66)
-        self.play_button.setMinimumWidth(136)
-        self.play_button.setMaximumWidth(158)
+        self.play_button.setMinimumHeight(56)
+        self.play_button.setMinimumWidth(128)
+        self.play_button.setMaximumWidth(146)
         self.play_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.mods_button = QPushButton()
         self.mods_button.setObjectName("modsButton")
-        self.mods_button.setMinimumHeight(66)
-        self.mods_button.setMinimumWidth(158)
-        self.mods_button.setMaximumWidth(178)
+        self.mods_button.setMinimumHeight(56)
+        self.mods_button.setMinimumWidth(150)
+        self.mods_button.setMaximumWidth(166)
         self.mods_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.set_button_icon(self.play_button, "play", 22)
         self.set_button_icon(self.mods_button, self.get_mods_action_key(), 21)
@@ -1598,12 +1741,12 @@ class MSLauncherWindow(QMainWindow):
         self.feedback_button.setObjectName("panelButton")
         self.feedback_button.setMinimumHeight(34)
 
-        username_group = self.create_control_group(self.username_label, self.username_input)
+        username_group = self.create_control_group(self.username_label, username_field)
         self.build_group = self.create_control_group(self.build_label, self.build_combo)
         self.version_group = self.create_control_group(self.version_label, self.version_combo)
-        username_group.setMaximumWidth(150)
-        self.build_group.setMaximumWidth(158)
-        self.version_group.setMaximumWidth(125)
+        username_group.setMaximumWidth(170)
+        self.build_group.setMaximumWidth(146)
+        self.version_group.setMaximumWidth(118)
         control_layout.addWidget(username_group, 2)
         control_layout.addWidget(self.build_group, 2)
         control_layout.addWidget(self.version_group, 2)
@@ -1720,7 +1863,7 @@ class MSLauncherWindow(QMainWindow):
         icon_path = ICON_DIR / f"{icon_name}.svg"
         if icon_path.is_file():
             button.setIcon(QIcon(str(icon_path)))
-            button.setIconSize(QSize(26, 26))
+            button.setIconSize(QSize(22, 22))
         else:
             button.setText(fallback_text or icon_name[:2].upper())
         button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
@@ -1734,6 +1877,7 @@ class MSLauncherWindow(QMainWindow):
         self.nukem_tab.clicked.connect(lambda: self.handle_project_tab(CLIENT_MODE_NUKEM))
         self.vibecraft_tab.clicked.connect(lambda: self.handle_project_tab("vibecraft"))
         self.language_toggle_button.clicked.connect(self.toggle_language)
+        self.update_check_button.clicked.connect(self.manual_check_launcher_update)
         self.minimize_button.clicked.connect(self.showMinimized)
         self.close_button.clicked.connect(self.close)
         self.mode_button.clicked.connect(self.toggle_client_mode)
@@ -1747,8 +1891,14 @@ class MSLauncherWindow(QMainWindow):
         self.open_modpack_repo_button.clicked.connect(self.open_modpack_repo)
         self.open_modpack_manifest_button.clicked.connect(self.open_modpack_manifest)
         self.open_support_queue_button.clicked.connect(self.open_support_queue)
+        self.admin_news_button.clicked.connect(self.open_modpack_repo)
+        self.admin_builds_button.clicked.connect(self.open_modpack_manifest)
+        self.admin_password_button.clicked.connect(self.open_support_queue)
+        self.admin_unlock_button.clicked.connect(self.request_admin_access)
         self.java_browse_button.clicked.connect(self.browse_java_path)
         self.skin_browse_button.clicked.connect(self.browse_skin_file)
+        self.skin_url_button.clicked.connect(self.save_skin_url)
+        self.skin_quick_button.clicked.connect(self.show_player_panel)
         self.loader_setting_combo.currentTextChanged.connect(lambda *_: self.save_user_preferences())
         self.loader_setting_combo.currentTextChanged.connect(self.sync_loader_segments)
         self.loader_vanilla_button.clicked.connect(lambda: self.set_loader_mode("vanilla"))
@@ -1834,7 +1984,7 @@ class MSLauncherWindow(QMainWindow):
             button.setParent(None)
             button.deleteLater()
         self.social_buttons = []
-        self.admin_button.setVisible(self.client_mode == CLIENT_MODE_NUKEM)
+        self.admin_button.hide()
 
         visible_links = self.get_visible_social_links()
         for offset, (link_name, url) in enumerate(visible_links):
@@ -1863,6 +2013,65 @@ class MSLauncherWindow(QMainWindow):
                 break
 
         return direct_links[:3]
+
+    def get_project_news_items(self) -> list[dict[str, str]]:
+        raw_news = self.config.get("news")
+        if isinstance(raw_news, dict):
+            raw_items = raw_news.get(self.client_mode, raw_news.get("default", []))
+        elif isinstance(raw_news, list):
+            raw_items = raw_news
+        else:
+            raw_items = []
+
+        if not isinstance(raw_items, list):
+            return []
+
+        items: list[dict[str, str]] = []
+        for item in raw_items:
+            title = ""
+            body = ""
+            if isinstance(item, dict):
+                title = str(item.get("title", "")).strip()
+                body = str(item.get("body", item.get("text", ""))).strip()
+            elif isinstance(item, str):
+                body = item.strip()
+            if body:
+                items.append({"title": title or self.translate("news_title"), "body": body})
+            if len(items) == 5:
+                break
+        return items
+
+    def refresh_news_items(self) -> None:
+        self.news_items = self.get_project_news_items()
+        self.news_index = min(self.news_index, max(len(self.news_items) - 1, 0))
+        self.update_news_panel()
+
+    def show_next_news_item(self) -> None:
+        if len(self.news_items) <= 1:
+            return
+        self.news_index = (self.news_index + 1) % len(self.news_items)
+        self.update_news_panel()
+
+    def update_news_panel(self) -> None:
+        if not self.news_items:
+            self.news_title_label.setText(self.translate("news_title"))
+            self.news_body_label.setText(self.translate("news_empty"))
+            self.news_counter_label.setText("")
+        else:
+            item = self.news_items[self.news_index]
+            self.news_title_label.setText(item["title"])
+            self.news_body_label.setText(item["body"])
+            self.news_counter_label.setText(f"{self.news_index + 1}/{len(self.news_items)}")
+        self.refresh_news_visibility()
+
+    def refresh_news_visibility(self) -> None:
+        visible = bool(self.news_items) and self.info_panel_mode in ("status", "help")
+        self.news_frame.setVisible(visible)
+        if visible and len(self.news_items) > 1:
+            if not self.news_timer.isActive():
+                self.news_timer.start()
+        else:
+            self.news_timer.stop()
 
     def update_project_tabs(self) -> None:
         tab_states = (
@@ -1919,6 +2128,13 @@ class MSLauncherWindow(QMainWindow):
         self.open_modpack_repo_button.setText(self.translate("open_modpack_repo"))
         self.open_modpack_manifest_button.setText(self.translate("open_modpack_manifest"))
         self.open_support_queue_button.setText(self.translate("open_support_queue"))
+        self.admin_news_button.setText(self.translate("admin_create_news"))
+        self.admin_builds_button.setText(self.translate("admin_view_builds"))
+        self.admin_password_button.setText(self.translate("admin_change_password"))
+        self.admin_unlock_button.setText(self.translate("admin_password_open"))
+        self.update_check_button.setToolTip(self.translate("manual_update_tooltip"))
+        self.project_switcher.setToolTip(self.translate("project_switcher_tooltip"))
+        self.skin_quick_button.setToolTip(self.translate("skin_button_tooltip"))
         self.refresh_info_panel()
         self.loader_setting_label.setText(self.translate("loader"))
         self.memory_min_label.setText(self.translate("memory_min"))
@@ -1927,6 +2143,9 @@ class MSLauncherWindow(QMainWindow):
         self.java_browse_button.setText(self.translate("java_browse"))
         self.skin_label.setText(self.translate("skin"))
         self.skin_browse_button.setText(self.translate("skin_browse"))
+        self.skin_url_label.setText(self.translate("skin_url"))
+        self.skin_url_button.setText(self.translate("skin_url_apply"))
+        self.skin_url_input.setPlaceholderText(self.translate("skin_url_invalid"))
         self.refresh_skin_status()
         self.language_label.setText(self.translate("language"))
         self.profile_label.setText(self.translate("profile"))
@@ -1940,6 +2159,7 @@ class MSLauncherWindow(QMainWindow):
         self.refresh_action_button_icons()
         self.feedback_button.setText(self.translate("feedback_ok"))
         self.language_toggle_button.setText(self.language)
+        self.refresh_update_check_button()
         self.refresh_nukem_control_policy()
         self.mode_button.setText("NK" if self.client_mode == CLIENT_MODE_INDEPENDENT else "MS")
         self.mode_button.setToolTip(
@@ -1950,6 +2170,7 @@ class MSLauncherWindow(QMainWindow):
             )
         )
         self.update_project_tabs()
+        self.refresh_news_items()
 
         status_key = self.status_label.property("status_key")
         status_detail = self.status_label.property("status_detail")
@@ -1961,8 +2182,8 @@ class MSLauncherWindow(QMainWindow):
             self.set_status("ready")
 
     def refresh_action_button_icons(self) -> None:
-        self.set_button_icon(self.play_button, "play", 22)
-        self.set_button_icon(self.mods_button, self.get_mods_action_key(), 21)
+        self.set_button_icon(self.play_button, "play", 19)
+        self.set_button_icon(self.mods_button, self.get_mods_action_key(), 18)
 
     def apply_styles(self) -> None:
         self.setStyleSheet(
@@ -2023,8 +2244,27 @@ class MSLauncherWindow(QMainWindow):
                 background: rgba(8, 10, 12, 148);
                 border: 1px solid rgba(255, 255, 255, 30);
                 border-radius: 8px;
-                min-width: 78px;
-                max-width: 78px;
+                min-width: 64px;
+                max-width: 64px;
+            }
+            #newsFrame {
+                background: rgba(7, 10, 11, 128);
+                border: 1px solid rgba(116, 231, 186, 42);
+                border-radius: 8px;
+            }
+            #newsTitle {
+                color: #9ff4cf;
+                font-size: 15px;
+                font-weight: 800;
+            }
+            #newsBody {
+                color: #f3f6f2;
+                font-size: 13px;
+                line-height: 120%;
+            }
+            #newsCounter {
+                color: rgba(255, 255, 255, 130);
+                font-size: 11px;
             }
             #infoPanel {
                 background: rgba(10, 10, 10, 182);
@@ -2150,15 +2390,40 @@ class MSLauncherWindow(QMainWindow):
                 background: rgba(116, 231, 186, 34);
                 border: 1px solid rgba(116, 231, 186, 110);
             }
+            QPushButton#updateCheckButton {
+                background: rgba(8, 11, 15, 150);
+                color: #9ff4cf;
+                border: 1px solid rgba(116, 231, 186, 70);
+                border-radius: 8px;
+                font-size: 12px;
+                font-weight: 900;
+            }
+            QPushButton#updateCheckButton[state="checking"] {
+                color: #ffffff;
+                border: 1px solid rgba(116, 231, 186, 140);
+            }
+            QPushButton#updateCheckButton[state="available"] {
+                color: #ff3b30;
+                background: rgba(30, 18, 4, 210);
+                border: 2px solid #ffd45c;
+            }
+            QPushButton#updateCheckButton[state="available"][pulse="true"] {
+                background: rgba(82, 43, 8, 235);
+                border: 2px solid #ffe88a;
+            }
+            QPushButton#updateCheckButton[state="error"] {
+                color: #ff8d7f;
+                border: 1px solid rgba(255, 120, 96, 150);
+            }
             QPushButton#sideButton {
                 background: rgba(255, 255, 255, 14);
                 color: #f3f6f2;
                 border: 1px solid rgba(255, 255, 255, 26);
                 border-radius: 8px;
-                min-width: 52px;
-                min-height: 52px;
-                max-width: 52px;
-                max-height: 52px;
+                min-width: 44px;
+                min-height: 44px;
+                max-width: 44px;
+                max-height: 44px;
                 font-size: 13px;
                 font-weight: 800;
             }
@@ -2180,6 +2445,20 @@ class MSLauncherWindow(QMainWindow):
             }
             QPushButton#panelButton:hover {
                 background: rgba(116, 231, 186, 36);
+                border: 1px solid rgba(116, 231, 186, 110);
+            }
+            #inlineFieldFrame {
+                background: transparent;
+                border: 0;
+            }
+            QPushButton#miniIconButton {
+                background: rgba(255, 255, 255, 16);
+                color: #f3f6f2;
+                border: 1px solid rgba(255, 255, 255, 32);
+                border-radius: 8px;
+            }
+            QPushButton#miniIconButton:hover {
+                background: rgba(116, 231, 186, 34);
                 border: 1px solid rgba(116, 231, 186, 110);
             }
             QLineEdit,
@@ -2225,19 +2504,19 @@ class MSLauncherWindow(QMainWindow):
             QPushButton#playButton,
             QPushButton#modsButton {
                 color: #ffffff;
-                border-radius: 8px;
+                border-radius: 10px;
                 font-size: 15px;
                 font-weight: 800;
                 letter-spacing: 0px;
-                padding: 8px 10px;
+                padding: 6px 10px;
             }
             QPushButton#playButton:hover {
-                background: #ff9a1f;
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #ffa22b, stop:1 #ff7d12);
                 border: 1px solid #ffc36b;
             }
             QPushButton#playButton {
-                background: #f08a16;
-                border: 1px solid #ffb24f;
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #f89b22, stop:1 #e87712);
+                border: 1px solid rgba(255, 203, 111, 190);
             }
             QPushButton#modsButton {
                 background: rgba(6, 17, 24, 188);
@@ -2305,7 +2584,7 @@ class MSLauncherWindow(QMainWindow):
             cleaned_username = username.strip()
             if cleaned_username and cleaned_username not in usernames:
                 usernames.append(cleaned_username)
-        return usernames[:10]
+        return usernames[:5]
 
     def on_profile_changed(self) -> None:
         self.active_profile = self.profile_manager.get_profile(self.get_selected_profile_id())
@@ -2388,7 +2667,10 @@ class MSLauncherWindow(QMainWindow):
     def refresh_nukem_control_policy(self) -> None:
         nukem_locked = self.client_mode == CLIENT_MODE_NUKEM
         self.build_combo.setEnabled(not nukem_locked)
+        self.build_combo.setEditable(not nukem_locked)
         self.version_combo.setEnabled(not nukem_locked and self.version_combo.count() > 0)
+        if hasattr(self, "admin_unlock_button"):
+            self.admin_unlock_button.setVisible(self.client_mode == CLIENT_MODE_NUKEM)
         if hasattr(self, "build_group"):
             self.build_group.setToolTip(
                 "Build is selected by the Nukem admin panel." if nukem_locked else ""
@@ -2400,7 +2682,17 @@ class MSLauncherWindow(QMainWindow):
 
     def get_selected_build(self) -> dict[str, object] | None:
         build = self.build_combo.currentData()
-        return build if isinstance(build, dict) else None
+        if isinstance(build, dict):
+            return build
+        build_name = self.build_combo.currentText().strip()
+        if build_name and self.client_mode != CLIENT_MODE_NUKEM:
+            return {
+                "id": build_name,
+                "name": build_name,
+                "minecraft_version": self.version_combo.currentText().strip(),
+                "loader": self.loader_setting_combo.currentText().strip() or "vanilla",
+            }
+        return None
 
     def get_selected_build_id(self) -> str:
         build = self.get_selected_build()
@@ -2447,6 +2739,127 @@ class MSLauncherWindow(QMainWindow):
         if bool(self.get_project_access_config().get("password_enabled", False)):
             return True
         return bool(self.get_build_access_hash(build))
+
+    def get_admin_access_hash(self) -> str:
+        value = self.get_project_access_config().get("admin_password_hash_sha256", "")
+        return str(value).strip().lower()
+
+    def is_admin_password(self, password: str) -> bool:
+        expected_hash = self.get_admin_access_hash()
+        if not expected_hash:
+            return False
+        actual_hash = hashlib.sha256(password.encode("utf-8")).hexdigest()
+        return hmac.compare_digest(actual_hash, expected_hash)
+
+    def get_access_dialog_stylesheet(self) -> str:
+        return """
+            QDialog#accessDialog {
+                background: #081012;
+                border: 1px solid rgba(116, 231, 186, 80);
+                font-family: "Segoe UI", "Arial";
+            }
+            QLabel#accessTitle {
+                color: #ffffff;
+                font-size: 22px;
+                font-weight: 800;
+            }
+            QLabel#accessBody {
+                color: #d8e0dc;
+                font-size: 14px;
+            }
+            QLineEdit#accessInput {
+                background: rgba(0, 0, 0, 150);
+                color: #ffffff;
+                border: 1px solid rgba(116, 231, 186, 95);
+                border-radius: 8px;
+                padding: 10px 12px;
+                min-height: 38px;
+                font-size: 15px;
+            }
+            QPushButton#accessCancelButton,
+            QPushButton#accessDownloadButton {
+                border-radius: 8px;
+                min-height: 38px;
+                padding: 8px 14px;
+                font-size: 14px;
+                font-weight: 800;
+            }
+            QPushButton#accessCancelButton {
+                color: rgba(255, 255, 255, 190);
+                background: rgba(255, 255, 255, 18);
+                border: 1px solid rgba(255, 255, 255, 42);
+            }
+            QPushButton#accessDownloadButton {
+                color: #ffffff;
+                background: rgba(12, 38, 52, 230);
+                border: 1px solid #46b8ee;
+            }
+            """
+
+    def request_admin_password(self) -> str | None:
+        dialog = QDialog(self)
+        dialog.setObjectName("accessDialog")
+        dialog.setWindowTitle(self.translate("admin_password_title"))
+        dialog.setModal(True)
+        dialog.setMinimumWidth(420)
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(24, 22, 24, 22)
+        layout.setSpacing(14)
+
+        title = QLabel(self.translate("admin_password_title"))
+        title.setObjectName("accessTitle")
+        body = QLabel(self.translate("admin_password_body"))
+        body.setObjectName("accessBody")
+        body.setWordWrap(True)
+        input_field = QLineEdit()
+        input_field.setObjectName("accessInput")
+        input_field.setEchoMode(QLineEdit.EchoMode.Password)
+        input_field.setPlaceholderText(self.translate("admin_password_title"))
+
+        button_row = QHBoxLayout()
+        button_row.addStretch()
+        cancel_button = QPushButton(self.translate("cancel_close"))
+        cancel_button.setObjectName("accessCancelButton")
+        admin_button = QPushButton(self.translate("admin_password_open"))
+        admin_button.setObjectName("accessDownloadButton")
+        button_row.addWidget(cancel_button)
+        button_row.addWidget(admin_button)
+
+        layout.addWidget(title)
+        layout.addWidget(body)
+        layout.addWidget(input_field)
+        layout.addLayout(button_row)
+        dialog.setStyleSheet(self.get_access_dialog_stylesheet())
+
+        cancel_button.clicked.connect(dialog.reject)
+        admin_button.clicked.connect(dialog.accept)
+        input_field.returnPressed.connect(dialog.accept)
+        input_field.setFocus()
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return None
+        return input_field.text()
+
+    def request_admin_access(self, checked: bool = False, *, show_panel: bool = True) -> bool:
+        del checked
+        if self.admin_access_unlocked:
+            if show_panel:
+                self.show_admin_panel(require_auth=False)
+            return True
+
+        expected_hash = self.get_admin_access_hash()
+        if expected_hash:
+            password = self.request_admin_password()
+            if password is None:
+                return False
+            if not self.is_admin_password(password):
+                self.show_error(self.translate("access_password_failed"))
+                return False
+
+        self.admin_access_unlocked = True
+        self.set_status("admin_access_granted")
+        if show_panel:
+            self.show_admin_panel(require_auth=False)
+        return True
 
     def request_build_password(self, build: dict[str, object]) -> str | None:
         build_name = str(build.get("name") or build.get("build_id") or build.get("id") or "Nukem build").strip()
@@ -2561,6 +2974,11 @@ class MSLauncherWindow(QMainWindow):
         password = self.request_build_password(build)
         if password is None:
             self.set_status("ready")
+            return False
+        if self.is_admin_password(password):
+            self.admin_access_unlocked = True
+            self.set_status("admin_access_granted")
+            self.show_admin_panel(require_auth=False)
             return False
 
         if panel_required:
@@ -2793,7 +3211,72 @@ class MSLauncherWindow(QMainWindow):
         self.launcher_update_url = download_url
         self.launcher_update_notes = update_notice["notes"]
         self.set_status_text(self.translate("update_available", version=self.launcher_update_version))
+        self.set_update_check_state("available")
         self.show_launcher_update_panel()
+
+    def manual_check_launcher_update(self) -> None:
+        if self.update_check_worker is not None and self.update_check_worker.isRunning():
+            return
+        build = self.get_selected_build() or {}
+        self.set_update_check_state("checking")
+        self.set_status("manual_update_checking")
+        self.update_check_worker = BuildConfigWorker(
+            dict(build),
+            config=self.config,
+            client_mode=self.client_mode,
+            require_manifest=False,
+        )
+        self.update_check_worker.build_loaded.connect(self.on_manual_update_loaded)
+        self.update_check_worker.error_occurred.connect(self.on_manual_update_failed)
+        self.update_check_worker.start()
+
+    def on_manual_update_loaded(self, resolved_build: dict) -> None:
+        self.launcher_update_version = ""
+        self.launcher_update_url = ""
+        self.launcher_update_notes = ""
+        self.evaluate_launcher_update(resolved_build)
+        if self.launcher_update_version:
+            self.set_update_check_state("available")
+            return
+        self.set_update_check_state("ok")
+        self.set_status("manual_update_ok")
+
+    def on_manual_update_failed(self, error: str) -> None:
+        self.set_update_check_state("error")
+        self.set_status_text(self.translate("manual_update_failed", error=error))
+
+    def set_update_check_state(self, state: str) -> None:
+        self.update_check_state = state if state in {"available", "checking", "error", "ok"} else "ok"
+        self.refresh_update_check_button()
+
+    def toggle_update_pulse(self) -> None:
+        self.update_pulse_on = not self.update_pulse_on
+        self.refresh_update_check_button()
+
+    def refresh_update_check_button(self) -> None:
+        if not hasattr(self, "update_check_button"):
+            return
+        labels = {
+            "available": "!",
+            "checking": "...",
+            "error": "!",
+            "ok": "OK",
+        }
+        self.update_check_button.setText(labels.get(self.update_check_state, "OK"))
+        tooltip = self.translate("manual_update_tooltip")
+        if self.update_check_state == "available" and self.launcher_update_version:
+            tooltip = self.translate("update_available", version=self.launcher_update_version)
+        self.update_check_button.setToolTip(tooltip)
+        self.update_check_button.setProperty("state", self.update_check_state)
+        self.update_check_button.setProperty("pulse", self.update_pulse_on and self.update_check_state == "available")
+        self.update_check_button.style().unpolish(self.update_check_button)
+        self.update_check_button.style().polish(self.update_check_button)
+        if self.update_check_state == "available":
+            if not self.update_pulse_timer.isActive():
+                self.update_pulse_timer.start()
+        else:
+            self.update_pulse_timer.stop()
+            self.update_pulse_on = False
 
     def show_launcher_update_panel(self) -> None:
         if not self.launcher_update_version:
@@ -2818,6 +3301,13 @@ class MSLauncherWindow(QMainWindow):
 
     def refresh_info_panel(self) -> None:
         self.set_admin_widgets_visible(False)
+        self.set_launch_settings_visible(False)
+        self.set_player_widgets_visible(False)
+        if hasattr(self, "admin_unlock_button"):
+            self.admin_unlock_button.hide()
+        self.info_panel.setMinimumHeight(220)
+        if hasattr(self, "news_frame"):
+            self.refresh_news_visibility()
 
         if self.info_panel_mode == "crash" and self.last_crash_reason:
             self.set_status_rows_visible(False)
@@ -2889,20 +3379,35 @@ class MSLauncherWindow(QMainWindow):
             return
 
         if self.info_panel_mode == "settings":
+            self.info_panel.setMinimumHeight(320)
             self.set_status_rows_visible(False)
             self.set_settings_widgets_visible(True)
+            self.set_launch_settings_visible(True)
+            self.admin_unlock_button.setVisible(self.client_mode == CLIENT_MODE_NUKEM)
             self.info_title_label.show()
-            self.info_body_label.show()
+            self.info_body_label.hide()
             self.info_title_label.setText(self.translate("settings_title"))
-            self.info_body_label.setText(
-                f"{self.translate('settings_body')}\n{self.translate('update_disabled')}"
-            )
             self.open_crash_reports_button.setText(self.translate("open_crash_reports"))
             self.open_crash_reports_button.hide()
             self.download_update_button.hide()
             return
 
+        if self.info_panel_mode == "player":
+            self.info_panel.setMinimumHeight(300)
+            self.set_status_rows_visible(False)
+            self.set_settings_widgets_visible(True)
+            self.set_player_widgets_visible(True)
+            self.info_title_label.show()
+            self.info_body_label.hide()
+            self.info_title_label.setText(self.translate("player_panel_title"))
+            self.open_profile_button.hide()
+            self.open_game_button.hide()
+            self.open_crash_reports_button.hide()
+            self.download_update_button.hide()
+            return
+
         if self.info_panel_mode == "admin":
+            self.info_panel.setMinimumHeight(330)
             self.set_status_rows_visible(False)
             self.set_settings_widgets_visible(False)
             self.set_admin_widgets_visible(True)
@@ -2964,7 +3469,7 @@ class MSLauncherWindow(QMainWindow):
         self.refresh_info_panel()
 
     def show_success_status_card(self) -> None:
-        if self.info_panel_mode in ("crash", "error", "update", "settings", "feedback"):
+        if self.info_panel_mode in ("admin", "crash", "error", "update", "settings", "feedback", "player"):
             return
         self.status_card_confirmed = True
         self.info_panel_mode = "status"
@@ -2972,6 +3477,14 @@ class MSLauncherWindow(QMainWindow):
 
     def set_settings_widgets_visible(self, visible: bool) -> None:
         for widget in getattr(self, "settings_widgets", []):
+            widget.setVisible(visible)
+
+    def set_launch_settings_visible(self, visible: bool) -> None:
+        for widget in getattr(self, "launch_settings_widgets", []):
+            widget.setVisible(visible)
+
+    def set_player_widgets_visible(self, visible: bool) -> None:
+        for widget in getattr(self, "player_widgets", []):
             widget.setVisible(visible)
 
     def set_admin_widgets_visible(self, visible: bool) -> None:
@@ -2986,7 +3499,17 @@ class MSLauncherWindow(QMainWindow):
         for button in self.social_buttons:
             button.show()
 
-    def show_admin_panel(self) -> None:
+    def show_player_panel(self) -> None:
+        self.info_panel_mode = "player"
+        self.refresh_info_panel()
+        self.info_panel.show()
+        for button in self.social_buttons:
+            button.show()
+
+    def show_admin_panel(self, checked: bool = False, *, require_auth: bool = True) -> None:
+        del checked
+        if require_auth and not self.request_admin_access(show_panel=False):
+            return
         self.info_panel_mode = "admin"
         self.refresh_info_panel()
         self.info_panel.show()
@@ -3085,9 +3608,26 @@ class MSLauncherWindow(QMainWindow):
         self.set_status_text(self.translate("skin_saved"))
         self.save_user_preferences()
 
+    def save_skin_url(self) -> None:
+        raw_url = self.skin_url_input.text().strip()
+        if not raw_url:
+            self.show_error(self.translate("skin_url_invalid"))
+            return
+        try:
+            skin_url = normalize_https_url(raw_url, "Skin URL")
+        except URLPolicyError:
+            self.show_error(self.translate("skin_url_invalid"))
+            return
+        self.skin_path = skin_url
+        self.refresh_skin_status()
+        self.set_status_text(self.translate("skin_saved"))
+        self.save_user_preferences()
+
     def refresh_skin_status(self) -> None:
         if self.skin_path:
             self.skin_status_label.setText(f"{self.translate('skin_saved')}\n{self.skin_path}")
+            if self.skin_path.startswith("https://"):
+                self.skin_url_input.setText(self.skin_path)
             return
         self.skin_status_label.setText(self.translate("skin_empty"))
 
@@ -3210,12 +3750,11 @@ class MSLauncherWindow(QMainWindow):
             self.mods_status_body.setText(text)
 
     def show_error(self, message: str) -> None:
-        dialog = QMessageBox(self)
-        dialog.setIcon(QMessageBox.Icon.Critical)
-        dialog.setWindowTitle(self.translate("error"))
-        dialog.setText(message)
-        dialog.setStyleSheet(SYSTEM_DIALOG_STYLESHEET)
-        dialog.exec()
+        self.last_error_message = message
+        self.info_panel_mode = "error"
+        self.refresh_info_panel()
+        self.info_panel.show()
+        self.set_status_text(message.splitlines()[0] if message else self.translate("error"))
 
     def build_launch_options(self, build: dict[str, object]) -> dict[str, object]:
         launch_options = self.get_current_launch_settings()

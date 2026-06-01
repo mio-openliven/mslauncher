@@ -14,6 +14,9 @@
       "discord": "https://discord.com/invite/P35nvXQ"
     }
   },
+  "news": {
+    "independent": []
+  },
   "default_build": "main",
   "launch": {
     "memory_min": "512M",

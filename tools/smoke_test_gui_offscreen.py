@@ -20,6 +20,8 @@ def main() -> None:
 
     app = QApplication.instance() or QApplication(sys.argv)
     window = gui.MSLauncherWindow()
+    original_save_preferences = window.save_user_preferences
+    window.save_user_preferences = lambda: None
     try:
         assert "MSLaunch" in window.windowTitle()
         assert window.play_button.text()
@@ -36,6 +38,7 @@ def main() -> None:
         assert window.height() >= 520
         assert window.info_panel_mode == "status"
         assert all(not row.isHidden() for row in window.status_rows)
+        assert window.update_check_button.text() == "OK"
         window.show_success_status_card()
         assert window.info_panel_mode == "status"
         assert all(not row.isHidden() for row in window.status_rows)
@@ -69,12 +72,45 @@ def main() -> None:
         assert window.get_mods_action_key() == "download_mods"
         assert len(window.get_project_background_paths()) == 6
         assert window.hero_frame._slideshow_enabled
+        assert window.admin_button.isHidden()
+        window.config["news"] = {
+            gui.CLIENT_MODE_NUKEM: [
+                {"title": "Notice one", "body": "First message"},
+                {"title": "Notice two", "body": "Second message"},
+            ]
+        }
+        window.info_panel_mode = "status"
+        window.refresh_news_items()
+        assert window.news_frame.isVisible()
+        window.info_panel_mode = "settings"
+        window.refresh_info_panel()
+        assert window.news_frame.isHidden()
+        assert not window.admin_unlock_button.isHidden()
+        window.toggle_info_panel()
+        assert window.info_panel_mode == "status"
+        assert window.news_frame.isVisible()
+        window.show_player_panel()
+        assert not window.skin_browse_button.isHidden()
+        window.skin_url_input.setText("https://example.com/skin.png")
+        window.save_skin_url()
+        assert window.skin_path == "https://example.com/skin.png"
+        assert window.loader_setting_combo.isHidden()
+        window.set_update_check_state("available")
+        assert window.update_check_button.text() == "!"
+        window.set_update_check_state("ok")
         window.config["project_access"] = {
             "nukem": {
                 "password_enabled": True,
                 "password_hash_sha256": "",
+                "admin_password_hash_sha256": hashlib.sha256(b"admin").hexdigest(),
             }
         }
+        original_admin_prompt = window.request_admin_password
+        window.request_admin_password = lambda: "admin"
+        try:
+            assert window.request_admin_access(show_panel=False)
+        finally:
+            window.request_admin_password = original_admin_prompt
         window.show_error = lambda message: None
         window.project_access_unlocked = False
         assert not window.ensure_project_access()
@@ -102,6 +138,7 @@ def main() -> None:
         window.refresh_info_panel()
         assert not window.download_update_button.isHidden()
     finally:
+        window.save_user_preferences = original_save_preferences
         window.close()
 
     print("gui offscreen smoke test: OK")
