@@ -29,6 +29,8 @@ button.danger { background:#da3633; }
 .hero h1 { font-size:48px; margin:8px 0 12px; }
 .hero p { max-width:620px; color:#c9d1d9; font-size:18px; line-height:1.45; }
 .eyebrow { color:#7ee3b6; text-transform:uppercase; letter-spacing:.08em; font-size:12px; font-weight:800; }
+.notice { max-width:680px; margin-top:18px; padding:14px 16px; border:1px solid #d29922; border-radius:10px; background:rgba(210,153,34,.12); color:#ffe8ad; line-height:1.5; }
+.notice code { display:block; margin-top:8px; word-break:break-all; color:#e6edf3; font-size:12px; }
 .row { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; }
 .error { background:#3d1518; border:1px solid #da3633; color:#ffdcd7; padding:12px; border-radius:6px; }
 .ok { background:#12331f; border:1px solid #238636; color:#d8ffe2; padding:12px; border-radius:6px; }
