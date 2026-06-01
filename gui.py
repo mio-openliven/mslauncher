@@ -19,6 +19,7 @@ from PyQt6.QtWidgets import (
     QApplication,
     QButtonGroup,
     QComboBox,
+    QDialog,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -111,6 +112,31 @@ SOCIAL_FALLBACK_LABELS = {
     "link": "WB",
 }
 
+SYSTEM_DIALOG_STYLESHEET = """
+QMessageBox,
+QInputDialog {
+    background: #f5f5f5;
+}
+QMessageBox QLabel,
+QInputDialog QLabel {
+    color: #151515;
+    font-family: "Segoe UI", "Arial";
+    font-size: 12px;
+}
+QMessageBox QPushButton,
+QInputDialog QPushButton {
+    color: #151515;
+    min-width: 72px;
+    min-height: 24px;
+}
+QInputDialog QLineEdit {
+    color: #151515;
+    background: #ffffff;
+    border: 1px solid #7a7a7a;
+    padding: 4px 6px;
+}
+"""
+
 DEFAULT_NUKEM_SOCIAL_LINKS = {
     "youtube": "https://www.youtube.com/@Nuckem",
     "discord": "https://discord.gg/P35nvXQ",
@@ -134,6 +160,11 @@ TRANSLATIONS = {
         "brand_subtitle_nukem": "Helping the crew keep every mod in place",
         "settings_title": "Launcher Panel",
         "settings_body": "Sync status, Java checks and crash reports will appear here.",
+        "admin_panel_title": "Nukem admin",
+        "admin_panel_body": "Modpack source, manifest and customer support entry points.",
+        "open_modpack_repo": "Open modpack repo",
+        "open_modpack_manifest": "Open manifest",
+        "open_support_queue": "Open support queue",
         "open_profile": "Open profile folder",
         "open_game": "Open profiles root",
         "open_crash_reports": "Open crash reports",
@@ -243,6 +274,11 @@ TRANSLATIONS = {
         "brand_subtitle_nukem": "\u041f\u043e\u043c\u043e\u0433\u0430\u0435\u043c \u0430\u043a\u0442\u0435\u0440\u0430\u043c \u0438 \u0438\u0433\u0440\u043e\u043a\u0430\u043c \u0434\u0435\u0440\u0436\u0430\u0442\u044c \u043c\u043e\u0434\u044b \u0432 \u043f\u043e\u0440\u044f\u0434\u043a\u0435",
         "settings_title": "\u041f\u0430\u043d\u0435\u043b\u044c \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430",
         "settings_body": "\u0417\u0434\u0435\u0441\u044c \u0431\u0443\u0434\u0443\u0442 \u0441\u0442\u0430\u0442\u0443\u0441 \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u0438, \u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0438 Java \u0438 \u043e\u0442\u0447\u0435\u0442\u044b \u043e\u0448\u0438\u0431\u043e\u043a.",
+        "admin_panel_title": "\u0410\u0434\u043c\u0438\u043d Nukem",
+        "admin_panel_body": "\u0418\u0441\u0442\u043e\u0447\u043d\u0438\u043a \u0441\u0431\u043e\u0440\u043a\u0438, manifest \u0438 \u043e\u0447\u0435\u0440\u0435\u0434\u044c \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0439 \u0437\u0430\u043a\u0430\u0437\u0447\u0438\u043a\u0430.",
+        "open_modpack_repo": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c repo \u0441\u0431\u043e\u0440\u043a\u0438",
+        "open_modpack_manifest": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c manifest",
+        "open_support_queue": "\u041e\u0447\u0435\u0440\u0435\u0434\u044c report",
         "open_profile": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u043f\u0430\u043f\u043a\u0443 \u043f\u0440\u043e\u0444\u0438\u043b\u044f",
         "open_game": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u043a\u043e\u0440\u0435\u043d\u044c \u043f\u0440\u043e\u0444\u0438\u043b\u0435\u0439",
         "open_crash_reports": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c crash-reports",
@@ -359,6 +395,19 @@ def load_launcher_config(config_path: str | Path = CONFIG_FILE) -> dict[str, obj
         },
         "support_url": "https://github.com/mio-openliven/mslauncher/issues/new",
         "support_urls": {},
+        "admin_links": {
+            CLIENT_MODE_NUKEM: {
+                "repo_url": "https://github.com/mio-openliven/MSNukem",
+                "manifest_url": "https://raw.githubusercontent.com/mio-openliven/MSNukem/main/manifest.json",
+            }
+        },
+        "project_access": {
+            CLIENT_MODE_NUKEM: {
+                "password_enabled": False,
+                "password_hash_sha256": "",
+                "password_hint": "Ask the project admin for the access password.",
+            }
+        },
         "skin_path": "",
         "default_build": "",
         "launch": {},
@@ -426,6 +475,11 @@ def load_launcher_config(config_path: str | Path = CONFIG_FILE) -> dict[str, obj
     support_urls = loaded_config.get("support_urls")
     if isinstance(support_urls, dict):
         default_config["support_urls"] = support_urls
+
+    for key in ("admin_links", "project_access"):
+        value = loaded_config.get(key)
+        if isinstance(value, dict):
+            default_config[key] = value
 
     builds = loaded_config.get("builds")
     if isinstance(builds, list):
@@ -510,6 +564,17 @@ def get_support_url(config: dict[str, object], client_mode: str) -> str:
     return get_config_text(config, "support_url").strip()
 
 
+def get_admin_link(config: dict[str, object], client_mode: str, key: str) -> str:
+    admin_links = config.get("admin_links")
+    if not isinstance(admin_links, dict):
+        return ""
+    project_links = admin_links.get(client_mode)
+    if not isinstance(project_links, dict):
+        return ""
+    value = project_links.get(key)
+    return value.strip() if isinstance(value, str) else ""
+
+
 def get_config_builds(config: dict[str, object]) -> list[dict[str, object]]:
     builds = config.get("builds", [])
     if isinstance(builds, list) and builds:
@@ -544,8 +609,12 @@ def get_profile_base_directory(config: dict[str, object]) -> str:
     return str(get_default_profiles_directory())
 
 
-def requires_server_manifest(profile: LauncherProfile, manifest_url: str) -> bool:
-    return profile.server_sync_enabled and not manifest_url.strip()
+def should_sync_profile(client_mode: str, profile: LauncherProfile) -> bool:
+    return client_mode == CLIENT_MODE_NUKEM and profile.server_sync_enabled
+
+
+def requires_server_manifest(profile: LauncherProfile, manifest_url: str, client_mode: str) -> bool:
+    return should_sync_profile(client_mode, profile) and not manifest_url.strip()
 
 
 class VersionsWorker(QThread):
@@ -1260,6 +1329,10 @@ class MSLauncherWindow(QMainWindow):
         self.report_button.clicked.connect(self.show_feedback_panel)
         self.sidebar_layout.addWidget(self.report_button)
 
+        self.admin_button = self.create_side_button("admin", "ADM")
+        self.admin_button.clicked.connect(self.show_admin_panel)
+        self.sidebar_layout.addWidget(self.admin_button)
+
         self.mode_button = self.create_side_button("mode", "NK")
         self.mode_button.hide()
 
@@ -1308,6 +1381,21 @@ class MSLauncherWindow(QMainWindow):
         info_layout.addWidget(self.open_game_button)
         info_layout.addWidget(self.open_crash_reports_button)
         info_layout.addWidget(self.download_update_button)
+
+        self.open_modpack_repo_button = QPushButton()
+        self.open_modpack_repo_button.setObjectName("panelButton")
+        self.open_modpack_manifest_button = QPushButton()
+        self.open_modpack_manifest_button.setObjectName("panelButton")
+        self.open_support_queue_button = QPushButton()
+        self.open_support_queue_button.setObjectName("panelButton")
+        info_layout.addWidget(self.open_modpack_repo_button)
+        info_layout.addWidget(self.open_modpack_manifest_button)
+        info_layout.addWidget(self.open_support_queue_button)
+        self.admin_widgets = [
+            self.open_modpack_repo_button,
+            self.open_modpack_manifest_button,
+            self.open_support_queue_button,
+        ]
 
         self.loader_setting_label = QLabel()
         self.loader_setting_combo = QComboBox()
@@ -1575,6 +1663,9 @@ class MSLauncherWindow(QMainWindow):
         self.open_game_button.clicked.connect(self.open_profiles_root_folder)
         self.open_crash_reports_button.clicked.connect(self.handle_panel_report_action)
         self.download_update_button.clicked.connect(self.open_launcher_update_url)
+        self.open_modpack_repo_button.clicked.connect(self.open_modpack_repo)
+        self.open_modpack_manifest_button.clicked.connect(self.open_modpack_manifest)
+        self.open_support_queue_button.clicked.connect(self.open_support_queue)
         self.java_browse_button.clicked.connect(self.browse_java_path)
         self.skin_browse_button.clicked.connect(self.browse_skin_file)
         self.loader_setting_combo.currentTextChanged.connect(lambda *_: self.save_user_preferences())
@@ -1648,6 +1739,7 @@ class MSLauncherWindow(QMainWindow):
             button.setParent(None)
             button.deleteLater()
         self.social_buttons = []
+        self.admin_button.setVisible(self.client_mode == CLIENT_MODE_NUKEM)
 
         visible_links = self.get_visible_social_links()
         for offset, (link_name, url) in enumerate(visible_links):
@@ -1725,6 +1817,9 @@ class MSLauncherWindow(QMainWindow):
         self.open_game_button.setText(self.translate("open_game"))
         self.open_crash_reports_button.setText(self.translate("open_crash_reports"))
         self.download_update_button.setText(self.translate("download_update"))
+        self.open_modpack_repo_button.setText(self.translate("open_modpack_repo"))
+        self.open_modpack_manifest_button.setText(self.translate("open_modpack_manifest"))
+        self.open_support_queue_button.setText(self.translate("open_support_queue"))
         self.refresh_info_panel()
         self.loader_setting_label.setText(self.translate("loader"))
         self.memory_min_label.setText(self.translate("memory_min"))
@@ -2186,12 +2281,13 @@ class MSLauncherWindow(QMainWindow):
             self.set_status("ready")
             return False
 
-        password, accepted = QInputDialog.getText(
-            self,
-            APP_DISPLAY_NAME,
-            self.translate("access_password_prompt"),
-            QLineEdit.EchoMode.Password,
-        )
+        dialog = QInputDialog(self)
+        dialog.setWindowTitle(APP_DISPLAY_NAME)
+        dialog.setLabelText(self.translate("access_password_prompt"))
+        dialog.setTextEchoMode(QLineEdit.EchoMode.Password)
+        dialog.setStyleSheet(SYSTEM_DIALOG_STYLESHEET)
+        accepted = dialog.exec() == QDialog.DialogCode.Accepted
+        password = dialog.textValue()
         if not accepted:
             return False
 
@@ -2238,8 +2334,9 @@ class MSLauncherWindow(QMainWindow):
             self.play_button.setText(self.translate(self.action_phrase_key))
         self.set_action_buttons_enabled(False)
         self.progress_bar.setValue(0)
+        sync_enabled = should_sync_profile(self.client_mode, self.selected_profile)
 
-        if self.selected_profile.server_sync_enabled:
+        if sync_enabled:
             self.set_status("status_loading_build")
             self.build_config_worker = BuildConfigWorker(build, require_manifest=True)
             self.build_config_worker.build_loaded.connect(self.on_build_config_loaded)
@@ -2270,7 +2367,8 @@ class MSLauncherWindow(QMainWindow):
         manifest_url = str(resolved_build.get("manifest_url", "")).strip()
         self.selected_version = version
         self.selected_manifest_url = manifest_url
-        if requires_server_manifest(self.selected_profile, manifest_url):
+        sync_enabled = should_sync_profile(self.client_mode, self.selected_profile)
+        if requires_server_manifest(self.selected_profile, manifest_url, self.client_mode):
             self.reset_action_buttons()
             user_error = explain_user_error(
                 "Server profile needs manifest_url or source_key before launch.",
@@ -2295,7 +2393,7 @@ class MSLauncherWindow(QMainWindow):
         self.selected_launch_options["language"] = self.language
         self.save_user_preferences()
 
-        if not self.selected_profile.server_sync_enabled:
+        if not sync_enabled:
             self.progress_bar.setValue(0)
             if self.launch_after_sync:
                 self.set_status("status_mods_no_sync")
@@ -2404,6 +2502,8 @@ class MSLauncherWindow(QMainWindow):
             button.show()
 
     def refresh_info_panel(self) -> None:
+        self.set_admin_widgets_visible(False)
+
         if self.info_panel_mode == "crash" and self.last_crash_reason:
             self.set_status_rows_visible(False)
             self.set_settings_widgets_visible(False)
@@ -2483,6 +2583,20 @@ class MSLauncherWindow(QMainWindow):
             self.download_update_button.hide()
             return
 
+        if self.info_panel_mode == "admin":
+            self.set_status_rows_visible(False)
+            self.set_settings_widgets_visible(False)
+            self.set_admin_widgets_visible(True)
+            self.info_title_label.show()
+            self.info_body_label.show()
+            self.info_title_label.setText(self.translate("admin_panel_title"))
+            self.info_body_label.setText(self.translate("admin_panel_body"))
+            self.open_profile_button.hide()
+            self.open_game_button.hide()
+            self.open_crash_reports_button.hide()
+            self.download_update_button.hide()
+            return
+
         if not self.status_card_confirmed:
             self.info_panel_mode = "help"
             self.refresh_info_panel()
@@ -2539,9 +2653,20 @@ class MSLauncherWindow(QMainWindow):
         for widget in getattr(self, "settings_widgets", []):
             widget.setVisible(visible)
 
+    def set_admin_widgets_visible(self, visible: bool) -> None:
+        for widget in getattr(self, "admin_widgets", []):
+            widget.setVisible(visible)
+
     def show_feedback_panel(self) -> None:
         self.feedback_button.setText(self.translate("feedback_problem"))
         self.info_panel_mode = "feedback"
+        self.refresh_info_panel()
+        self.info_panel.show()
+        for button in self.social_buttons:
+            button.show()
+
+    def show_admin_panel(self) -> None:
+        self.info_panel_mode = "admin"
         self.refresh_info_panel()
         self.info_panel.show()
         for button in self.social_buttons:
@@ -2554,6 +2679,21 @@ class MSLauncherWindow(QMainWindow):
                 return
             self.set_status_text(self.translate("support_offline"))
         self.open_crash_reports_folder()
+
+    def open_modpack_repo(self) -> None:
+        repo_url = get_admin_link(self.config, self.client_mode, "repo_url")
+        if repo_url:
+            self.open_external_link(repo_url)
+
+    def open_modpack_manifest(self) -> None:
+        manifest_url = get_admin_link(self.config, self.client_mode, "manifest_url")
+        if manifest_url:
+            self.open_external_link(manifest_url)
+
+    def open_support_queue(self) -> None:
+        support_url = get_support_url(self.config, self.client_mode)
+        if support_url:
+            self.open_external_link(support_url)
 
     def open_current_profile_folder(self) -> None:
         profile = self.profile_manager.get_profile(self.get_selected_profile_id())
@@ -2736,7 +2876,12 @@ class MSLauncherWindow(QMainWindow):
             self.mods_status_body.setText(text)
 
     def show_error(self, message: str) -> None:
-        QMessageBox.critical(self, self.translate("error"), message)
+        dialog = QMessageBox(self)
+        dialog.setIcon(QMessageBox.Icon.Critical)
+        dialog.setWindowTitle(self.translate("error"))
+        dialog.setText(message)
+        dialog.setStyleSheet(SYSTEM_DIALOG_STYLESHEET)
+        dialog.exec()
 
     def build_launch_options(self, build: dict[str, object]) -> dict[str, object]:
         launch_options = self.get_current_launch_settings()
@@ -2856,6 +3001,7 @@ class MSLauncherWindow(QMainWindow):
         dialog.setIcon(QMessageBox.Icon.Question)
         dialog.setWindowTitle(self.translate("app_title"))
         dialog.setText(self.translate("close_game_prompt"))
+        dialog.setStyleSheet(SYSTEM_DIALOG_STYLESHEET)
         leave_button = dialog.addButton(self.translate("leave_game_running"), QMessageBox.ButtonRole.AcceptRole)
         close_button = dialog.addButton(self.translate("close_game"), QMessageBox.ButtonRole.DestructiveRole)
         cancel_button = dialog.addButton(self.translate("cancel_close"), QMessageBox.ButtonRole.RejectRole)

@@ -11,7 +11,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 os.environ.setdefault("MSLAUNCHER_USER_DATA_ROOT", str(Path(tempfile.gettempdir()) / "mslauncher-smoke"))
 
-from gui import requires_server_manifest
+from gui import CLIENT_MODE_INDEPENDENT, CLIENT_MODE_NUKEM, requires_server_manifest, should_sync_profile
 from profile_manager import LauncherProfile
 
 
@@ -20,13 +20,16 @@ def main() -> None:
     personal_profile = LauncherProfile("personal", Path("personal"), False)
     other_profile = LauncherProfile("other", Path("other"), False)
 
-    assert requires_server_manifest(server_profile, "")
-    assert requires_server_manifest(server_profile, "   ")
+    assert should_sync_profile(CLIENT_MODE_NUKEM, server_profile)
+    assert not should_sync_profile(CLIENT_MODE_INDEPENDENT, server_profile)
+    assert requires_server_manifest(server_profile, "", CLIENT_MODE_NUKEM)
+    assert requires_server_manifest(server_profile, "   ", CLIENT_MODE_NUKEM)
     resolved_empty_manifest_url = ""
-    assert requires_server_manifest(server_profile, resolved_empty_manifest_url)
-    assert not requires_server_manifest(server_profile, "https://example.com/manifest.json")
-    assert not requires_server_manifest(personal_profile, "")
-    assert not requires_server_manifest(other_profile, "")
+    assert requires_server_manifest(server_profile, resolved_empty_manifest_url, CLIENT_MODE_NUKEM)
+    assert not requires_server_manifest(server_profile, resolved_empty_manifest_url, CLIENT_MODE_INDEPENDENT)
+    assert not requires_server_manifest(server_profile, "https://example.com/manifest.json", CLIENT_MODE_NUKEM)
+    assert not requires_server_manifest(personal_profile, "", CLIENT_MODE_NUKEM)
+    assert not requires_server_manifest(other_profile, "", CLIENT_MODE_NUKEM)
 
     print("server manifest gate smoke test: OK")
 

@@ -75,12 +75,35 @@ def main() -> None:
         window.config["project_access"]["nukem"]["password_hash_sha256"] = hashlib.sha256(
             b"secret"
         ).hexdigest()
-        original_get_text = gui.QInputDialog.getText
-        gui.QInputDialog.getText = lambda *args, **kwargs: ("secret", True)
+        original_dialog = gui.QInputDialog
+
+        class FakePasswordDialog:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            def setWindowTitle(self, *args, **kwargs):
+                pass
+
+            def setLabelText(self, *args, **kwargs):
+                pass
+
+            def setTextEchoMode(self, *args, **kwargs):
+                pass
+
+            def setStyleSheet(self, *args, **kwargs):
+                pass
+
+            def exec(self):
+                return gui.QDialog.DialogCode.Accepted
+
+            def textValue(self):
+                return "secret"
+
+        gui.QInputDialog = FakePasswordDialog
         try:
             assert window.ensure_project_access()
         finally:
-            gui.QInputDialog.getText = original_get_text
+            gui.QInputDialog = original_dialog
 
         window.info_panel_mode = "settings"
         window.refresh_info_panel()

@@ -12,6 +12,7 @@ data/
 build/
 dist/
 release/*.zip
+release/*.local.txt
 *.spec
 !MSLauncher.spec
 
