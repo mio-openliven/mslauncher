@@ -21,12 +21,12 @@ DESKTOP = Path(os.environ.get("USERPROFILE", str(Path.home()))) / "Desktop"
 SHORTCUT_PATH = DESKTOP / "MSLaunch.lnk"
 EXE_NAME = "MSLauncher.exe"
 PACKAGE_NAME = "MSLaunch-1.9.0-beta.zip"
-PACKAGE_SHA256 = "29bcfe2d18e66f0a1c6c2bfc9d1e67c93f0ce3ec43ec3bd3886e46829ecd106e"
+PACKAGE_SHA256 = "e8b500c38402dabf1df76b9ec97ad5de5a1e85bdd2b9c11bded1fc758b052df2"
 PROBE_BYTES = 64 * 1024
 CHUNK_SIZE = 1024 * 256
 
 SOURCES = [
-    ("Host", f"http://186.246.12.238:18080/downloads/{PACKAGE_NAME}", PACKAGE_SHA256),
+    ("Host", f"https://mslaunch.186.246.12.238.sslip.io/downloads/{PACKAGE_NAME}", PACKAGE_SHA256),
     (
         "GitHub",
         "https://github.com/mio-openliven/MSNukem/releases/download/v1.9.0-beta.1/MSLaunch-1.9.0-beta.zip",

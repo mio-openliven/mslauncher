@@ -23,10 +23,10 @@
   },
   "panel": {
     "enabled": true,
-    "base_url": "http://186.246.12.238:18080",
+    "base_url": "https://mslaunch.186.246.12.238.sslip.io",
     "project": "nukem",
     "timeout_seconds": 8,
-    "allow_insecure_http": true
+    "allow_insecure_http": false
   },
   "default_build": "main",
   "launch": {
