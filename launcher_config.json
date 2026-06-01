@@ -22,10 +22,11 @@
     "nukem": "https://github.com/mio-openliven/MSNukem/issues/new"
   },
   "panel": {
-    "enabled": false,
-    "base_url": "",
+    "enabled": true,
+    "base_url": "http://186.246.12.238:18080",
     "project": "nukem",
-    "timeout_seconds": 8
+    "timeout_seconds": 8,
+    "allow_insecure_http": true
   },
   "default_build": "main",
   "launch": {

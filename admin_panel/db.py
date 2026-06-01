@@ -4,7 +4,7 @@ import sqlite3
 from pathlib import Path
 from typing import Iterable
 
-from .settings import get_database_path, get_panel_data_root, get_storage_root
+from .settings import get_database_path, get_downloads_root, get_panel_data_root, get_storage_root
 
 
 SCHEMA = """
@@ -102,6 +102,7 @@ def connect(database_path: Path | None = None) -> sqlite3.Connection:
 def init_db(database_path: Path | None = None) -> None:
     get_panel_data_root().mkdir(parents=True, exist_ok=True)
     get_storage_root().mkdir(parents=True, exist_ok=True)
+    get_downloads_root().mkdir(parents=True, exist_ok=True)
     with connect(database_path) as connection:
         connection.executescript(SCHEMA)
         ensure_build_columns(connection)

@@ -49,6 +49,7 @@ from launcher_update import APP_DISPLAY_NAME, APP_VERSION, get_launcher_update_n
 from manifest_validator import normalize_download_url, normalize_manifest_path
 from panel_client import (
     PanelClientError,
+    allow_insecure_panel_http,
     get_panel_launcher_update,
     post_panel_report,
     request_panel_build_access,
@@ -465,6 +466,7 @@ def load_launcher_config(config_path: str | Path = CONFIG_FILE) -> dict[str, obj
             "base_url": "",
             "project": CLIENT_MODE_NUKEM,
             "timeout_seconds": 8,
+            "allow_insecure_http": False,
         },
         "admin_links": {
             CLIENT_MODE_NUKEM: {
@@ -766,6 +768,7 @@ class DownloadWorker(QThread):
         game_directory: str | Path,
         *,
         allow_insecure_local: bool = False,
+        allow_insecure_http: bool = False,
         require_manifest_files: bool = True,
     ) -> None:
         super().__init__()
@@ -773,6 +776,7 @@ class DownloadWorker(QThread):
         self.manifest_url = manifest_url
         self.game_directory = Path(game_directory)
         self.allow_insecure_local = allow_insecure_local
+        self.allow_insecure_http = allow_insecure_http
         self.require_manifest_files = require_manifest_files
 
     def run(self) -> None:
@@ -783,6 +787,7 @@ class DownloadWorker(QThread):
                 self.manifest_url,
                 self.game_directory,
                 allow_insecure_local=self.allow_insecure_local,
+                allow_insecure_http=self.allow_insecure_http,
                 require_files=self.require_manifest_files,
             )
 
@@ -939,6 +944,7 @@ class DownloadWorker(QThread):
             file_info.get("url", ""),
             relative_path,
             allow_insecure_local=self.allow_insecure_local,
+            allow_insecure_http=self.allow_insecure_http,
         )
 
     def _calculate_sha256(self, file_path: Path) -> str:
@@ -3130,7 +3136,12 @@ class MSLauncherWindow(QMainWindow):
                 self.reset_action_buttons()
             return
 
-        self.download_worker = DownloadWorker(self.engine, self.selected_manifest_url, self.game_directory)
+        self.download_worker = DownloadWorker(
+            self.engine,
+            self.selected_manifest_url,
+            self.game_directory,
+            allow_insecure_http=allow_insecure_panel_http(self.config),
+        )
         self.download_worker.progress_changed.connect(self.progress_bar.setValue)
         self.download_worker.status_changed.connect(self.set_status)
         self.download_worker.status_detail_changed.connect(self.set_status_detail)

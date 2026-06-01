@@ -24,6 +24,11 @@ label { display:block; font-size:13px; color:#c9d1d9; margin:8px 0 5px; }
 button,.button { display:inline-block; background:#238636; color:#fff; border:0; border-radius:6px; padding:9px 13px; font-weight:700; cursor:pointer; }
 button.secondary,.button.secondary { background:#21262d; border:1px solid #30363d; }
 button.danger { background:#da3633; }
+.button.primary { background:linear-gradient(135deg,#ff9d1a,#ff6b00); color:#111; padding:13px 18px; border-radius:10px; box-shadow:0 10px 30px rgba(255,132,0,.25); }
+.hero { min-height:72vh; display:grid; align-items:center; background:radial-gradient(circle at 20% 20%, rgba(126,227,182,.16), transparent 38%), #10161d; border:1px solid #30363d; border-radius:16px; padding:42px; }
+.hero h1 { font-size:48px; margin:8px 0 12px; }
+.hero p { max-width:620px; color:#c9d1d9; font-size:18px; line-height:1.45; }
+.eyebrow { color:#7ee3b6; text-transform:uppercase; letter-spacing:.08em; font-size:12px; font-weight:800; }
 .row { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; }
 .error { background:#3d1518; border:1px solid #da3633; color:#ffdcd7; padding:12px; border-radius:6px; }
 .ok { background:#12331f; border:1px solid #238636; color:#d8ffe2; padding:12px; border-radius:6px; }
@@ -63,4 +68,3 @@ def page(title: str, body: str, *, user: Row | None = None) -> str:
 
 def esc(value: object) -> str:
     return escape(str(value or ""))
-

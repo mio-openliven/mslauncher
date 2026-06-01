@@ -46,6 +46,11 @@ def allow_insecure_panel_url(url: str) -> bool:
     return parsed.scheme == "http" and host in {"127.0.0.1", "localhost", "::1"}
 
 
+def allow_insecure_panel_http(config: dict[str, object]) -> bool:
+    panel_config = get_panel_config(config)
+    return bool(panel_config.get("allow_insecure_http", False))
+
+
 def resolve_panel_active_build(
     config: dict[str, object],
     project: str,
@@ -80,6 +85,7 @@ def resolve_panel_active_build(
         return validate_build_config(
             normalized,
             allow_insecure_local=allow_insecure_panel_url(base_url),
+            allow_insecure_http=allow_insecure_panel_http(config),
             require_manifest=require_manifest,
         )
     except RemoteBuildConfigError as exc:
@@ -159,6 +165,7 @@ def request_panel_build_access(
         return validate_build_config(
             unlocked,
             allow_insecure_local=allow_insecure_panel_url(base_url),
+            allow_insecure_http=allow_insecure_panel_http(config),
             require_manifest=True,
         )
     except RemoteBuildConfigError as exc:

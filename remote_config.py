@@ -33,6 +33,7 @@ def resolve_build_config(
     build: dict[str, object],
     *,
     allow_insecure_local: bool = False,
+    allow_insecure_http: bool = False,
     require_manifest: bool = False,
 ) -> dict[str, object]:
     source_key = str(build.get("source_key", "")).strip()
@@ -40,11 +41,16 @@ def resolve_build_config(
         return validate_build_config(
             dict(build),
             allow_insecure_local=allow_insecure_local,
+            allow_insecure_http=allow_insecure_http,
             require_manifest=require_manifest,
         )
 
     try:
-        remote_url = normalize_source_key(source_key, allow_insecure_local=allow_insecure_local)
+        remote_url = normalize_source_key(
+            source_key,
+            allow_insecure_local=allow_insecure_local,
+            allow_insecure_http=allow_insecure_http,
+        )
     except URLPolicyError as exc:
         raise RemoteBuildConfigError(str(exc)) from exc
 
@@ -86,6 +92,7 @@ def resolve_build_config(
     return validate_build_config(
         resolved_build,
         allow_insecure_local=allow_insecure_local,
+        allow_insecure_http=allow_insecure_http,
         require_manifest=require_manifest,
     )
 
@@ -94,6 +101,7 @@ def validate_build_config(
     build: dict[str, object],
     *,
     allow_insecure_local: bool = False,
+    allow_insecure_http: bool = False,
     require_manifest: bool = False,
 ) -> dict[str, object]:
     normalized_build = dict(build)
@@ -112,6 +120,7 @@ def validate_build_config(
                 manifest_url,
                 "Build manifest_url",
                 allow_insecure_local=allow_insecure_local,
+                allow_insecure_http=allow_insecure_http,
             )
         except URLPolicyError as exc:
             raise RemoteBuildConfigError(str(exc)) from exc
@@ -126,6 +135,7 @@ def validate_build_config(
                 launcher_download_url,
                 "Build launcher_download_url",
                 allow_insecure_local=allow_insecure_local,
+                allow_insecure_http=allow_insecure_http,
             )
         except URLPolicyError as exc:
             raise RemoteBuildConfigError(str(exc)) from exc
@@ -165,8 +175,17 @@ def normalize_optional_string(build: dict[str, object], key: str) -> str:
     return value.strip()
 
 
-def normalize_source_key(source_key: str, *, allow_insecure_local: bool = False) -> str:
+def normalize_source_key(
+    source_key: str,
+    *,
+    allow_insecure_local: bool = False,
+    allow_insecure_http: bool = False,
+) -> str:
     try:
-        return normalize_source_key_url(source_key, allow_insecure_local=allow_insecure_local)
+        return normalize_source_key_url(
+            source_key,
+            allow_insecure_local=allow_insecure_local,
+            allow_insecure_http=allow_insecure_http,
+        )
     except URLPolicyError as exc:
         raise RemoteBuildConfigError(str(exc)) from exc

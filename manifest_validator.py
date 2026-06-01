@@ -14,7 +14,12 @@ class ManifestValidationError(RuntimeError):
     pass
 
 
-def validate_manifest(manifest: object, *, allow_insecure_local: bool = False) -> list[dict[str, str | int]]:
+def validate_manifest(
+    manifest: object,
+    *,
+    allow_insecure_local: bool = False,
+    allow_insecure_http: bool = False,
+) -> list[dict[str, str | int]]:
     if not isinstance(manifest, dict):
         raise ManifestValidationError("Manifest must be a JSON object.")
 
@@ -39,6 +44,7 @@ def validate_manifest(manifest: object, *, allow_insecure_local: bool = False) -
             item.get("url", ""),
             relative_path,
             allow_insecure_local=allow_insecure_local,
+            allow_insecure_http=allow_insecure_http,
         )
         size = normalize_size(item.get("size", 0), relative_path)
 
@@ -89,12 +95,14 @@ def normalize_download_url(
     relative_path: str,
     *,
     allow_insecure_local: bool = False,
+    allow_insecure_http: bool = False,
 ) -> str:
     try:
         return normalize_https_url(
             raw_url,
             f"Manifest url for {relative_path}",
             allow_insecure_local=allow_insecure_local,
+            allow_insecure_http=allow_insecure_http,
         )
     except URLPolicyError as exc:
         raise ManifestValidationError(str(exc)) from exc

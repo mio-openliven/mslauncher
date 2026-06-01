@@ -13,6 +13,7 @@ def normalize_https_url(
     field_name: str,
     *,
     allow_insecure_local: bool = False,
+    allow_insecure_http: bool = False,
 ) -> str:
     if not isinstance(raw_url, str):
         raise URLPolicyError(f"{field_name} must be a URL string.")
@@ -24,9 +25,9 @@ def normalize_https_url(
         raise URLPolicyError(f"{field_name} must include https://.")
     if parsed_url.scheme not in ("https", "http"):
         raise URLPolicyError(f"{field_name} must use https://.")
-    if parsed_url.scheme == "http" and not allow_insecure_local:
+    if parsed_url.scheme == "http" and not (allow_insecure_local or allow_insecure_http):
         raise URLPolicyError(f"{field_name} must use https://. HTTP is not supported.")
-    if parsed_url.scheme == "http" and not is_local_host(parsed_url.hostname or ""):
+    if parsed_url.scheme == "http" and not allow_insecure_http and not is_local_host(parsed_url.hostname or ""):
         raise URLPolicyError(f"{field_name} may use HTTP only for explicit local tests.")
     if not parsed_url.hostname:
         raise URLPolicyError(f"{field_name} must include a host.")
@@ -40,7 +41,12 @@ def normalize_https_url(
     return url
 
 
-def normalize_source_key_url(source_key: object, *, allow_insecure_local: bool = False) -> str:
+def normalize_source_key_url(
+    source_key: object,
+    *,
+    allow_insecure_local: bool = False,
+    allow_insecure_http: bool = False,
+) -> str:
     if not isinstance(source_key, str):
         raise URLPolicyError("source_key must be a string.")
 
@@ -51,7 +57,12 @@ def normalize_source_key_url(source_key: object, *, allow_insecure_local: bool =
     if "://" in stripped_source:
         # Full raw.githubusercontent.com source_key values are treated as ordinary public HTTPS URLs.
         # A launcher password gate can block UI downloads, but it cannot make public raw files secret.
-        return normalize_https_url(stripped_source, "source_key", allow_insecure_local=allow_insecure_local)
+        return normalize_https_url(
+            stripped_source,
+            "source_key",
+            allow_insecure_local=allow_insecure_local,
+            allow_insecure_http=allow_insecure_http,
+        )
 
     host_candidate = stripped_source.strip("/")
     if not host_candidate:
@@ -65,6 +76,7 @@ def normalize_source_key_url(source_key: object, *, allow_insecure_local: bool =
         f"https://{host_candidate}/mslauncher/build.json",
         "source_key",
         allow_insecure_local=allow_insecure_local,
+        allow_insecure_http=allow_insecure_http,
     )
 
 

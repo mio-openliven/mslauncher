@@ -138,6 +138,7 @@ class MinecraftEngine:
         game_directory: str | os.PathLike[str],
         *,
         allow_insecure_local: bool = False,
+        allow_insecure_http: bool = False,
         require_files: bool = False,
     ) -> SyncPlan:
         """Compare local files with a remote manifest and return a safe sync plan."""
@@ -148,6 +149,7 @@ class MinecraftEngine:
                 manifest_url,
                 "manifest_url",
                 allow_insecure_local=allow_insecure_local,
+                allow_insecure_http=allow_insecure_http,
             )
             response = requests.get(safe_manifest_url, timeout=30)
             response.raise_for_status()
@@ -160,7 +162,11 @@ class MinecraftEngine:
             raise RuntimeError(f"Манифест сборки содержит некорректный JSON: {exc}") from exc
 
         try:
-            manifest_files = validate_manifest(manifest, allow_insecure_local=allow_insecure_local)
+            manifest_files = validate_manifest(
+                manifest,
+                allow_insecure_local=allow_insecure_local,
+                allow_insecure_http=allow_insecure_http,
+            )
         except ManifestValidationError as exc:
             raise RuntimeError(f"Манифест сборки поврежден: {exc}") from exc
         if require_files and not manifest_files:
