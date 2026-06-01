@@ -23,7 +23,11 @@ DESKTOP = Path(os.environ.get("USERPROFILE", str(Path.home()))) / "Desktop"
 SHORTCUT_PATH = DESKTOP / "MSLaunch.lnk"
 EXE_NAME = "MSLauncher.exe"
 PACKAGE_NAME = "MSLaunch-1.9.0-beta.zip"
-PACKAGE_SHA256 = "9e04fa7864dddb1f7a8b966f49c62cbf62d83b112b9a597557db6d133fb1ac7c"
+PACKAGE_SHA256 = "d6ba745b1ad21119e7316f68dc3eb685d1fcfa0b14f63c721135be95bfa58723"
+BOOTSTRAP_MANIFESTS = [
+    "https://mslaunch.186.246.12.238.sslip.io/downloads/bootstrap.json",
+    "https://github.com/mio-openliven/MSNukem/releases/download/v1.9.0-beta.1/bootstrap.json",
+]
 PROBE_BYTES = 64 * 1024
 CHUNK_SIZE = 1024 * 256
 
@@ -71,11 +75,15 @@ class SetupUi:
     def _worker(self) -> None:
         try:
             install(self)
-            self.set_progress(100)
-            self.set_text("Готово.", "Лаунчер запускается...")
-            self.root.after(1200, self.root.destroy)
+            self.root.after(0, self._finish_success)
         except Exception as exc:
-            self.set_text("Не удалось установить MSLaunch.", str(exc))
+            detail = str(exc)
+            self.root.after(0, lambda: self.set_text("Не удалось установить MSLaunch.", detail))
+
+    def _finish_success(self) -> None:
+        self.set_progress(100)
+        self.set_text("Готово.", "Лаунчер запускается...")
+        self.root.after(1200, self.root.destroy)
 
 
 def probe_source(name: str, url: str, expected_sha256: str) -> tuple[float, str, str, str]:
@@ -86,7 +94,40 @@ def probe_source(name: str, url: str, expected_sha256: str) -> tuple[float, str,
     return time.perf_counter() - started, name, url, expected_sha256
 
 
-def order_sources() -> list[tuple[str, str, str]]:
+def load_bootstrap_sources() -> list[tuple[str, str, str]]:
+    for manifest_url in BOOTSTRAP_MANIFESTS:
+        try:
+            request = urllib.request.Request(manifest_url, headers={"User-Agent": "MSLaunchSetup/1.1"})
+            with urllib.request.urlopen(request, timeout=8) as response:
+                payload = json.loads(response.read(256 * 1024).decode("utf-8-sig"))
+            sources = parse_bootstrap_manifest(payload)
+            if sources:
+                return sources
+        except (OSError, ValueError, KeyError, TypeError):
+            continue
+    return SOURCES
+
+
+def parse_bootstrap_manifest(payload: object) -> list[tuple[str, str, str]]:
+    if not isinstance(payload, dict):
+        return []
+    parsed: list[tuple[str, str, str]] = []
+    raw_sources = payload.get("sources")
+    if not isinstance(raw_sources, list):
+        return []
+    for item in raw_sources:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name", "")).strip()[:40] or "Source"
+        url = str(item.get("url", "")).strip()
+        sha256_value = str(item.get("sha256", "")).strip().lower()
+        if not url.startswith("https://") or len(sha256_value) != 64:
+            continue
+        parsed.append((name, url, sha256_value))
+    return parsed
+
+
+def order_sources(sources: list[tuple[str, str, str]]) -> list[tuple[str, str, str]]:
     results: list[tuple[float, str, str, str]] = []
     threads: list[threading.Thread] = []
     lock = threading.Lock()
@@ -99,7 +140,7 @@ def order_sources() -> list[tuple[str, str, str]]:
         with lock:
             results.append(result)
 
-    for source in SOURCES:
+    for source in sources:
         thread = threading.Thread(target=run_probe, args=(source,), daemon=True)
         thread.start()
         threads.append(thread)
@@ -107,7 +148,7 @@ def order_sources() -> list[tuple[str, str, str]]:
         thread.join(timeout=10)
 
     if not results:
-        return SOURCES
+        return sources
     return [(name, url, expected_sha256) for _, name, url, expected_sha256 in sorted(results, key=lambda item: item[0])]
 
 
@@ -219,7 +260,7 @@ def launch(exe_path: Path) -> None:
 
 def install(ui: SetupUi) -> None:
     ui.set_text("Выбор быстрого источника...", "Проверяем хост и GitHub")
-    sources = order_sources()
+    sources = order_sources(load_bootstrap_sources())
     errors: list[str] = []
     with tempfile.TemporaryDirectory(prefix="mslaunch-setup-") as temp_dir:
         archive_path = Path(temp_dir) / PACKAGE_NAME

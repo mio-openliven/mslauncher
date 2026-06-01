@@ -153,7 +153,7 @@ def client_page(request: Request) -> HTMLResponse:
 @app.get("/downloads/{filename}")
 def download_launcher(filename: str) -> FileResponse:
     safe_name = Path(filename).name
-    if safe_name != filename or not safe_name.lower().endswith((".exe", ".zip", ".txt", ".cer", ".png")):
+    if safe_name != filename or not safe_name.lower().endswith((".exe", ".zip", ".txt", ".cer", ".png", ".json", ".dat")):
         raise HTTPException(status_code=404, detail="File not found.")
     target = get_downloads_root() / safe_name
     if not target.is_file():
