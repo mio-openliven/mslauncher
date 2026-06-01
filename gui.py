@@ -119,6 +119,11 @@ SOCIAL_FALLBACK_LABELS = {
     "website": "WB",
     "link": "WB",
 }
+ACTION_ICON_FILES = {
+    "play": "play.svg",
+    "download_mods": "download.svg",
+    "game_folder": "folder.svg",
+}
 
 SYSTEM_DIALOG_STYLESHEET = """
 QMessageBox,
@@ -1573,13 +1578,17 @@ class MSLauncherWindow(QMainWindow):
         self.play_button = QPushButton()
         self.play_button.setObjectName("playButton")
         self.play_button.setMinimumHeight(66)
-        self.play_button.setMinimumWidth(128)
-        self.play_button.setMaximumWidth(150)
+        self.play_button.setMinimumWidth(136)
+        self.play_button.setMaximumWidth(158)
+        self.play_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.mods_button = QPushButton()
         self.mods_button.setObjectName("modsButton")
         self.mods_button.setMinimumHeight(66)
-        self.mods_button.setMinimumWidth(150)
-        self.mods_button.setMaximumWidth(166)
+        self.mods_button.setMinimumWidth(158)
+        self.mods_button.setMaximumWidth(178)
+        self.mods_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.set_button_icon(self.play_button, "play", 22)
+        self.set_button_icon(self.mods_button, self.get_mods_action_key(), 21)
 
         self.feedback_button = QPushButton()
         self.feedback_button.setObjectName("panelButton")
@@ -1635,6 +1644,15 @@ class MSLauncherWindow(QMainWindow):
         button.setFixedSize(54, 52)
         button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         return button
+
+    def set_button_icon(self, button: QPushButton, icon_key: str, size: int = 22) -> None:
+        icon_file = ACTION_ICON_FILES.get(icon_key)
+        icon_path = ICON_DIR / icon_file if icon_file else Path()
+        if icon_path.is_file():
+            button.setIcon(QIcon(str(icon_path)))
+            button.setIconSize(QSize(size, size))
+        else:
+            button.setIcon(QIcon())
 
     def get_project_icon_path(self, project_key: str) -> Path:
         icon_name = PROJECT_ICON_FILES.get(project_key, PROJECT_ICON_FILES[CLIENT_MODE_INDEPENDENT])
@@ -1915,6 +1933,7 @@ class MSLauncherWindow(QMainWindow):
         self.loader_label.setText(self.translate("loader"))
         self.play_button.setText(self.translate(self.action_phrase_key))
         self.mods_button.setText(self.translate(self.get_mods_action_key()))
+        self.refresh_action_button_icons()
         self.feedback_button.setText(self.translate("feedback_ok"))
         self.language_toggle_button.setText(self.language)
         self.refresh_nukem_control_policy()
@@ -1936,6 +1955,10 @@ class MSLauncherWindow(QMainWindow):
             self.set_status(status_key)
         else:
             self.set_status("ready")
+
+    def refresh_action_button_icons(self) -> None:
+        self.set_button_icon(self.play_button, "play", 22)
+        self.set_button_icon(self.mods_button, self.get_mods_action_key(), 21)
 
     def apply_styles(self) -> None:
         self.setStyleSheet(
@@ -2448,6 +2471,7 @@ class MSLauncherWindow(QMainWindow):
         cancel_button.setObjectName("accessCancelButton")
         download_button = QPushButton(self.translate("access_password_download"))
         download_button.setObjectName("accessDownloadButton")
+        self.set_button_icon(download_button, "download_mods", 19)
         button_row.addWidget(cancel_button)
         button_row.addWidget(download_button)
 
@@ -2593,6 +2617,7 @@ class MSLauncherWindow(QMainWindow):
         self.action_phrase_key = random.choice(self.get_action_phrase_keys()) if launch_after_sync else "mods_idle"
         if launch_after_sync:
             self.play_button.setText(self.translate(self.action_phrase_key))
+            self.refresh_action_button_icons()
         self.set_action_buttons_enabled(False)
         self.progress_bar.setValue(0)
         sync_enabled = should_sync_profile(self.client_mode, self.selected_profile)
@@ -3148,6 +3173,7 @@ class MSLauncherWindow(QMainWindow):
         self.action_phrase_key = "play_idle"
         self.play_button.setText(self.translate(self.action_phrase_key))
         self.mods_button.setText(self.translate(self.get_mods_action_key()))
+        self.refresh_action_button_icons()
 
     def set_status(self, key: str) -> None:
         self.status_label.setProperty("status_key", key)

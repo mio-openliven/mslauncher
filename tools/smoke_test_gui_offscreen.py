@@ -24,6 +24,8 @@ def main() -> None:
         assert "MSLaunch" in window.windowTitle()
         assert window.play_button.text()
         assert window.mods_button.text()
+        assert not window.play_button.icon().isNull()
+        assert not window.mods_button.icon().isNull()
         assert window.play_button.minimumHeight() == window.mods_button.minimumHeight()
         assert not window.progress_bar.isTextVisible()
 
