@@ -31,6 +31,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QProgressBar,
     QFileDialog,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
@@ -1474,19 +1475,18 @@ class MSLauncherWindow(QMainWindow):
         self.memory_max_input.setText(str(launch_options.get("memory_max", "2G")))
         self.java_path_input.setText(str(launch_options.get("java_path", "")))
 
-        info_layout.addWidget(self.loader_setting_label)
-        info_layout.addWidget(self.loader_setting_combo)
-        info_layout.addWidget(self.memory_min_label)
-        info_layout.addWidget(self.memory_min_input)
-        info_layout.addWidget(self.memory_max_label)
-        info_layout.addWidget(self.memory_max_input)
-        info_layout.addWidget(self.java_path_label)
-        info_layout.addWidget(self.java_path_input)
-        info_layout.addWidget(self.java_browse_button)
-        info_layout.addWidget(self.skin_label)
-        info_layout.addWidget(self.skin_status_label)
-        info_layout.addWidget(self.skin_browse_button)
-        self.settings_widgets = [
+        self.settings_scroll_area = QScrollArea()
+        self.settings_scroll_area.setObjectName("settingsScrollArea")
+        self.settings_scroll_area.setWidgetResizable(True)
+        self.settings_scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        self.settings_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.settings_scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.settings_container = QFrame()
+        self.settings_container.setObjectName("settingsContainer")
+        settings_layout = QVBoxLayout(self.settings_container)
+        settings_layout.setContentsMargins(0, 0, 0, 0)
+        settings_layout.setSpacing(8)
+        for widget in (
             self.loader_setting_label,
             self.loader_setting_combo,
             self.memory_min_label,
@@ -1499,7 +1499,12 @@ class MSLauncherWindow(QMainWindow):
             self.skin_label,
             self.skin_status_label,
             self.skin_browse_button,
-        ]
+        ):
+            settings_layout.addWidget(widget)
+        settings_layout.addStretch()
+        self.settings_scroll_area.setWidget(self.settings_container)
+        info_layout.addWidget(self.settings_scroll_area, 1)
+        self.settings_widgets = [self.settings_scroll_area]
         info_layout.addStretch()
         self.info_panel.setMinimumWidth(390)
         self.info_panel.setMaximumWidth(430)
@@ -1516,8 +1521,8 @@ class MSLauncherWindow(QMainWindow):
         control_frame.setObjectName("controlFrame")
         control_frame.setMinimumHeight(108)
         control_layout = QHBoxLayout(control_frame)
-        control_layout.setContentsMargins(16, 16, 16, 16)
-        control_layout.setSpacing(8)
+        control_layout.setContentsMargins(12, 14, 12, 14)
+        control_layout.setSpacing(6)
 
         self.language_label = QLabel()
         self.language_combo = QComboBox()
@@ -1568,13 +1573,13 @@ class MSLauncherWindow(QMainWindow):
         self.play_button = QPushButton()
         self.play_button.setObjectName("playButton")
         self.play_button.setMinimumHeight(66)
-        self.play_button.setMinimumWidth(145)
-        self.play_button.setMaximumWidth(170)
+        self.play_button.setMinimumWidth(128)
+        self.play_button.setMaximumWidth(150)
         self.mods_button = QPushButton()
         self.mods_button.setObjectName("modsButton")
         self.mods_button.setMinimumHeight(66)
-        self.mods_button.setMinimumWidth(165)
-        self.mods_button.setMaximumWidth(190)
+        self.mods_button.setMinimumWidth(150)
+        self.mods_button.setMaximumWidth(166)
 
         self.feedback_button = QPushButton()
         self.feedback_button.setObjectName("panelButton")
@@ -1583,9 +1588,9 @@ class MSLauncherWindow(QMainWindow):
         username_group = self.create_control_group(self.username_label, self.username_input)
         self.build_group = self.create_control_group(self.build_label, self.build_combo)
         self.version_group = self.create_control_group(self.version_label, self.version_combo)
-        username_group.setMaximumWidth(170)
-        self.build_group.setMaximumWidth(180)
-        self.version_group.setMaximumWidth(160)
+        username_group.setMaximumWidth(150)
+        self.build_group.setMaximumWidth(158)
+        self.version_group.setMaximumWidth(125)
         control_layout.addWidget(username_group, 2)
         control_layout.addWidget(self.build_group, 2)
         control_layout.addWidget(self.version_group, 2)
@@ -1648,8 +1653,8 @@ class MSLauncherWindow(QMainWindow):
     def create_loader_group(self) -> QFrame:
         frame = QFrame()
         frame.setObjectName("controlGroup")
-        frame.setMinimumWidth(138)
-        frame.setMaximumWidth(155)
+        frame.setMinimumWidth(118)
+        frame.setMaximumWidth(132)
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
@@ -1999,6 +2004,26 @@ class MSLauncherWindow(QMainWindow):
                 border: 1px solid rgba(255, 255, 255, 36);
                 border-radius: 8px;
             }
+            #settingsScrollArea,
+            #settingsScrollArea QWidget,
+            #settingsContainer {
+                background: transparent;
+                border: 0;
+            }
+            #settingsScrollArea QScrollBar:vertical {
+                background: rgba(255, 255, 255, 16);
+                width: 8px;
+                margin: 2px;
+                border-radius: 4px;
+            }
+            #settingsScrollArea QScrollBar::handle:vertical {
+                background: rgba(116, 231, 186, 90);
+                border-radius: 4px;
+            }
+            #settingsScrollArea QScrollBar::add-line:vertical,
+            #settingsScrollArea QScrollBar::sub-line:vertical {
+                height: 0;
+            }
             #controlFrame {
                 background: rgba(7, 10, 11, 176);
                 border: 1px solid rgba(255, 255, 255, 26);
@@ -2136,7 +2161,7 @@ class MSLauncherWindow(QMainWindow):
                 color: #ffffff;
                 border: 1px solid rgba(255, 255, 255, 34);
                 border-radius: 8px;
-                padding: 8px 12px;
+                padding: 8px 10px;
                 min-height: 36px;
                 font-size: 15px;
             }
@@ -2174,10 +2199,10 @@ class MSLauncherWindow(QMainWindow):
             QPushButton#modsButton {
                 color: #ffffff;
                 border-radius: 8px;
-                font-size: 16px;
+                font-size: 15px;
                 font-weight: 800;
                 letter-spacing: 0px;
-                padding: 8px 12px;
+                padding: 8px 10px;
             }
             QPushButton#playButton:hover {
                 background: #ff9a1f;
