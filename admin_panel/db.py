@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
     username TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     role TEXT NOT NULL CHECK(role IN ('owner', 'project_admin', 'viewer')),
+    project_slug TEXT NOT NULL DEFAULT 'nukem',
     active INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -105,8 +106,18 @@ def init_db(database_path: Path | None = None) -> None:
     get_downloads_root().mkdir(parents=True, exist_ok=True)
     with connect(database_path) as connection:
         connection.executescript(SCHEMA)
+        ensure_user_columns(connection)
         ensure_build_columns(connection)
         seed_projects(connection, DEFAULT_PROJECTS)
+
+
+def ensure_user_columns(connection: sqlite3.Connection) -> None:
+    columns = {
+        str(row["name"])
+        for row in connection.execute("PRAGMA table_info(users)").fetchall()
+    }
+    if "project_slug" not in columns:
+        connection.execute("ALTER TABLE users ADD COLUMN project_slug TEXT NOT NULL DEFAULT 'nukem'")
 
 
 def ensure_build_columns(connection: sqlite3.Connection) -> None:

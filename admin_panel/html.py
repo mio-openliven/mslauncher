@@ -9,8 +9,15 @@ body { margin:0; background:#0d1117; color:#e6edf3; font-family:Segoe UI,Arial,s
 a { color:#7ee3b6; text-decoration:none; }
 .shell { max-width:1180px; margin:0 auto; padding:28px; }
 .top { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; }
-.brand { font-size:24px; font-weight:800; }
-.nav a, .nav button { margin-left:8px; }
+.brandWrap { display:flex; align-items:center; gap:12px; min-width:260px; }
+.brandLogo { width:46px; height:46px; object-fit:contain; filter:drop-shadow(0 0 14px rgba(126,227,182,.25)); }
+.brand { font-size:24px; font-weight:850; letter-spacing:.01em; }
+.brandSub { color:#7ee3b6; font-size:12px; font-weight:800; margin-top:2px; }
+.nav { display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+.nav a, .nav button { margin-left:0; }
+.langSwitch { display:inline-flex; align-items:center; gap:4px; padding:4px; border:1px solid #30363d; border-radius:12px; background:#151b23; margin-right:8px; }
+.langButton { min-width:54px; text-align:center; padding:9px 10px; border-radius:9px; color:#c9d1d9; font-weight:900; letter-spacing:.04em; }
+.langButton.active { background:#7ee3b6; color:#08110d; box-shadow:0 0 0 1px rgba(126,227,182,.35), 0 10px 26px rgba(126,227,182,.18); }
 .card { background:#151b23; border:1px solid #30363d; border-radius:8px; padding:18px; margin-bottom:16px; }
 .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; }
 .muted { color:#9198a1; }
@@ -38,17 +45,65 @@ pre { white-space:pre-wrap; background:#0d1117; border:1px solid #30363d; border
 """
 
 
-def page(title: str, body: str, *, user: Row | None = None) -> str:
-    nav = ""
+LABELS = {
+    "ru": {
+        "dashboard": "Главная",
+        "builds": "Сборки",
+        "updates": "Обновления",
+        "reports": "Отчёты",
+        "admins": "Админы",
+        "logout": "Выйти",
+        "project_panel": "кабинет проекта",
+    },
+    "en": {
+        "dashboard": "Dashboard",
+        "builds": "Builds",
+        "updates": "Updates",
+        "reports": "Reports",
+        "admins": "Admins",
+        "logout": "Logout",
+        "project_panel": "project panel",
+    },
+}
+
+
+def page(
+    title: str,
+    body: str,
+    *,
+    user: Row | None = None,
+    lang: str = "ru",
+    project_name: str = "",
+    project_slug: str = "",
+) -> str:
+    lang = "en" if lang == "en" else "ru"
+    labels = LABELS[lang]
+    project_slug = project_slug or str(user["project_slug"] if user is not None and "project_slug" in user.keys() else "")
+    brand_name = project_name or title
+    logo = ""
+    if project_slug == "nukem":
+        logo = '<img class="brandLogo" src="/downloads/nukem.png" alt="">'
+        brand_name = "MS Nuckem"
+    elif project_slug:
+        brand_name = project_name or project_slug
+    language_switch = f"""
+      <div class="langSwitch" aria-label="Language">
+        <a class="langButton {'active' if lang == 'ru' else ''}" href="/language/ru">RU</a>
+        <a class="langButton {'active' if lang == 'en' else ''}" href="/language/en">ENG</a>
+      </div>
+    """
+    nav = language_switch
     if user is not None:
-        nav = """
+        admins_link = '<a class="button secondary" href="/admins">{}</a>'.format(labels["admins"]) if user["role"] == "owner" else ""
+        nav = f"""
         <div class="nav">
-          <a class="button secondary" href="/">Dashboard</a>
-          <a class="button secondary" href="/builds">Builds</a>
-          <a class="button secondary" href="/updates">Updates</a>
-          <a class="button secondary" href="/reports">Reports</a>
-          <a class="button secondary" href="/admins">Admins</a>
-          <form action="/logout" method="post" style="display:inline"><button class="secondary">Logout</button></form>
+          {language_switch}
+          <a class="button secondary" href="/">{labels["dashboard"]}</a>
+          <a class="button secondary" href="/builds">{labels["builds"]}</a>
+          <a class="button secondary" href="/updates">{labels["updates"]}</a>
+          <a class="button secondary" href="/reports">{labels["reports"]}</a>
+          {admins_link}
+          <form action="/logout" method="post" style="display:inline"><button class="secondary">{labels["logout"]}</button></form>
         </div>
         """
     return f"""<!doctype html>
@@ -61,7 +116,13 @@ def page(title: str, body: str, *, user: Row | None = None) -> str:
 </head>
 <body>
   <main class="shell">
-    <div class="top"><div class="brand">{escape(title)}</div>{nav}</div>
+    <div class="top">
+      <div class="brandWrap">
+        {logo}
+        <div><div class="brand">{escape(brand_name)}</div><div class="brandSub">{escape(labels["project_panel"])}</div></div>
+      </div>
+      {nav}
+    </div>
     {body}
   </main>
 </body>

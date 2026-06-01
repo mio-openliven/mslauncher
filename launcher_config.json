@@ -19,7 +19,7 @@
   },
   "support_url": "https://github.com/mio-openliven/mslauncher/issues/new",
   "support_urls": {
-    "nukem": "https://github.com/mio-openliven/MSNukem/issues/new"
+    "independent": "https://github.com/mio-openliven/mslauncher/issues/new"
   },
   "panel": {
     "enabled": true,

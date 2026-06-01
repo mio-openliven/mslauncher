@@ -4,6 +4,9 @@ import shutil
 import tempfile
 import hashlib
 import hmac
+import json
+import urllib.error
+import urllib.request
 from pathlib import Path
 from sqlite3 import Row
 from typing import Annotated
@@ -36,6 +39,8 @@ from .settings import (
     DEFAULT_HOST,
     DEFAULT_PORT,
     get_downloads_root,
+    get_github_report_repo,
+    get_github_report_token,
     get_public_base_url,
     get_session_secret,
     get_storage_root,
@@ -43,6 +48,7 @@ from .settings import (
 
 
 SESSION_COOKIE = "mslaunch_panel_session"
+LANGUAGE_COOKIE = "mslaunch_panel_lang"
 app = FastAPI(title=APP_NAME)
 
 
@@ -83,6 +89,36 @@ def require_build_admin(user: Annotated[Row, Depends(require_user)]) -> Row:
     return user
 
 
+def get_lang(request: Request) -> str:
+    lang = request.cookies.get(LANGUAGE_COOKIE, "ru").lower()
+    return "en" if lang == "en" else "ru"
+
+
+def user_project_slug(user: Row) -> str:
+    return str(user["project_slug"] or "nukem")
+
+
+def can_access_project(user: Row, project_slug: str) -> bool:
+    return user["role"] == "owner" or user_project_slug(user) == project_slug
+
+
+def require_project_access(user: Row, project_slug: str) -> None:
+    if not can_access_project(user, project_slug):
+        raise HTTPException(status_code=403, detail="This account can only manage its assigned project.")
+
+
+def visible_project_where(user: Row, column: str = "slug") -> tuple[str, tuple[str, ...]]:
+    if user["role"] == "owner":
+        return "", ()
+    return f" WHERE {column}=?", (user_project_slug(user),)
+
+
+def get_project_name(project_slug: str) -> str:
+    with connect() as connection:
+        row = connection.execute("SELECT name FROM projects WHERE slug=?", (project_slug,)).fetchone()
+    return str(row["name"]) if row is not None else project_slug
+
+
 def redirect_login() -> RedirectResponse:
     return RedirectResponse("/login", status_code=303)
 
@@ -111,13 +147,13 @@ def client_page(request: Request) -> HTMLResponse:
       </div>
     </section>
     """
-    return HTMLResponse(page("MSLaunch", body))
+    return HTMLResponse(page("MSLaunch", body, lang=get_lang(request), project_slug="nukem"))
 
 
 @app.get("/downloads/{filename}")
 def download_launcher(filename: str) -> FileResponse:
     safe_name = Path(filename).name
-    if safe_name != filename or not safe_name.lower().endswith((".exe", ".zip", ".txt", ".cer")):
+    if safe_name != filename or not safe_name.lower().endswith((".exe", ".zip", ".txt", ".cer", ".png")):
         raise HTTPException(status_code=404, detail="File not found.")
     target = get_downloads_root() / safe_name
     if not target.is_file():
@@ -130,17 +166,22 @@ def login_page(request: Request, error: str = "") -> HTMLResponse:
     if get_current_user(request) is not None:
         return HTMLResponse("", status_code=303, headers={"location": "/"})
     message = f'<div class="error">{esc(error)}</div>' if error else ""
+    lang = get_lang(request)
+    if lang == "ru":
+        login_label, password_label, button_label = "Логин", "Пароль", "Войти в панель"
+    else:
+        login_label, password_label, button_label = "Login", "Password", "Enter panel"
     body = f"""
     <div class="card" style="max-width:420px">
       {message}
       <form method="post" action="/login">
-        <label>Login</label><input name="username" autocomplete="username">
-        <label>Password</label><input name="password" type="password" autocomplete="current-password">
-        <p><button>Enter panel</button></p>
+        <label>{login_label}</label><input name="username" autocomplete="username">
+        <label>{password_label}</label><input name="password" type="password" autocomplete="current-password">
+        <p><button>{button_label}</button></p>
       </form>
     </div>
     """
-    return HTMLResponse(page(APP_NAME, body))
+    return HTMLResponse(page(APP_NAME, body, lang=lang, project_slug="nukem"))
 
 
 @app.post("/login")
@@ -171,6 +212,13 @@ def logout() -> RedirectResponse:
     return response
 
 
+@app.get("/language/{lang}")
+def set_language(lang: str) -> RedirectResponse:
+    response = RedirectResponse("/", status_code=303)
+    response.set_cookie(LANGUAGE_COOKIE, "en" if lang == "en" else "ru", samesite="lax", max_age=60 * 60 * 24 * 180)
+    return response
+
+
 @app.get("/", response_class=HTMLResponse)
 def dashboard(request: Request):
     user = get_current_user(request)
@@ -178,9 +226,18 @@ def dashboard(request: Request):
         return redirect_login()
 
     with connect() as connection:
-        projects = connection.execute("SELECT * FROM projects ORDER BY slug").fetchall()
-        active_builds = connection.execute("SELECT * FROM builds WHERE status='active' ORDER BY project_slug").fetchall()
-        open_reports = connection.execute("SELECT COUNT(*) AS count FROM reports WHERE status='open'").fetchone()["count"]
+        project_where, project_params = visible_project_where(user, "slug")
+        build_where, build_params = visible_project_where(user, "project_slug")
+        report_where, report_params = visible_project_where(user, "project")
+        projects = connection.execute(f"SELECT * FROM projects{project_where} ORDER BY slug", project_params).fetchall()
+        active_builds = connection.execute(
+            f"SELECT * FROM builds WHERE status='active'{' AND project_slug=?' if build_where else ''} ORDER BY project_slug",
+            build_params,
+        ).fetchall()
+        open_reports = connection.execute(
+            f"SELECT COUNT(*) AS count FROM reports WHERE status='open'{' AND project=?' if report_where else ''}",
+            report_params,
+        ).fetchone()["count"]
 
     project_cards = "".join(
         f'<div class="card"><b>{esc(row["name"])}</b><p class="muted">{esc(row["slug"])}</p></div>'
@@ -201,7 +258,7 @@ def dashboard(request: Request):
       <table><tr><th>Project</th><th>Build</th><th>Minecraft</th><th>Files</th></tr>{build_rows}</table>
     </div>
     """
-    return HTMLResponse(page(APP_NAME, body, user=user))
+    return HTMLResponse(page(APP_NAME, body, user=user, lang=get_lang(request), project_name=get_project_name(user_project_slug(user)), project_slug=user_project_slug(user)))
 
 
 @app.get("/builds", response_class=HTMLResponse)
@@ -211,8 +268,10 @@ def builds_page(request: Request):
         return redirect_login()
 
     with connect() as connection:
-        projects = connection.execute("SELECT * FROM projects ORDER BY slug").fetchall()
-        builds = connection.execute("SELECT * FROM builds ORDER BY project_slug, created_at DESC").fetchall()
+        project_where, project_params = visible_project_where(user, "slug")
+        build_where, build_params = visible_project_where(user, "project_slug")
+        projects = connection.execute(f"SELECT * FROM projects{project_where} ORDER BY slug", project_params).fetchall()
+        builds = connection.execute(f"SELECT * FROM builds{build_where} ORDER BY project_slug, created_at DESC", build_params).fetchall()
 
     project_options = "".join(f'<option value="{esc(row["slug"])}">{esc(row["name"])}</option>' for row in projects)
     build_rows = "".join(render_build_row(row) for row in builds) or '<tr><td colspan="8" class="muted">No builds yet.</td></tr>'
@@ -241,7 +300,7 @@ def builds_page(request: Request):
       <table><tr><th>Project</th><th>ID</th><th>Name</th><th>MC</th><th>Loader</th><th>Files</th><th>Access</th><th>Status</th><th></th></tr>{build_rows}</table>
     </div>
     """
-    return HTMLResponse(page("Builds", body, user=user))
+    return HTMLResponse(page("Builds", body, user=user, lang=get_lang(request), project_name=get_project_name(user_project_slug(user)), project_slug=user_project_slug(user)))
 
 
 def render_build_row(row: Row) -> str:
@@ -281,6 +340,7 @@ def create_build(
 ) -> RedirectResponse:
     try:
         project = safe_segment(project_slug)
+        require_project_access(user, project)
         build = safe_segment(build_id)
         if loader not in ("vanilla", "fabric"):
             raise UploadValidationError("Loader must be vanilla or fabric.")
@@ -356,6 +416,7 @@ def create_build(
 
 @app.post("/builds/{project}/{build_id}/activate")
 def activate_build(project: str, build_id: str, user: Annotated[Row, Depends(require_build_admin)]) -> RedirectResponse:
+    require_project_access(user, project)
     with connect() as connection:
         connection.execute("UPDATE builds SET status='archived' WHERE project_slug=? AND status='active'", (project,))
         connection.execute(
@@ -417,7 +478,7 @@ def updates_page(request: Request):
     </div>
     <div class="card"><table><tr><th>Version</th><th>Enabled</th><th>URL</th><th>Notes</th></tr>{rendered}</table></div>
     """
-    return HTMLResponse(page("Updates", body, user=user))
+    return HTMLResponse(page("Updates", body, user=user, lang=get_lang(request), project_name=get_project_name(user_project_slug(user)), project_slug=user_project_slug(user)))
 
 
 @app.post("/updates/create")
@@ -445,13 +506,14 @@ def reports_page(request: Request):
     if user is None:
         return redirect_login()
     with connect() as connection:
-        rows = connection.execute("SELECT * FROM reports ORDER BY created_at DESC LIMIT 200").fetchall()
+        report_where, report_params = visible_project_where(user, "project")
+        rows = connection.execute(f"SELECT * FROM reports{report_where} ORDER BY created_at DESC LIMIT 200", report_params).fetchall()
     rendered = "".join(
         f"<tr><td>{esc(row['created_at'])}</td><td>{esc(row['project'])}</td><td>{esc(row['username'])}</td><td>{esc(row['error_type'])}</td><td>{esc(row['status'])}</td><td><a href='/reports/{row['id']}'>Open</a></td></tr>"
         for row in rows
     ) or '<tr><td colspan="6" class="muted">No reports yet.</td></tr>'
     body = f'<div class="card"><table><tr><th>Time</th><th>Project</th><th>User</th><th>Type</th><th>Status</th><th></th></tr>{rendered}</table></div>'
-    return HTMLResponse(page("Reports", body, user=user))
+    return HTMLResponse(page("Reports", body, user=user, lang=get_lang(request), project_name=get_project_name(user_project_slug(user)), project_slug=user_project_slug(user)))
 
 
 @app.get("/reports/{report_id}", response_class=HTMLResponse)
@@ -463,6 +525,7 @@ def report_detail(report_id: int, request: Request):
         row = connection.execute("SELECT * FROM reports WHERE id=?", (report_id,)).fetchone()
     if row is None:
         raise HTTPException(status_code=404, detail="Report not found.")
+    require_project_access(user, row["project"])
     body = f"""
     <div class="card">
       <p><b>{esc(row['error_type'])}</b> <span class="muted">{esc(row['created_at'])}</span></p>
@@ -472,12 +535,16 @@ def report_detail(report_id: int, request: Request):
       <form method="post" action="/reports/{report_id}/resolve"><button>Mark resolved</button></form>
     </div>
     """
-    return HTMLResponse(page("Report", body, user=user))
+    return HTMLResponse(page("Report", body, user=user, lang=get_lang(request), project_name=get_project_name(user_project_slug(user)), project_slug=user_project_slug(user)))
 
 
 @app.post("/reports/{report_id}/resolve")
 def resolve_report(report_id: int, user: Annotated[Row, Depends(require_build_admin)]) -> RedirectResponse:
     with connect() as connection:
+        row = connection.execute("SELECT project FROM reports WHERE id=?", (report_id,)).fetchone()
+        if row is None:
+            raise HTTPException(status_code=404, detail="Report not found.")
+        require_project_access(user, row["project"])
         connection.execute("UPDATE reports SET status='resolved' WHERE id=?", (report_id,))
     return RedirectResponse("/reports", status_code=303)
 
@@ -488,11 +555,13 @@ def admins_page(request: Request):
     if user is None:
         return redirect_login()
     if user["role"] != "owner":
-        return HTMLResponse(page("Admins", '<div class="error">Owner role required.</div>', user=user), status_code=403)
+        return HTMLResponse(page("Admins", '<div class="error">Owner role required.</div>', user=user, lang=get_lang(request), project_name=get_project_name(user_project_slug(user)), project_slug=user_project_slug(user)), status_code=403)
     with connect() as connection:
         users = connection.execute("SELECT * FROM users ORDER BY username").fetchall()
+        projects = connection.execute("SELECT * FROM projects ORDER BY slug").fetchall()
+    project_options = "".join(f'<option value="{esc(row["slug"])}">{esc(row["name"])}</option>' for row in projects)
     rows = "".join(
-        f"<tr><td>{esc(row['username'])}</td><td>{esc(row['role'])}</td><td>{esc(row['active'])}</td><td><form method='post' action='/admins/{esc(row['username'])}/deactivate'><button class='danger'>Deactivate</button></form></td></tr>"
+        f"<tr><td>{esc(row['username'])}</td><td>{esc(row['role'])}</td><td>{esc(row['project_slug'])}</td><td>{esc(row['active'])}</td><td><form method='post' action='/admins/{esc(row['username'])}/deactivate'><button class='danger'>Deactivate</button></form></td></tr>"
         for row in users
     )
     body = f"""
@@ -502,13 +571,14 @@ def admins_page(request: Request):
           <div><label>Username</label><input name="username"></div>
           <div><label>Password</label><input name="password" type="password"></div>
           <div><label>Role</label><select name="role"><option>project_admin</option><option>owner</option><option>viewer</option></select></div>
+          <div><label>Project</label><select name="project_slug">{project_options}</select></div>
         </div>
         <button>Create/reset admin</button>
       </form>
     </div>
-    <div class="card"><table><tr><th>User</th><th>Role</th><th>Active</th><th></th></tr>{rows}</table></div>
+    <div class="card"><table><tr><th>User</th><th>Role</th><th>Project</th><th>Active</th><th></th></tr>{rows}</table></div>
     """
-    return HTMLResponse(page("Admins", body, user=user))
+    return HTMLResponse(page("Admins", body, user=user, lang=get_lang(request), project_name=get_project_name(user_project_slug(user)), project_slug=user_project_slug(user)))
 
 
 @app.post("/admins/create")
@@ -517,17 +587,22 @@ def create_admin(
     username: Annotated[str, Form()],
     password: Annotated[str, Form()],
     role: str = Form("project_admin"),
+    project_slug: str = Form("nukem"),
 ) -> RedirectResponse:
     if role not in ("owner", "project_admin", "viewer"):
         raise HTTPException(status_code=400, detail="Invalid role.")
     with connect() as connection:
         connection.execute(
             """
-            INSERT INTO users (username, password_hash, role, active)
-            VALUES (?, ?, ?, 1)
-            ON CONFLICT(username) DO UPDATE SET password_hash=excluded.password_hash, role=excluded.role, active=1
+            INSERT INTO users (username, password_hash, role, project_slug, active)
+            VALUES (?, ?, ?, ?, 1)
+            ON CONFLICT(username) DO UPDATE SET
+                password_hash=excluded.password_hash,
+                role=excluded.role,
+                project_slug=excluded.project_slug,
+                active=1
             """,
-            (username.strip(), hash_password(password), role),
+            (username.strip(), hash_password(password), role, safe_segment(project_slug)),
         )
     return RedirectResponse("/admins", status_code=303)
 
@@ -654,6 +729,15 @@ def api_launcher_update() -> JSONResponse:
 @app.post("/api/reports")
 async def api_reports(request: Request) -> JSONResponse:
     payload = await request.json()
+    report_payload = {
+        "project": clean_text(payload.get("project"), 80),
+        "build_id": clean_text(payload.get("build_id"), 120),
+        "username": clean_text(payload.get("username"), 120),
+        "launcher_version": clean_text(payload.get("launcher_version"), 40),
+        "error_type": clean_text(payload.get("error_type"), 80),
+        "user_message": clean_text(payload.get("user_message"), 4000),
+        "technical_details": clean_text(payload.get("technical_details"), 20000),
+    }
     with connect() as connection:
         connection.execute(
             """
@@ -663,16 +747,67 @@ async def api_reports(request: Request) -> JSONResponse:
             VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                clean_text(payload.get("project"), 80),
-                clean_text(payload.get("build_id"), 120),
-                clean_text(payload.get("username"), 120),
-                clean_text(payload.get("launcher_version"), 40),
-                clean_text(payload.get("error_type"), 80),
-                clean_text(payload.get("user_message"), 4000),
-                clean_text(payload.get("technical_details"), 20000),
+                report_payload["project"],
+                report_payload["build_id"],
+                report_payload["username"],
+                report_payload["launcher_version"],
+                report_payload["error_type"],
+                report_payload["user_message"],
+                report_payload["technical_details"],
             ),
         )
-    return JSONResponse({"ok": True})
+    github_url = maybe_create_github_report(report_payload)
+    return JSONResponse({"ok": True, "github_url": github_url})
+
+
+def maybe_create_github_report(payload: dict[str, str]) -> str:
+    project = payload.get("project", "").lower()
+    if project in {"nukem", "ms_nuckem", "msnukem"}:
+        return ""
+
+    token = get_github_report_token()
+    repo = get_github_report_repo()
+    if not token or "/" not in repo:
+        return ""
+
+    title = f"[Launcher report] {payload.get('error_type') or 'manual'} / {payload.get('username') or 'unknown'}"
+    body = "\n".join(
+        [
+            "Automatic report from MSLaunch.",
+            "",
+            f"Project: {payload.get('project')}",
+            f"Build: {payload.get('build_id')}",
+            f"Player: {payload.get('username')}",
+            f"Launcher: {payload.get('launcher_version')}",
+            f"Type: {payload.get('error_type')}",
+            "",
+            "User message:",
+            payload.get("user_message") or "-",
+            "",
+            "Technical details:",
+            "```text",
+            payload.get("technical_details") or "-",
+            "```",
+        ]
+    )
+    request = urllib.request.Request(
+        f"https://api.github.com/repos/{repo}/issues",
+        data=json.dumps({"title": title[:250], "body": body, "labels": ["launcher-report"]}).encode("utf-8"),
+        headers={
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "User-Agent": "MSLaunch-Panel",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=8) as response:
+            data = json.loads(response.read().decode("utf-8"))
+    except (OSError, urllib.error.HTTPError, ValueError):
+        return ""
+    return str(data.get("html_url", ""))
 
 
 def clean_text(value: object, limit: int) -> str:

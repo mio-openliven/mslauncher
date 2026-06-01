@@ -10,19 +10,27 @@ from .security import generate_password, hash_password
 from .settings import get_database_path
 
 
-def create_user(username: str, role: str, password: str, *, database_path: Path | None = None) -> None:
+def create_user(
+    username: str,
+    role: str,
+    password: str,
+    *,
+    project_slug: str = "nukem",
+    database_path: Path | None = None,
+) -> None:
     init_db(database_path)
     with connect(database_path) as connection:
         connection.execute(
             """
-            INSERT INTO users (username, password_hash, role, active)
-            VALUES (?, ?, ?, 1)
+            INSERT INTO users (username, password_hash, role, project_slug, active)
+            VALUES (?, ?, ?, ?, 1)
             ON CONFLICT(username) DO UPDATE SET
                 password_hash=excluded.password_hash,
                 role=excluded.role,
+                project_slug=excluded.project_slug,
                 active=1
             """,
-            (username, hash_password(password), role),
+            (username, hash_password(password), role, project_slug),
         )
 
 
@@ -35,6 +43,7 @@ def parse_args() -> argparse.Namespace:
     create_parser = subparsers.add_parser("create-user", help="Create or reset a panel user.")
     create_parser.add_argument("--username", required=True)
     create_parser.add_argument("--role", default="project_admin", choices=("owner", "project_admin", "viewer"))
+    create_parser.add_argument("--project", default="nukem", help="Project slug for project admins/viewers.")
     create_parser.add_argument("--password", default="")
     create_parser.add_argument("--print-password", action="store_true")
 
@@ -54,8 +63,8 @@ def main() -> None:
             password = generate_password()
         if not password:
             password = getpass.getpass("Password: ")
-        create_user(args.username, args.role, password)
-        print(f"User ready: {args.username} ({args.role})")
+        create_user(args.username, args.role, password, project_slug=args.project)
+        print(f"User ready: {args.username} ({args.role}, project={args.project})")
         if args.print_password:
             print(password)
         return
@@ -65,4 +74,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

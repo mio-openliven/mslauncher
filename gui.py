@@ -233,6 +233,8 @@ TRANSLATIONS = {
         "feedback_card_body": "Report a bug or open logs if something does not launch cleanly.",
         "report_bug": "Report a bug",
         "support_offline": "Could not open the report page. Opening local reports instead.",
+        "report_sent": "Report sent.",
+        "report_send_failed": "Could not send the report. Opening local reports instead.",
         "feedback_panel_title": "Need help?",
         "feedback_panel_body": "Opens the bug report page for this project. If GitHub or the browser is unavailable, the launcher opens local reports instead.",
         "news_title": "News",
@@ -372,6 +374,8 @@ TRANSLATIONS = {
         "feedback_card_body": "\u0421\u043e\u043e\u0431\u0449\u0438\u0442\u0435 \u043e \u0431\u0430\u0433\u0435 \u0438\u043b\u0438 \u043e\u0442\u043a\u0440\u043e\u0439\u0442\u0435 \u043e\u0442\u0447\u0435\u0442\u044b, \u0435\u0441\u043b\u0438 \u0447\u0442\u043e-\u0442\u043e \u043d\u0435 \u0437\u0430\u043f\u0443\u0441\u043a\u0430\u0435\u0442\u0441\u044f.",
         "report_bug": "\u0421\u043e\u043e\u0431\u0449\u0438\u0442\u044c \u043e \u0431\u0430\u0433\u0435",
         "support_offline": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043a\u0440\u044b\u0442\u044c \u0431\u0430\u0433-\u0440\u0435\u043f\u043e\u0440\u0442. \u041e\u0442\u043a\u0440\u044b\u0432\u0430\u044e \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u044b\u0435 \u043e\u0442\u0447\u0435\u0442\u044b.",
+        "report_sent": "\u041e\u0442\u0447\u0451\u0442 \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d.",
+        "report_send_failed": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u043e\u0442\u0447\u0451\u0442. \u041e\u0442\u043a\u0440\u044b\u0432\u0430\u044e \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u044b\u0435 \u043e\u0442\u0447\u0451\u0442\u044b.",
         "feedback_panel_title": "\u041d\u0443\u0436\u043d\u0430 \u043f\u043e\u043c\u043e\u0449\u044c?",
         "feedback_panel_body": "\u041e\u0442\u043a\u0440\u043e\u0435\u0442 \u0431\u0430\u0433-\u0440\u0435\u043f\u043e\u0440\u0442 \u0434\u043b\u044f \u044d\u0442\u043e\u0433\u043e \u043f\u0440\u043e\u0435\u043a\u0442\u0430. \u0415\u0441\u043b\u0438 GitHub \u0438\u043b\u0438 \u0431\u0440\u0430\u0443\u0437\u0435\u0440 \u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u0435\u043d, \u043b\u0430\u0443\u043d\u0447\u0435\u0440 \u043e\u0442\u043a\u0440\u043e\u0435\u0442 \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u044b\u0435 \u043e\u0442\u0447\u0435\u0442\u044b.",
         "news_title": "\u041d\u043e\u0432\u043e\u0441\u0442\u0438",
@@ -460,7 +464,9 @@ def load_launcher_config(config_path: str | Path = CONFIG_FILE) -> dict[str, obj
             CLIENT_MODE_NUKEM: dict(DEFAULT_NUKEM_SOCIAL_LINKS),
         },
         "support_url": "https://github.com/mio-openliven/mslauncher/issues/new",
-        "support_urls": {},
+        "support_urls": {
+            "independent": "https://github.com/mio-openliven/mslauncher/issues/new"
+        },
         "panel": {
             "enabled": False,
             "base_url": "",
@@ -3541,11 +3547,34 @@ class MSLauncherWindow(QMainWindow):
 
     def handle_panel_report_action(self) -> None:
         if self.info_panel_mode in ("help", "feedback"):
+            if self.client_mode == "nukem":
+                if self.send_panel_report("manual_report"):
+                    self.set_status_text(self.translate("report_sent"))
+                    return
+                self.set_status_text(self.translate("report_send_failed"))
+                self.open_crash_reports_folder()
+                return
             support_url = get_support_url(self.config, self.client_mode)
             if support_url and QDesktopServices.openUrl(QUrl(support_url)):
                 return
             self.set_status_text(self.translate("support_offline"))
         self.open_crash_reports_folder()
+
+    def send_panel_report(self, context: str, user_message: str = "", technical_details: str = "") -> bool:
+        if self.client_mode != "nukem":
+            return False
+        return post_panel_report(
+            self.config,
+            {
+                "project": self.client_mode,
+                "build_id": self.get_selected_build_id(),
+                "username": self.get_current_username(),
+                "launcher_version": APP_VERSION,
+                "error_type": context,
+                "user_message": user_message or self.last_error_message or "Player pressed report button.",
+                "technical_details": technical_details or f"Manual report from {APP_DISPLAY_NAME} {APP_VERSION}.",
+            },
+        )
 
     def open_modpack_repo(self) -> None:
         repo_url = get_admin_link(self.config, self.client_mode, "repo_url")
@@ -3697,18 +3726,7 @@ class MSLauncherWindow(QMainWindow):
 
         self.last_error_message = user_message
         self.last_error_report_path = report_path
-        post_panel_report(
-            self.config,
-            {
-                "project": self.client_mode,
-                "build_id": self.get_selected_build_id(),
-                "username": self.get_current_username(),
-                "launcher_version": APP_VERSION,
-                "error_type": context,
-                "user_message": user_message,
-                "technical_details": technical_details,
-            },
-        )
+        self.send_panel_report(context, user_message, technical_details)
         self.info_panel_mode = "error"
         self.refresh_info_panel()
         self.info_panel.show()

@@ -22,6 +22,7 @@ def main() -> None:
         from admin_panel.cli import create_user
 
         create_user("li2fly", "owner", "secret")
+        create_user("SKELET", "project_admin", "nukem-secret", project_slug="nukem")
         archive_path = Path(temp_dir) / "pack.zip"
         with zipfile.ZipFile(archive_path, "w") as archive:
             archive.writestr("mods/example.jar", b"jar-data")
@@ -122,6 +123,33 @@ def main() -> None:
             assert report.status_code == 200
             reports_page = client.get("/reports")
             assert "sync_failed" in reports_page.text
+
+            logout = client.post("/logout", follow_redirects=False)
+            assert logout.status_code == 303
+            login = client.post(
+                "/login",
+                data={"username": "SKELET", "password": "nukem-secret"},
+                follow_redirects=False,
+            )
+            assert login.status_code == 303
+            dashboard = client.get("/")
+            assert "MS Nuckem" in dashboard.text
+            assert "VibeCraft" not in dashboard.text
+            builds_page = client.get("/builds")
+            assert "MS Nuckem" in builds_page.text
+            assert "VibeCraft" not in builds_page.text
+            forbidden = client.post(
+                "/builds/create",
+                data={
+                    "project_slug": "vibecraft",
+                    "build_id": "vc-test",
+                    "name": "Vibe Test",
+                    "minecraft_version": "1.20.1",
+                    "loader": "vanilla",
+                },
+                follow_redirects=False,
+            )
+            assert forbidden.status_code == 403
 
     print("admin panel smoke test: OK")
 

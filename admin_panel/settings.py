@@ -34,3 +34,11 @@ def get_session_secret() -> str:
 
 def get_public_base_url(default: str = "") -> str:
     return os.environ.get("MSLAUNCH_PANEL_PUBLIC_URL", default).rstrip("/")
+
+
+def get_github_report_repo() -> str:
+    return os.environ.get("MSLAUNCH_GITHUB_REPORT_REPO", "mio-openliven/mslauncher").strip()
+
+
+def get_github_report_token() -> str:
+    return os.environ.get("MSLAUNCH_GITHUB_REPORT_TOKEN", "").strip()
