@@ -12,8 +12,93 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import gui
-from PyQt6.QtCore import QEvent
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtCore import QEvent, QPoint
+from PyQt6.QtWidgets import QApplication, QWidget
+
+
+def widget_rect_in_parent(widget: QWidget, parent: QWidget) -> tuple[int, int]:
+    position = widget.mapTo(parent, QPoint(0, 0))
+    return position.x(), position.x() + widget.width()
+
+
+def assert_horizontal_no_overlap(parent: QWidget, widgets: list[QWidget]) -> None:
+    visible_widgets = [widget for widget in widgets if widget.isVisible()]
+    rects = [widget_rect_in_parent(widget, parent) for widget in visible_widgets]
+    for (_, previous_right), (current_left, _) in zip(rects, rects[1:]):
+        assert previous_right <= current_left
+
+
+def assert_layout_fixes(window: gui.MSLauncherWindow, app: QApplication) -> None:
+    control_frame = window.findChild(gui.QFrame, "controlFrame")
+    assert control_frame is not None
+
+    for width, height in ((1280, 720), (1040, 560)):
+        window.resize(width, height)
+        window.info_panel_mode = "settings"
+        window.refresh_info_panel()
+        window.show()
+        app.processEvents()
+        assert window.info_panel.geometry().bottom() < control_frame.geometry().top()
+
+        window.launcher_update_version = "1.9.888"
+        window.launcher_update_url = "https://example.com/MSLaunchSetup.exe"
+        window.info_panel_mode = "update"
+        window.refresh_info_panel()
+        app.processEvents()
+        assert window.info_title_label.wordWrap()
+        assert window.info_title_label.height() >= window.info_title_label.sizeHint().height()
+
+        window.client_mode = gui.CLIENT_MODE_NUKEM
+        window.apply_translations()
+        app.processEvents()
+        assert 116 <= control_frame.height() <= 120
+        assert window.username_input.height() == window.build_combo.height() == window.version_combo.height() == 38
+        assert window.loader_combo.height() == 38
+        assert window.play_button.height() == window.mods_button.height() == 38
+        control_groups = [
+            group
+            for group in control_frame.findChildren(gui.QFrame, "controlGroup")
+            if group.isVisible()
+        ]
+        assert len(control_groups) >= 6
+        cta_groups = {window.mods_button.parentWidget(), window.play_button.parentWidget()}
+        regular_groups = [group for group in control_groups if group not in cta_groups]
+        assert all(60 <= group.height() <= 64 for group in regular_groups)
+        assert 104 <= window.mods_button.parentWidget().height() <= 108
+        assert 104 <= window.play_button.parentWidget().height() <= 108
+        separators = [
+            separator
+            for separator in control_frame.findChildren(gui.QFrame, "controlSeparator")
+            if separator.isVisible()
+        ]
+        assert len(separators) == 4
+        assert all(separator.height() == 46 for separator in separators)
+        control_row_widgets: list[QWidget] = [
+            control_groups[0],
+            separators[0],
+            control_groups[1],
+            separators[1],
+            control_groups[2],
+            separators[2],
+            control_groups[3],
+            separators[3],
+            window.mods_button.parentWidget(),
+            window.play_button.parentWidget(),
+        ]
+        assert_horizontal_no_overlap(control_frame, control_row_widgets)
+        assert window.build_combo.width() >= min(window.build_combo.sizeHint().width(), 176)
+        assert window.mods_button.width() >= window.mods_button.sizeHint().width()
+        assert window.play_button.width() >= window.play_button.sizeHint().width()
+        assert [window.loader_combo.itemText(index) for index in range(window.loader_combo.count())] == [
+            "vanilla",
+            "fabric",
+        ]
+        window.set_loader_mode("fabric")
+        assert window.loader_combo.currentText() == "fabric"
+        assert window.loader_setting_combo.currentText() == "fabric"
+        window.set_loader_mode("vanilla")
+        assert window.loader_combo.currentText() == "vanilla"
+        assert window.loader_setting_combo.currentText() == "vanilla"
 
 
 def main() -> None:
@@ -42,6 +127,44 @@ def main() -> None:
         assert window.update_check_button.text() == "OK"
         assert window.update_poll_timer.interval() == 15_000
         assert window.update_poll_timer.isActive()
+        if gui.MASCOT_FEATURE_ENABLED:
+            assert len(window.mascot_paths) >= 1
+            window.show_mascot_picker()
+            assert window.mascot_picker_frame.isVisible()
+            window.select_floating_mascot(0)
+            assert window.mascot_picker_frame.isHidden()
+            assert window.mascot_window is not None
+            assert window.mascot_window.isVisible()
+            window.toggle_floating_mascot()
+            assert window.mascot_window.isHidden()
+            window.toggle_floating_mascot()
+            assert window.mascot_window is not None
+            assert window.mascot_window.isVisible()
+            first_mascot_index = window.mascot_window.mascot_index
+            window.register_floating_mascot_click()
+            window.register_floating_mascot_click()
+            assert window.mascot_window.mascot_index == first_mascot_index
+            window.register_floating_mascot_click()
+            assert window.mascot_window.mascot_index != first_mascot_index or len(window.mascot_paths) == 1
+            window.toggle_floating_mascot()
+            assert window.mascot_window.isHidden()
+            window.set_update_check_state("ok")
+            assert not window.register_update_ok_click()
+            assert not window.register_update_ok_click()
+            assert window.register_update_ok_click()
+            assert window.mascot_window is not None
+            assert window.mascot_window.isVisible()
+            assert window.mascot_window.message_label.text() == window.translate("update_mascot_ok")
+        else:
+            assert window.mascot_paths == []
+            assert window.mascot_button.isHidden()
+            assert not window.mascot_button.isEnabled()
+            window.show_mascot_picker()
+            assert window.mascot_picker_frame.isHidden()
+            window.toggle_floating_mascot()
+            assert window.mascot_window is None
+            window.set_update_check_state("ok")
+            assert not window.register_update_ok_click()
         assert window.project_switcher_expanded is False
         active_project_tab = window.project_tabs[window.client_mode]
         inactive_project_tabs = [
@@ -76,11 +199,28 @@ def main() -> None:
         )
         assert window.update_check_button.text() == "!"
         assert window.info_panel_mode == "update"
-        assert window.update_mascot_frame.isVisible()
-        window.eventFilter(window.update_mascot_frame, QEvent(QEvent.Type.Enter))
         assert window.update_mascot_frame.isHidden()
+        if gui.MASCOT_FEATURE_ENABLED:
+            assert window.mascot_window is not None
+            assert window.mascot_window.message_label.text() == window.translate("update_mascot_found")
+            window.dismiss_floating_mascot_message()
+            assert window.mascot_window.isHidden()
+        else:
+            assert window.mascot_window is None
         window.on_launcher_update_loaded({"launcher_version": gui.APP_VERSION})
         assert window.update_check_button.text() == "OK"
+        window.config["last_seen_launcher_version"] = "0.0.1"
+        window.show_startup_mascot_notice_if_needed()
+        if gui.MASCOT_FEATURE_ENABLED:
+            assert window.config["last_seen_launcher_version"] == gui.APP_VERSION
+            assert window.mascot_window is not None
+            assert window.mascot_window.message_label.text() == window.translate(
+                "mascot_updated", version=gui.APP_VERSION
+            )
+            window.dismiss_floating_mascot_message()
+        else:
+            assert window.config["last_seen_launcher_version"] == "0.0.1"
+            assert window.mascot_window is None
         window.show_success_status_card()
         assert window.info_panel_mode == "status"
         assert all(not row.isHidden() for row in window.status_rows)
@@ -202,6 +342,7 @@ def main() -> None:
         window.info_panel_mode = "update"
         window.refresh_info_panel()
         assert not window.download_update_button.isHidden()
+        assert_layout_fixes(window, app)
     finally:
         window.save_user_preferences = original_save_preferences
         window.close()
