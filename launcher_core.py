@@ -18,6 +18,7 @@ import requests
 
 from crash_advisor import advise_crash
 from java_diagnostics import JavaDiagnosticError, diagnose_launch_environment
+from launch_defaults import seed_minecraft_options
 from launcher_update import APP_DISPLAY_NAME, APP_VERSION
 from loader_support import INSTALLABLE_LOADERS, format_supported_loaders, normalize_loader
 from manifest_validator import ManifestValidationError, validate_manifest
@@ -42,6 +43,17 @@ class SyncPlan:
 class CrashLogSource:
     path: Path | None
     lines: list[str]
+
+
+def build_subprocess_startup_kwargs() -> dict[str, object]:
+    if os.name != "nt":
+        return {}
+
+    startupinfo = subprocess.STARTUPINFO()
+    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    startupinfo.wShowWindow = 0
+    creationflags = int(getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    return {"startupinfo": startupinfo, "creationflags": creationflags}
 
 
 class MinecraftEngine:
@@ -225,6 +237,8 @@ class MinecraftEngine:
 
         try:
             launch_version = self._install_requested_version(version, callback_options, effective_launch_options)
+            language = self._clean_config_text(effective_launch_options.get("language")) or "EN"
+            seed_minecraft_options(self.minecraft_directory, language)
 
             options = {
                 "username": username.strip() or "Player",
@@ -251,11 +265,11 @@ class MinecraftEngine:
                 encoding="utf-8",
                 errors="replace",
                 bufsize=1,
+                **build_subprocess_startup_kwargs(),
             )
             with self._process_lock:
                 self._current_process = process
 
-            language = self._clean_config_text(effective_launch_options.get("language")) or "EN"
             detach_event = effective_launch_options.get("detach_event")
             if not isinstance(detach_event, threading.Event):
                 detach_event = None
