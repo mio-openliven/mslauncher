@@ -40,8 +40,9 @@ def main() -> None:
         assert window.info_panel_mode == "status"
         assert all(not row.isHidden() for row in window.status_rows)
         assert window.update_check_button.text() == "OK"
-        assert window.update_poll_timer.interval() == 15_000
+        assert window.update_poll_timer.interval() == 10 * 60_000
         assert window.update_poll_timer.isActive()
+        assert window.hero_frame._animation_timer.interval() == gui.ParallaxFrame.IDLE_ANIMATION_INTERVAL_MS
         assert window.project_switcher_expanded is False
         active_project_tab = window.project_tabs[window.client_mode]
         inactive_project_tabs = [
