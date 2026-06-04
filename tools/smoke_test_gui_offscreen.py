@@ -91,6 +91,11 @@ def main() -> None:
         assert all(row.isHidden() for row in window.status_rows)
         assert window.open_crash_reports_button.text() == window.translate("report_bug")
         assert not window.open_crash_reports_button.icon().isNull()
+        assert "GitHub" not in window.info_body_label.text()
+        assert (
+            "owner panel" in window.info_body_label.text()
+            or "\u043f\u0430\u043d\u0435\u043b\u044c" in window.info_body_label.text()
+        )
         window.client_mode = gui.CLIENT_MODE_INDEPENDENT
         window.social_links = gui.get_social_links(window.config, window.client_mode)
         window.refresh_project_backgrounds()

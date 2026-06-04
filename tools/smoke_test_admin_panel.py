@@ -121,6 +121,10 @@ def main() -> None:
                 },
             )
             assert report.status_code == 200
+            report_data = report.json()
+            assert report_data["ok"] is True
+            assert isinstance(report_data["report_id"], int)
+            assert "github_url" not in report_data
             reports_page = client.get("/reports")
             assert "sync_failed" in reports_page.text
 
