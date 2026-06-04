@@ -1157,6 +1157,11 @@ class StatusGlyph(QFrame):
 
 
 class ParallaxFrame(QFrame):
+    IDLE_ANIMATION_INTERVAL_MS = 250
+    ACTIVE_ANIMATION_INTERVAL_MS = 66
+    SLIDE_INTERVAL_TICKS = 96
+    FADE_STEP = 0.07
+
     def __init__(self) -> None:
         super().__init__()
         self.setMouseTracking(False)
@@ -1171,13 +1176,14 @@ class ParallaxFrame(QFrame):
         self._fade_progress = 1.0
         self._slideshow_enabled = False
         self._slide_ticks = 0
-        self._slide_interval_ticks = 122
         self._cinema_phase = random.random() * math.tau
         self._particle_phase = 0
+        self._cover_cache: dict[tuple[int, int, int], QPixmap] = {}
         self._particles = self._create_particles()
         self._glow_particles = self._create_glow_particles()
         self._animation_timer = QTimer(self)
-        self._animation_timer.setInterval(33)
+        self._animation_timer.setTimerType(Qt.TimerType.CoarseTimer)
+        self._animation_timer.setInterval(self.IDLE_ANIMATION_INTERVAL_MS)
         self._animation_timer.timeout.connect(self._tick)
         self._animation_timer.start()
 
@@ -1193,6 +1199,7 @@ class ParallaxFrame(QFrame):
         self._background_index = random.randrange(len(self._background_paths)) if self._background_paths else 0
         self._pixmap = self._load_current_background()
         self._next_pixmap = None
+        self._cover_cache.clear()
         self._fade_progress = 1.0
         self._slideshow_enabled = slideshow_enabled and len(self._background_paths) > 1
         self._slide_ticks = 0
@@ -1216,13 +1223,26 @@ class ParallaxFrame(QFrame):
     def leaveEvent(self, event) -> None:
         super().leaveEvent(event)
 
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        if not self._animation_timer.isActive():
+            self._animation_timer.start()
+
+    def hideEvent(self, event) -> None:
+        self._animation_timer.stop()
+        super().hideEvent(event)
+
+    def resizeEvent(self, event) -> None:
+        self._cover_cache.clear()
+        super().resizeEvent(event)
+
     def _tick(self) -> None:
         self._current_offset_x *= 0.94
         self._current_offset_y *= 0.94
         self._cinema_phase = (self._cinema_phase + 0.0014) % math.tau
 
         if self._next_pixmap is not None:
-            self._fade_progress += 0.022
+            self._fade_progress += self.FADE_STEP
             if self._fade_progress >= 1:
                 self._pixmap = self._next_pixmap
                 self._next_pixmap = None
@@ -1230,7 +1250,7 @@ class ParallaxFrame(QFrame):
                 self._slide_ticks = 0
         elif self._slideshow_enabled:
             self._slide_ticks += 1
-            if self._slide_ticks >= self._slide_interval_ticks:
+            if self._slide_ticks >= self.SLIDE_INTERVAL_TICKS:
                 next_pixmap = self._load_next_background()
                 if next_pixmap is not None and not next_pixmap.isNull():
                     self._next_pixmap = next_pixmap
@@ -1239,7 +1259,13 @@ class ParallaxFrame(QFrame):
                     self._slide_ticks = 0
 
         self._particle_phase = (self._particle_phase + 1) % 1620
+        self._update_timer_interval()
         self.update()
+
+    def _update_timer_interval(self) -> None:
+        interval = self.ACTIVE_ANIMATION_INTERVAL_MS if self._next_pixmap is not None else self.IDLE_ANIMATION_INTERVAL_MS
+        if self._animation_timer.interval() != interval:
+            self._animation_timer.setInterval(interval)
 
     def paintEvent(self, event) -> None:
         painter = QPainter(self)
@@ -1260,12 +1286,7 @@ class ParallaxFrame(QFrame):
     def _paint_cover_pixmap(self, painter: QPainter, pixmap: QPixmap, opacity: float) -> None:
         target_width = max(1, int(self.width() * 1.10) + 64)
         target_height = max(1, int(self.height() * 1.10) + 48)
-        scaled = pixmap.scaled(
-            target_width,
-            target_height,
-            Qt.AspectRatioMode.KeepAspectRatioByExpanding,
-            Qt.TransformationMode.SmoothTransformation,
-        )
+        scaled = self._get_cover_pixmap(pixmap, target_width, target_height)
         cinematic_x = math.sin(self._cinema_phase * 0.74) * 10
         cinematic_y = math.cos(self._cinema_phase * 0.52) * 6
         x = int((self.width() - scaled.width()) / 2 - self._current_offset_x - cinematic_x)
@@ -1274,6 +1295,21 @@ class ParallaxFrame(QFrame):
         painter.setOpacity(opacity)
         painter.drawPixmap(x, y, scaled)
         painter.restore()
+
+    def _get_cover_pixmap(self, pixmap: QPixmap, target_width: int, target_height: int) -> QPixmap:
+        cache_key = (int(pixmap.cacheKey()), target_width, target_height)
+        cached_pixmap = self._cover_cache.get(cache_key)
+        if cached_pixmap is not None:
+            return cached_pixmap
+
+        scaled = pixmap.scaled(
+            target_width,
+            target_height,
+            Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+        self._cover_cache = {cache_key: scaled}
+        return scaled
 
     def _paint_depth_overlay(self, painter: QPainter) -> None:
         width = self.width()
@@ -1414,7 +1450,7 @@ class MSLauncherWindow(QMainWindow):
         self.update_pulse_timer.setInterval(650)
         self.update_pulse_timer.timeout.connect(self.toggle_update_pulse)
         self.update_poll_timer = QTimer(self)
-        self.update_poll_timer.setInterval(15_000)
+        self.update_poll_timer.setInterval(10 * 60_000)
         self.update_poll_timer.timeout.connect(self.auto_check_launcher_update)
         self.news_items: list[dict[str, str]] = []
         self.news_index = 0

@@ -11,7 +11,10 @@ def main() -> None:
     spec_file = (PROJECT_ROOT / "MSLauncher.spec").read_text(encoding="utf-8")
     prepare_script = (PROJECT_ROOT / "release" / "prepare_release.ps1").read_text(encoding="utf-8")
 
-    assert "python -m PyInstaller --noconfirm MSLauncher.spec" in build_script
+    assert "function Invoke-ProjectPython" in build_script
+    assert '& py -3 @Arguments' in build_script
+    assert '& python @Arguments' in build_script
+    assert 'Invoke-ProjectPython -Arguments @("-m", "PyInstaller", "--noconfirm", "MSLauncher.spec")' in build_script
     assert "--add-data" not in build_script
     assert "dist\\MSLauncher\\MSLauncher.exe" in build_script
     assert "Test-Path" in build_script
