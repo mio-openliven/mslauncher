@@ -260,6 +260,13 @@ def main() -> None:
             "website": "https://site.example",
         }
         assert window.get_visible_social_links()[2] == ("vk", "https://vk.example/group")
+        window.social_links = {
+            "youtube": "https://youtube.example",
+            "discord": "https://discord.example",
+            "rutube": "https://rutube.example/channel",
+            "website": "https://site.example",
+        }
+        assert window.get_visible_social_links()[2] == ("rutube", "https://rutube.example/channel")
         window.show_feedback_panel()
         assert not window.status_summary_timer.isActive()
         assert all(row.isHidden() for row in window.status_rows)
@@ -271,6 +278,9 @@ def main() -> None:
             or "\u043f\u0430\u043d\u0435\u043b\u044c" in window.info_body_label.text()
         )
         assert "bug" not in window.open_crash_reports_button.text().lower()
+        disclosure = window.create_report_disclosure_label()
+        assert window.translate("report_payload_disclosure") in disclosure.text()
+        assert "technical" in disclosure.text().lower() or "\u0442\u0435\u0445\u043d\u0438\u0447" in disclosure.text().lower()
         report_dialog_calls: list[bool] = []
         original_open_report_dialog = window.open_report_dialog
         original_send_panel_report = window.send_panel_report
@@ -472,6 +482,9 @@ def main() -> None:
         window.info_panel_mode = "settings"
         window.refresh_info_panel()
         assert all(not widget.isHidden() for widget in window.settings_widgets)
+        assert window.memory_min_input.height() <= 32
+        assert window.memory_max_input.height() <= 32
+        assert window.settings_scroll_area.verticalScrollBar().width() >= 14
 
         window.info_panel_mode = "feedback"
         window.refresh_info_panel()

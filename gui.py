@@ -305,6 +305,7 @@ TRANSLATIONS = {
         "report_dialog_title": "Report a problem",
         "report_dialog_body": "Write what happened, what you dislike, or what you want changed.",
         "report_dialog_placeholder": "Example: the launcher is confusing here, the button does not work, or I want...",
+        "report_payload_disclosure": "Also sent: nickname, build, launcher version, and technical details.",
         "report_send": "Send",
         "report_dialog_send": "Send",
         "report_dialog_cancel": "Cancel",
@@ -487,6 +488,7 @@ TRANSLATIONS = {
         "report_dialog_title": "\u0421\u043e\u043e\u0431\u0449\u0438\u0442\u044c \u043e \u043f\u0440\u043e\u0431\u043b\u0435\u043c\u0435",
         "report_dialog_body": "\u041d\u0430\u043f\u0438\u0448\u0438\u0442\u0435, \u0447\u0442\u043e \u0441\u043b\u0443\u0447\u0438\u043b\u043e\u0441\u044c, \u0447\u0442\u043e \u043d\u0435 \u043d\u0440\u0430\u0432\u0438\u0442\u0441\u044f \u0438\u043b\u0438 \u0447\u0442\u043e \u0445\u043e\u0442\u0438\u0442\u0435 \u0438\u0437\u043c\u0435\u043d\u0438\u0442\u044c.",
         "report_dialog_placeholder": "\u041d\u0430\u043f\u0440\u0438\u043c\u0435\u0440: \u0442\u0443\u0442 \u043d\u0435\u043f\u043e\u043d\u044f\u0442\u043d\u043e, \u043a\u043d\u043e\u043f\u043a\u0430 \u043d\u0435 \u0440\u0430\u0431\u043e\u0442\u0430\u0435\u0442 \u0438\u043b\u0438 \u0445\u043e\u0447\u0443...",
+        "report_payload_disclosure": "\u0422\u0430\u043a\u0436\u0435 \u043e\u0442\u043f\u0440\u0430\u0432\u044f\u0442\u0441\u044f: \u043d\u0438\u043a, \u0441\u0431\u043e\u0440\u043a\u0430, \u0432\u0435\u0440\u0441\u0438\u044f \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430 \u0438 \u0442\u0435\u0445\u043d\u0438\u0447\u0435\u0441\u043a\u0438\u0435 \u0434\u0435\u0442\u0430\u043b\u0438.",
         "report_dialog_send": "\u041e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c",
         "report_dialog_cancel": "\u041e\u0442\u043c\u0435\u043d\u0430",
         "report_send": "\u041e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c",
@@ -1994,11 +1996,12 @@ class MSLauncherWindow(QMainWindow):
         self.settings_scroll_area.setFrameShape(QFrame.Shape.NoFrame)
         self.settings_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.settings_scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.settings_scroll_area.setViewportMargins(0, 0, 12, 0)
         self.settings_container = QFrame()
         self.settings_container.setObjectName("settingsContainer")
         settings_layout = QVBoxLayout(self.settings_container)
         settings_layout.setContentsMargins(0, 0, 0, 0)
-        settings_layout.setSpacing(8)
+        settings_layout.setSpacing(4)
         for widget in (
             self.loader_setting_label,
             self.loader_setting_combo,
@@ -2818,7 +2821,7 @@ class MSLauncherWindow(QMainWindow):
         for key in ("vk_group", "vk", "rutube", "website", "link"):
             url = self.social_links.get(key)
             if url:
-                icon_key = "vk" if key in ("vk", "vk_group") else "link"
+                icon_key = "vk" if key == "vk_group" else key
                 direct_links.append((icon_key, url))
                 break
 
@@ -3160,14 +3163,18 @@ class MSLauncherWindow(QMainWindow):
                 border: 0;
             }
             #settingsScrollArea QScrollBar:vertical {
-                background: rgba(255, 255, 255, 16);
-                width: 8px;
-                margin: 2px;
-                border-radius: 4px;
+                background: rgba(255, 255, 255, 18);
+                width: 14px;
+                margin: 2px 0 2px 6px;
+                border-radius: 7px;
             }
             #settingsScrollArea QScrollBar::handle:vertical {
-                background: rgba(116, 231, 186, 90);
-                border-radius: 4px;
+                background: rgba(93, 202, 235, 132);
+                min-height: 34px;
+                border-radius: 7px;
+            }
+            #settingsScrollArea QScrollBar::handle:vertical:hover {
+                background: rgba(93, 202, 235, 205);
             }
             #settingsScrollArea QScrollBar::add-line:vertical,
             #settingsScrollArea QScrollBar::sub-line:vertical {
@@ -3451,7 +3458,7 @@ class MSLauncherWindow(QMainWindow):
             }
             QLabel#memoryHint {
                 color: #8ddcf2;
-                font-size: 12px;
+                font-size: 11px;
                 font-weight: 800;
             }
             QLabel#memoryHint[risk="good"] {
@@ -3464,12 +3471,16 @@ class MSLauncherWindow(QMainWindow):
                 color: #ff756e;
             }
             QSpinBox#memorySpin {
-                padding-right: 34px;
+                padding-top: 2px;
+                padding-bottom: 2px;
+                padding-right: 30px;
+                min-height: 22px;
+                max-height: 28px;
             }
             QSpinBox#memorySpin::up-button,
             QSpinBox#memorySpin::down-button {
                 subcontrol-origin: border;
-                width: 28px;
+                width: 24px;
                 background: rgba(93, 202, 235, 16);
                 border-left: 1px solid rgba(93, 202, 235, 42);
             }
@@ -4819,6 +4830,7 @@ class MSLauncherWindow(QMainWindow):
         message_input.setObjectName("reportTextInput")
         message_input.setPlaceholderText(self.translate("report_dialog_placeholder"))
         message_input.setMinimumHeight(150)
+        disclosure = self.create_report_disclosure_label()
 
         buttons = QHBoxLayout()
         buttons.addStretch(1)
@@ -4833,6 +4845,7 @@ class MSLauncherWindow(QMainWindow):
         layout.addWidget(title)
         layout.addWidget(body)
         layout.addWidget(message_input)
+        layout.addWidget(disclosure)
         layout.addLayout(buttons)
 
         if dialog.exec() != QDialog.DialogCode.Accepted:
@@ -4860,6 +4873,12 @@ class MSLauncherWindow(QMainWindow):
         self.set_status_text(self.translate("report_send_failed"))
         self.open_crash_reports_folder()
 
+    def create_report_disclosure_label(self) -> QLabel:
+        disclosure = QLabel(self.translate("report_payload_disclosure"))
+        disclosure.setObjectName("accessBody")
+        disclosure.setWordWrap(True)
+        return disclosure
+
     def request_player_report_message(self) -> str | None:
         dialog = QDialog(self)
         dialog.setWindowTitle(self.translate("report_dialog_title"))
@@ -4882,6 +4901,7 @@ class MSLauncherWindow(QMainWindow):
         message_input.setObjectName("reportInput")
         message_input.setPlaceholderText(self.translate("report_dialog_placeholder"))
         message_input.setMinimumHeight(120)
+        disclosure = self.create_report_disclosure_label()
 
         button_row = QHBoxLayout()
         button_row.addStretch()
@@ -4896,6 +4916,7 @@ class MSLauncherWindow(QMainWindow):
         layout.addWidget(title)
         layout.addWidget(body)
         layout.addWidget(message_input)
+        layout.addWidget(disclosure)
         layout.addLayout(button_row)
         dialog.setStyleSheet(self.report_dialog_stylesheet())
 
