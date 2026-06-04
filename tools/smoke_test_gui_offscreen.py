@@ -29,6 +29,7 @@ def main() -> None:
         assert window.mods_button.text()
         assert not window.play_button.icon().isNull()
         assert not window.mods_button.icon().isNull()
+        assert window.add_username_button.toolTip() == window.translate("add_username")
         assert window.play_button.minimumHeight() == window.mods_button.minimumHeight()
         assert not window.progress_bar.isTextVisible()
 
@@ -42,6 +43,15 @@ def main() -> None:
         assert window.update_check_button.text() == "OK"
         assert window.update_poll_timer.interval() == 15_000
         assert window.update_poll_timer.isActive()
+        original_get_text = gui.QInputDialog.getText
+        gui.QInputDialog.getText = lambda *args, **kwargs: ("SmokePlayer", True)
+        try:
+            window.add_local_username()
+        finally:
+            gui.QInputDialog.getText = original_get_text
+        assert window.get_current_username() == "SmokePlayer"
+        assert window.recent_usernames[0] == "SmokePlayer"
+        assert window.config["default_username"] == "SmokePlayer"
         assert window.project_switcher_expanded is False
         active_project_tab = window.project_tabs[window.client_mode]
         inactive_project_tabs = [

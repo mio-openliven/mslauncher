@@ -222,6 +222,9 @@ TRANSLATIONS = {
         "profile_other": "Other",
         "build": "Build",
         "username": "Nick",
+        "add_username": "Add nickname",
+        "add_username_prompt": "Enter a nickname to save locally.",
+        "username_saved": "Nickname saved.",
         "version": "Version",
         "play": "Play",
         "mods": "Mods",
@@ -365,6 +368,9 @@ TRANSLATIONS = {
         "profile_other": "\u0414\u0440\u0443\u0433\u043e\u0435",
         "build": "\u0421\u0431\u043e\u0440\u043a\u0430",
         "username": "\u041d\u0438\u043a",
+        "add_username": "\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u043d\u0438\u043a",
+        "add_username_prompt": "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u043d\u0438\u043a, \u0447\u0442\u043e\u0431\u044b \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0435\u0433\u043e \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e.",
+        "username_saved": "\u041d\u0438\u043a \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d.",
         "version": "\u0412\u0435\u0440\u0441\u0438\u044f",
         "play": "\u0418\u0433\u0440\u0430\u0442\u044c",
         "mods": "\u041c\u043e\u0434\u044b",
@@ -1778,6 +1784,10 @@ class MSLauncherWindow(QMainWindow):
         username_field_layout = QHBoxLayout(username_field)
         username_field_layout.setContentsMargins(0, 0, 0, 0)
         username_field_layout.setSpacing(6)
+        self.add_username_button = QPushButton("+")
+        self.add_username_button.setObjectName("miniIconButton")
+        self.add_username_button.setFixedSize(42, 42)
+        self.add_username_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.skin_quick_button = QPushButton()
         self.skin_quick_button.setObjectName("miniIconButton")
         self.skin_quick_button.setFixedSize(42, 42)
@@ -1787,6 +1797,7 @@ class MSLauncherWindow(QMainWindow):
             self.skin_quick_button.setIcon(QIcon(str(skin_icon_path)))
             self.skin_quick_button.setIconSize(QSize(20, 20))
         username_field_layout.addWidget(self.username_input, 1)
+        username_field_layout.addWidget(self.add_username_button, 0)
         username_field_layout.addWidget(self.skin_quick_button, 0)
 
         self.build_label = QLabel()
@@ -2017,6 +2028,7 @@ class MSLauncherWindow(QMainWindow):
         self.memory_max_input.editingFinished.connect(self.save_user_preferences)
         self.java_path_input.editingFinished.connect(self.save_user_preferences)
         self.username_input.editTextChanged.connect(lambda *_: self.save_user_preferences())
+        self.add_username_button.clicked.connect(self.add_local_username)
 
     def change_language(self, language: str) -> None:
         if language in TRANSLATIONS:
@@ -2317,6 +2329,7 @@ class MSLauncherWindow(QMainWindow):
         self.skin_url_label.setText(self.translate("skin_url"))
         self.skin_url_button.setText(self.translate("skin_url_apply"))
         self.skin_url_input.setPlaceholderText(self.translate("skin_url_invalid"))
+        self.add_username_button.setToolTip(self.translate("add_username"))
         self.refresh_skin_status()
         self.language_label.setText(self.translate("language"))
         self.profile_label.setText(self.translate("profile"))
@@ -2773,6 +2786,27 @@ class MSLauncherWindow(QMainWindow):
             if cleaned_username and cleaned_username not in usernames:
                 usernames.append(cleaned_username)
         return usernames[:5]
+
+    def add_local_username(self) -> None:
+        username, accepted = QInputDialog.getText(
+            self,
+            self.translate("add_username"),
+            self.translate("add_username_prompt"),
+            text=self.get_current_username(),
+        )
+        username = username.strip()
+        if not accepted:
+            return
+        if not username:
+            self.show_error(self.translate("empty_username"))
+            return
+        self.username_input.setCurrentText(username)
+        self.recent_usernames = self.get_recent_usernames(username)
+        self.config["default_username"] = username
+        self.config["recent_usernames"] = self.recent_usernames
+        self.populate_usernames()
+        self.set_status_text(self.translate("username_saved"))
+        self.save_user_preferences()
 
     def on_profile_changed(self) -> None:
         self.active_profile = self.profile_manager.get_profile(self.get_selected_profile_id())
