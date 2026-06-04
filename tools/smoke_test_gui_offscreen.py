@@ -234,9 +234,16 @@ def main() -> None:
             assert window.mascot_window is None
         window.show_success_status_card()
         assert window.info_panel_mode == "status"
+        assert window.status_summary_timer.isActive() == bool(window.news_items)
         assert all(not row.isHidden() for row in window.status_rows)
         assert window.fabric_status_title.text() == window.translate("status_card_fabric")
         assert window.loader_setting_combo.currentText() in window.fabric_status_body.text()
+        if window.news_items:
+            window.show_news_summary_after_status()
+            assert window.info_panel_mode == "news"
+            assert window.news_frame.isVisible()
+            window.show_success_status_card()
+            assert window.info_panel_mode == "status"
         assert {
             window.loader_combo.itemText(index) for index in range(window.loader_combo.count())
         } == set(gui.SUPPORTED_LOADERS)
@@ -246,8 +253,15 @@ def main() -> None:
         window.set_loader_mode("neoforge")
         assert window.loader_setting_combo.currentText() == "neoforge"
         assert window.loader_combo.currentText() == "neoforge"
-        window.info_panel_mode = "feedback"
-        window.refresh_info_panel()
+        window.social_links = {
+            "youtube": "https://youtube.example",
+            "discord": "https://discord.example",
+            "vk_group": "https://vk.example/group",
+            "website": "https://site.example",
+        }
+        assert window.get_visible_social_links()[2] == ("vk", "https://vk.example/group")
+        window.show_feedback_panel()
+        assert not window.status_summary_timer.isActive()
         assert all(row.isHidden() for row in window.status_rows)
         assert window.open_crash_reports_button.text() == window.translate("report_bug")
         assert not window.open_crash_reports_button.icon().isNull()
@@ -329,6 +343,20 @@ def main() -> None:
         window.last_crash_reason = "java.lang.OutOfMemoryError: Java heap space"
         window.memory_max_input.setValue(2)
         assert window.get_crash_memory_fix_value() == "4G"
+        window.memory_max_input.setValue(1)
+        window.refresh_memory_hint()
+        assert window.memory_hint_label.text() == window.translate("memory_hint_low")
+        assert window.memory_hint_label.property("risk") == "warm"
+        window.memory_max_input.setValue(4)
+        window.refresh_memory_hint()
+        assert window.memory_hint_label.text() == window.translate("memory_hint_good")
+        assert window.memory_hint_label.property("risk") == "good"
+        window.memory_max_input.setValue(8)
+        window.refresh_memory_hint()
+        assert window.memory_hint_label.text() == window.translate("memory_hint_warm")
+        window.memory_max_input.setValue(12)
+        window.refresh_memory_hint()
+        assert window.memory_hint_label.text() == window.translate("memory_hint_hot")
         window.client_mode = gui.CLIENT_MODE_INDEPENDENT
         window.social_links = gui.get_social_links(window.config, window.client_mode)
         window.refresh_project_backgrounds()
@@ -372,7 +400,10 @@ def main() -> None:
         }
         window.info_panel_mode = "status"
         window.refresh_news_items()
+        assert window.news_frame.isHidden()
+        window.show_news_summary_after_status()
         assert window.news_frame.isVisible()
+        window.info_panel_mode = "status"
         window.config["project_access"] = {
             "nukem": {
                 "password_enabled": True,
@@ -392,7 +423,7 @@ def main() -> None:
         assert errors and window.translate("admin_password_disabled") in errors[-1]
         window.toggle_info_panel()
         assert window.info_panel_mode == "status"
-        assert window.news_frame.isVisible()
+        assert window.news_frame.isHidden()
         window.show_player_panel()
         assert not window.skin_browse_button.isHidden()
         window.skin_url_input.setText("https://example.com/skin.png")

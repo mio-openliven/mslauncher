@@ -255,6 +255,7 @@ TRANSLATIONS = {
         "memory_min": "Min RAM",
         "memory_max": "Max RAM",
         "memory_hint_good": "Perfect for your PC!",
+        "memory_hint_low": "Too low for a modded build. Use 4-6G if your PC allows it.",
         "memory_hint_warm": "High allocation. Close heavy apps before launch.",
         "memory_hint_hot": "Risky allocation. This can starve the system.",
         "java_path": "Java path",
@@ -431,6 +432,7 @@ TRANSLATIONS = {
         "memory_min": "\u041c\u0438\u043d. RAM",
         "memory_max": "\u041c\u0430\u043a\u0441. RAM",
         "memory_hint_good": "\u0418\u0434\u0435\u0430\u043b\u044c\u043d\u043e \u0434\u043b\u044f \u0442\u0432\u043e\u0435\u0433\u043e \u041f\u041a!",
+        "memory_hint_low": "\u041c\u0430\u043b\u043e \u0434\u043b\u044f \u0441\u0431\u043e\u0440\u043a\u0438 \u0441 \u043c\u043e\u0434\u0430\u043c\u0438. \u041b\u0443\u0447\u0448\u0435 4-6G, \u0435\u0441\u043b\u0438 \u041f\u041a \u043f\u043e\u0437\u0432\u043e\u043b\u044f\u0435\u0442.",
         "memory_hint_warm": "\u0412\u044b\u0441\u043e\u043a\u043e\u0435 \u0432\u044b\u0434\u0435\u043b\u0435\u043d\u0438\u0435. \u0417\u0430\u043a\u0440\u043e\u0439\u0442\u0435 \u0442\u044f\u0436\u0451\u043b\u044b\u0435 \u043f\u0440\u0438\u043b\u043e\u0436\u0435\u043d\u0438\u044f \u043f\u0435\u0440\u0435\u0434 \u0437\u0430\u043f\u0443\u0441\u043a\u043e\u043c.",
         "memory_hint_hot": "\u0420\u0438\u0441\u043a\u043e\u0432\u0430\u043d\u043d\u043e\u0435 \u0437\u043d\u0430\u0447\u0435\u043d\u0438\u0435. \u0421\u0438\u0441\u0442\u0435\u043c\u0435 \u043c\u043e\u0436\u0435\u0442 \u043d\u0435 \u0445\u0432\u0430\u0442\u0438\u0442\u044c RAM.",
         "java_path": "\u041f\u0443\u0442\u044c Java",
@@ -1676,6 +1678,10 @@ class MSLauncherWindow(QMainWindow):
         self.news_timer = QTimer(self)
         self.news_timer.setInterval(30_000)
         self.news_timer.timeout.connect(self.show_next_news_item)
+        self.status_summary_timer = QTimer(self)
+        self.status_summary_timer.setSingleShot(True)
+        self.status_summary_timer.setInterval(3_500)
+        self.status_summary_timer.timeout.connect(self.show_news_summary_after_status)
         self.brand_subtitle_key = random.choice(self.get_brand_subtitle_keys())
         self.action_phrase_key = "play_idle"
         self.launch_after_sync = True
@@ -1857,6 +1863,9 @@ class MSLauncherWindow(QMainWindow):
         info_layout = QVBoxLayout(self.info_panel)
         info_layout.setContentsMargins(24, 24, 24, 24)
         info_layout.setSpacing(14)
+        info_header_layout = QHBoxLayout()
+        info_header_layout.setContentsMargins(0, 0, 0, 0)
+        info_header_layout.setSpacing(8)
         self.info_title_label = QLabel()
         self.info_title_label.setObjectName("infoTitle")
         self.info_title_label.setWordWrap(True)
@@ -1864,11 +1873,17 @@ class MSLauncherWindow(QMainWindow):
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.MinimumExpanding,
         )
+        self.info_close_button = QPushButton("x")
+        self.info_close_button.setObjectName("infoCloseButton")
+        self.info_close_button.setFixedSize(24, 24)
+        self.info_close_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        info_header_layout.addWidget(self.info_title_label, 1)
+        info_header_layout.addWidget(self.info_close_button, 0, Qt.AlignmentFlag.AlignTop)
         self.info_body_label = QLabel()
         self.info_body_label.setObjectName("infoBody")
         self.info_body_label.setWordWrap(True)
         self.info_body_label.setMinimumWidth(240)
-        info_layout.addWidget(self.info_title_label)
+        info_layout.addLayout(info_header_layout)
         info_layout.addWidget(self.info_body_label)
 
         self.mods_status_title, self.mods_status_body, self.mods_status_check, mods_row = self.create_status_row(
@@ -2439,6 +2454,7 @@ class MSLauncherWindow(QMainWindow):
         self.feedback_button.clicked.connect(self.show_feedback_panel)
         self.open_profile_button.clicked.connect(self.open_current_profile_folder)
         self.open_game_button.clicked.connect(self.open_profiles_root_folder)
+        self.info_close_button.clicked.connect(self.close_info_panel)
         self.open_crash_reports_button.clicked.connect(self.handle_panel_report_action)
         self.download_update_button.clicked.connect(self.open_launcher_update_url)
         self.open_modpack_repo_button.clicked.connect(self.open_modpack_repo)
@@ -2705,7 +2721,10 @@ class MSLauncherWindow(QMainWindow):
         if not hasattr(self, "memory_hint_label"):
             return
         max_gb = self.memory_max_input.value()
-        if max_gb >= 12:
+        if max_gb <= 2:
+            risk = "warm"
+            hint_key = "memory_hint_low"
+        elif max_gb >= 12:
             risk = "hot"
             hint_key = "memory_hint_hot"
         elif max_gb >= 8:
@@ -2799,7 +2818,8 @@ class MSLauncherWindow(QMainWindow):
         for key in ("vk_group", "vk", "rutube", "website", "link"):
             url = self.social_links.get(key)
             if url:
-                direct_links.append(("link" if key != "vk" else "vk", url))
+                icon_key = "vk" if key in ("vk", "vk_group") else "link"
+                direct_links.append((icon_key, url))
                 break
 
         return direct_links[:3]
@@ -2855,7 +2875,7 @@ class MSLauncherWindow(QMainWindow):
         self.refresh_news_visibility()
 
     def refresh_news_visibility(self) -> None:
-        visible = bool(self.news_items) and self.info_panel_mode in ("status", "help")
+        visible = bool(self.news_items) and self.info_panel_mode in ("news", "help")
         self.news_frame.setVisible(visible)
         if visible and len(self.news_items) > 1:
             if not self.news_timer.isActive():
@@ -3233,6 +3253,18 @@ class MSLauncherWindow(QMainWindow):
             #infoBody {
                 color: #d5d8d5;
                 font-size: 14px;
+            }
+            QPushButton#infoCloseButton {
+                background: rgba(4, 10, 14, 88);
+                color: rgba(220, 246, 255, 205);
+                border: 0;
+                border-radius: 12px;
+                font-size: 13px;
+                font-weight: 900;
+            }
+            QPushButton#infoCloseButton:hover {
+                background: rgba(93, 202, 235, 42);
+                color: #ffffff;
             }
             #statusLabel {
                 color: #8ddcf2;
@@ -4483,6 +4515,7 @@ class MSLauncherWindow(QMainWindow):
             return
         if self.info_panel_mode in ("crash", "error"):
             return
+        self.status_summary_timer.stop()
         self.info_panel_mode = "update"
         self.refresh_info_panel()
         self.info_panel.show()
@@ -4490,6 +4523,7 @@ class MSLauncherWindow(QMainWindow):
             button.show()
 
     def toggle_info_panel(self) -> None:
+        self.status_summary_timer.stop()
         if self.info_panel_mode == "settings":
             self.info_panel_mode = "status" if self.status_card_confirmed else "help"
         elif self.info_panel_mode not in ("crash", "error", "update"):
@@ -4508,6 +4542,9 @@ class MSLauncherWindow(QMainWindow):
         self.info_panel.setMinimumHeight(220)
         self.info_title_label.setMinimumHeight(0)
         self.info_title_label.setWordWrap(False)
+        self.info_close_button.setVisible(
+            self.info_panel_mode not in ("crash", "error", "update")
+        )
         if hasattr(self, "news_frame"):
             self.refresh_news_visibility()
 
@@ -4627,6 +4664,18 @@ class MSLauncherWindow(QMainWindow):
             self.download_update_button.hide()
             return
 
+        if self.info_panel_mode == "news":
+            self.set_status_rows_visible(False)
+            self.set_settings_widgets_visible(False)
+            self.info_title_label.hide()
+            self.info_body_label.hide()
+            self.open_profile_button.hide()
+            self.open_game_button.hide()
+            self.open_crash_reports_button.hide()
+            self.download_update_button.hide()
+            self.refresh_news_visibility()
+            return
+
         if not self.status_card_confirmed:
             self.info_panel_mode = "help"
             self.refresh_info_panel()
@@ -4653,6 +4702,19 @@ class MSLauncherWindow(QMainWindow):
         self.java_status_body.setText(java_path if java_path else self.translate("runtime_auto"))
         return
 
+    def show_news_summary_after_status(self) -> None:
+        if self.info_panel_mode != "status":
+            return
+        if not self.news_items:
+            return
+        self.info_panel_mode = "news"
+        self.refresh_info_panel()
+
+    def close_info_panel(self) -> None:
+        self.status_summary_timer.stop()
+        self.info_panel.hide()
+        self.news_frame.hide()
+
     def set_status_rows_visible(self, visible: bool) -> None:
         for row in getattr(self, "status_rows", []):
             row.setVisible(visible)
@@ -4671,15 +4733,19 @@ class MSLauncherWindow(QMainWindow):
                 widget.setVisible(visible)
 
     def show_settings_panel(self) -> None:
+        self.status_summary_timer.stop()
         self.info_panel_mode = "settings"
         self.refresh_info_panel()
 
     def show_success_status_card(self) -> None:
         if self.info_panel_mode in ("admin", "crash", "error", "update", "settings", "feedback", "player"):
             return
+        self.status_summary_timer.stop()
         self.status_card_confirmed = True
         self.info_panel_mode = "status"
         self.refresh_info_panel()
+        if self.news_items:
+            self.status_summary_timer.start()
 
     def set_settings_widgets_visible(self, visible: bool) -> None:
         for widget in getattr(self, "settings_widgets", []):
@@ -4698,6 +4764,7 @@ class MSLauncherWindow(QMainWindow):
             widget.setVisible(visible)
 
     def show_feedback_panel(self) -> None:
+        self.status_summary_timer.stop()
         self.feedback_button.setText(self.translate("feedback_problem"))
         self.info_panel_mode = "feedback"
         self.refresh_info_panel()
@@ -4706,6 +4773,7 @@ class MSLauncherWindow(QMainWindow):
             button.show()
 
     def show_player_panel(self) -> None:
+        self.status_summary_timer.stop()
         self.info_panel_mode = "player"
         self.refresh_info_panel()
         self.info_panel.show()
@@ -4714,6 +4782,7 @@ class MSLauncherWindow(QMainWindow):
 
     def show_admin_panel(self, checked: bool = False, *, require_auth: bool = True) -> None:
         del checked
+        self.status_summary_timer.stop()
         if require_auth and not self.request_admin_access(show_panel=False):
             return
         self.info_panel_mode = "admin"
