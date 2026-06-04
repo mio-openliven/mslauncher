@@ -9,6 +9,7 @@ from pathlib import Path
 import requests
 from PyQt6.QtCore import QThread, pyqtSignal
 
+from launcher_config import CLIENT_MODE_INDEPENDENT, CLIENT_MODE_NUKEM
 from launcher_core import MinecraftEngine
 from manifest_validator import normalize_download_url, normalize_manifest_path
 from panel_client import PanelClientError, get_panel_launcher_update, resolve_panel_active_build
@@ -19,10 +20,6 @@ from url_policy import URLPolicyError
 CHUNK_SIZE = 1024 * 1024
 DOWNLOAD_RETRIES = 3
 REQUEST_TIMEOUT = 60
-CLIENT_MODE_INDEPENDENT = "independent"
-CLIENT_MODE_NUKEM = "nukem"
-
-
 class VersionsWorker(QThread):
     versions_loaded = pyqtSignal(list)
     error_occurred = pyqtSignal(str)
