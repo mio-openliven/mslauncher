@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QDialog,
     QFrame,
+    QGraphicsDropShadowEffect,
     QGridLayout,
     QHBoxLayout,
     QInputDialog,
@@ -2289,7 +2290,26 @@ class MSLauncherWindow(QMainWindow):
         button.setProperty("label", label)
         button.setFixedSize(52, 46)
         button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        shadow = QGraphicsDropShadowEffect(button)
+        shadow.setBlurRadius(18)
+        shadow.setOffset(0, 3)
+        shadow.setColor(QColor(0, 0, 0, 185))
+        button.setGraphicsEffect(shadow)
         return button
+
+    def set_project_tab_depth(self, tab: QPushButton, *, active: bool) -> None:
+        effect = tab.graphicsEffect()
+        if not isinstance(effect, QGraphicsDropShadowEffect):
+            effect = QGraphicsDropShadowEffect(tab)
+            tab.setGraphicsEffect(effect)
+        if active:
+            effect.setBlurRadius(28)
+            effect.setOffset(0, 0)
+            effect.setColor(QColor(93, 202, 235, 145))
+        else:
+            effect.setBlurRadius(16)
+            effect.setOffset(0, 4)
+            effect.setColor(QColor(0, 0, 0, 175))
 
     def set_button_icon(self, button: QPushButton, icon_key: str, size: int = 22) -> None:
         icon_file = ACTION_ICON_FILES.get(icon_key)
@@ -2878,11 +2898,12 @@ class MSLauncherWindow(QMainWindow):
             icon_path = self.get_project_icon_path(project_key)
             if icon_path.is_file():
                 tab.setIcon(QIcon(str(icon_path)))
-                tab.setIconSize(QSize(30, 30))
+                tab.setIconSize(QSize(38, 38))
             tab.setText(label if self.project_switcher_expanded and active else "")
             tab.setToolTip(label)
             tab.setVisible(project_key in ordered_keys)
-            tab.setFixedSize(154 if self.project_switcher_expanded and active else 52, 46)
+            tab.setFixedSize(152 if self.project_switcher_expanded and active else 50, 48)
+            self.set_project_tab_depth(tab, active=active)
             tab.style().unpolish(tab)
             tab.style().polish(tab)
             tab.update()
@@ -3242,37 +3263,36 @@ class MSLauncherWindow(QMainWindow):
                 border-radius: 8px;
             }
             QPushButton#projectTab {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(20, 38, 45, 150),
-                    stop:0.48 rgba(4, 11, 15, 182),
-                    stop:1 rgba(2, 6, 8, 212));
+                background: transparent;
                 color: #f3f6f2;
-                border: 1px solid rgba(93, 202, 235, 58);
-                border-radius: 9px;
-                padding: 0 8px;
+                border: 0;
+                border-radius: 0;
+                padding: 0 6px;
                 text-align: left;
                 font-size: 13px;
                 font-weight: 800;
+                icon-size: 38px 38px;
             }
             QPushButton#projectTab:hover {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(35, 76, 88, 170),
-                    stop:0.50 rgba(5, 20, 28, 214),
-                    stop:1 rgba(2, 8, 12, 230));
-                border: 1px solid rgba(93, 202, 235, 130);
+                    stop:0 rgba(93, 202, 235, 30),
+                    stop:0.50 rgba(5, 20, 28, 36),
+                    stop:1 rgba(2, 8, 12, 12));
+                border: 0;
+                color: #ffffff;
             }
             QPushButton#projectTab[active="true"] {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(27, 62, 73, 175),
-                    stop:0.46 rgba(4, 16, 22, 220),
-                    stop:1 rgba(2, 8, 12, 238));
-                border: 1px solid rgba(93, 202, 235, 112);
+                    stop:0 rgba(93, 202, 235, 42),
+                    stop:0.46 rgba(4, 16, 22, 26),
+                    stop:1 rgba(2, 8, 12, 0));
+                border: 0;
                 color: #ffffff;
             }
             QPushButton#projectTab:disabled {
                 color: rgba(255, 255, 255, 118);
-                background: rgba(6, 10, 12, 118);
-                border: 1px solid rgba(255, 255, 255, 24);
+                background: transparent;
+                border: 0;
             }
             QPushButton#languageToggle {
                 background: rgba(8, 11, 15, 120);
