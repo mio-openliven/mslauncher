@@ -138,6 +138,12 @@ SOCIAL_FALLBACK_LABELS = {
     "website": "WB",
     "link": "WB",
 }
+
+
+def normalize_social_icon_key(key: str) -> str:
+    return "vk" if key == "vk_group" else key
+
+
 ACTION_ICON_FILES = {
     "play": "play.svg",
     "download_mods": "download.svg",
@@ -334,7 +340,8 @@ TRANSLATIONS = {
         "manual_update_ok": "Launcher is up to date.",
         "manual_update_failed": "Could not check launcher updates: {error}",
         "download_update": "Download update",
-        "update_panel_body": "Manual update only. Download the new package and replace launcher files after closing the game.",
+        "update_status": "Update",
+        "update_panel_body": "The launcher found this update automatically. Download and run the new package after closing the game.",
         "status_mods_ready": "Mod files are ready.",
         "status_mods_no_sync": "This profile does not use server mod sync.",
         "update_disabled": "No launcher update notice.",
@@ -512,7 +519,8 @@ TRANSLATIONS = {
         "manual_update_ok": "\u041e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0439 \u043d\u0435\u0442",
         "manual_update_failed": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u044f: {error}",
         "download_update": "\u0421\u043a\u0430\u0447\u0430\u0442\u044c \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435",
-        "update_panel_body": "\u0410\u0432\u0442\u043e\u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u044f \u043f\u043e\u043a\u0430 \u043d\u0435\u0442. \u0421\u043a\u0430\u0447\u0430\u0439\u0442\u0435 \u043d\u043e\u0432\u044b\u0439 \u0430\u0440\u0445\u0438\u0432 \u0438 \u0437\u0430\u043c\u0435\u043d\u0438\u0442\u0435 \u0444\u0430\u0439\u043b\u044b \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430 \u043f\u043e\u0441\u043b\u0435 \u0437\u0430\u043a\u0440\u044b\u0442\u0438\u044f \u0438\u0433\u0440\u044b.",
+        "update_status": "\u041e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435",
+        "update_panel_body": "\u041b\u0430\u0443\u043d\u0447\u0435\u0440 \u043d\u0430\u0448\u0451\u043b \u044d\u0442\u043e \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435 \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0438. \u0421\u043a\u0430\u0447\u0430\u0439\u0442\u0435 \u0438 \u0437\u0430\u043f\u0443\u0441\u0442\u0438\u0442\u0435 \u043d\u043e\u0432\u044b\u0439 \u043f\u0430\u043a\u0435\u0442 \u043f\u043e\u0441\u043b\u0435 \u0437\u0430\u043a\u0440\u044b\u0442\u0438\u044f \u0438\u0433\u0440\u044b.",
         "status_mods_ready": "\u0424\u0430\u0439\u043b\u044b \u043c\u043e\u0434\u043e\u0432 \u0433\u043e\u0442\u043e\u0432\u044b.",
         "status_mods_no_sync": "\u042d\u0442\u043e\u0442 \u043f\u0440\u043e\u0444\u0438\u043b\u044c \u043d\u0435 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0435\u0442 \u0441\u0435\u0440\u0432\u0435\u0440\u043d\u0443\u044e \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u044e \u043c\u043e\u0434\u043e\u0432.",
         "update_disabled": "\u041d\u0435\u0442 \u0443\u0432\u0435\u0434\u043e\u043c\u043b\u0435\u043d\u0438\u044f \u043e\u0431 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0438.",
@@ -1950,11 +1958,13 @@ class MSLauncherWindow(QMainWindow):
         self.memory_min_input.setObjectName("memorySpin")
         self.memory_min_input.setRange(1, 16)
         self.memory_min_input.setSuffix("G")
+        self.memory_min_input.setFixedWidth(140)
         self.memory_max_label = QLabel()
         self.memory_max_input = QSpinBox()
         self.memory_max_input.setObjectName("memorySpin")
         self.memory_max_input.setRange(1, 32)
         self.memory_max_input.setSuffix("G")
+        self.memory_max_input.setFixedWidth(140)
         self.memory_hint_label = QLabel()
         self.memory_hint_label.setObjectName("memoryHint")
         self.memory_hint_label.setWordWrap(True)
@@ -1996,7 +2006,7 @@ class MSLauncherWindow(QMainWindow):
         self.settings_scroll_area.setFrameShape(QFrame.Shape.NoFrame)
         self.settings_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.settings_scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.settings_scroll_area.setViewportMargins(0, 0, 12, 0)
+        self.settings_scroll_area.setViewportMargins(0, 0, 22, 0)
         self.settings_container = QFrame()
         self.settings_container.setObjectName("settingsContainer")
         settings_layout = QVBoxLayout(self.settings_container)
@@ -2340,6 +2350,10 @@ class MSLauncherWindow(QMainWindow):
 
     def get_project_icon_path(self, project_key: str) -> Path:
         icon_name = PROJECT_ICON_FILES.get(project_key, PROJECT_ICON_FILES[CLIENT_MODE_INDEPENDENT])
+        for mark_name in (f"{project_key}_mark.png", f"{Path(icon_name).stem}_mark.png"):
+            mark_path = PROJECT_ICON_DIR / mark_name
+            if mark_path.is_file():
+                return mark_path
         return PROJECT_ICON_DIR / icon_name
 
     def create_control_label(self, icon_name: str) -> tuple[QFrame, QLabel]:
@@ -2810,7 +2824,7 @@ class MSLauncherWindow(QMainWindow):
 
     def get_visible_social_links(self) -> list[tuple[str, str]]:
         if len(self.social_links) <= 3:
-            return list(self.social_links.items())
+            return [(normalize_social_icon_key(key), url) for key, url in self.social_links.items()]
 
         direct_links: list[tuple[str, str]] = []
         for key in ("youtube", "discord"):
@@ -2821,7 +2835,7 @@ class MSLauncherWindow(QMainWindow):
         for key in ("vk_group", "vk", "rutube", "website", "link"):
             url = self.social_links.get(key)
             if url:
-                icon_key = "vk" if key == "vk_group" else key
+                icon_key = normalize_social_icon_key(key)
                 direct_links.append((icon_key, url))
                 break
 
@@ -3163,18 +3177,18 @@ class MSLauncherWindow(QMainWindow):
                 border: 0;
             }
             #settingsScrollArea QScrollBar:vertical {
-                background: rgba(255, 255, 255, 18);
-                width: 14px;
-                margin: 2px 0 2px 6px;
-                border-radius: 7px;
+                background: rgba(8, 18, 24, 86);
+                width: 18px;
+                margin: 4px 2px 4px 12px;
+                border-radius: 9px;
             }
             #settingsScrollArea QScrollBar::handle:vertical {
-                background: rgba(93, 202, 235, 132);
-                min-height: 34px;
-                border-radius: 7px;
+                background: rgba(93, 202, 235, 172);
+                min-height: 44px;
+                border-radius: 8px;
             }
             #settingsScrollArea QScrollBar::handle:vertical:hover {
-                background: rgba(93, 202, 235, 205);
+                background: rgba(93, 202, 235, 230);
             }
             #settingsScrollArea QScrollBar::add-line:vertical,
             #settingsScrollArea QScrollBar::sub-line:vertical {
@@ -3306,25 +3320,19 @@ class MSLauncherWindow(QMainWindow):
                 color: #f3f6f2;
                 border: 0;
                 border-radius: 0;
-                padding: 0 6px;
+                padding: 0 2px;
                 text-align: left;
                 font-size: 13px;
                 font-weight: 800;
                 icon-size: 38px 38px;
             }
             QPushButton#projectTab:hover {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(93, 202, 235, 30),
-                    stop:0.50 rgba(5, 20, 28, 36),
-                    stop:1 rgba(2, 8, 12, 12));
+                background: transparent;
                 border: 0;
                 color: #ffffff;
             }
             QPushButton#projectTab[active="true"] {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(93, 202, 235, 42),
-                    stop:0.46 rgba(4, 16, 22, 26),
-                    stop:1 rgba(2, 8, 12, 0));
+                background: transparent;
                 border: 0;
                 color: #ffffff;
             }
@@ -4358,6 +4366,7 @@ class MSLauncherWindow(QMainWindow):
             self.launcher_update_version = ""
             self.launcher_update_url = ""
             self.launcher_update_notes = ""
+            self.progress_bar.setValue(0)
             if self.info_panel_mode == "update":
                 self.info_panel_mode = "status"
                 self.refresh_info_panel()
@@ -4375,7 +4384,8 @@ class MSLauncherWindow(QMainWindow):
         self.launcher_update_url = download_url
         self.launcher_update_notes = update_notice["notes"]
         self.update_mascot_dismissed = False
-        self.set_status_text(self.translate("update_available", version=self.launcher_update_version))
+        self.progress_bar.setValue(100)
+        self.set_status("update_status")
         self.set_update_check_state("available")
         if show_panel:
             self.show_launcher_update_panel()

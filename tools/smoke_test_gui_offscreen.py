@@ -210,6 +210,8 @@ def main() -> None:
         )
         assert window.update_check_button.text() == "!"
         assert window.info_panel_mode == "update"
+        assert window.status_label.text() == window.translate("update_status")
+        assert window.progress_bar.value() == 100
         assert window.update_mascot_frame.isHidden()
         if gui.MASCOT_FEATURE_ENABLED:
             assert window.mascot_window is not None
@@ -220,6 +222,7 @@ def main() -> None:
             assert window.mascot_window is None
         window.on_launcher_update_loaded({"launcher_version": gui.APP_VERSION})
         assert window.update_check_button.text() == "OK"
+        assert window.progress_bar.value() == 0
         window.config["last_seen_launcher_version"] = "0.0.1"
         window.show_startup_mascot_notice_if_needed()
         if gui.MASCOT_FEATURE_ENABLED:
@@ -267,6 +270,11 @@ def main() -> None:
             "website": "https://site.example",
         }
         assert window.get_visible_social_links()[2] == ("rutube", "https://rutube.example/channel")
+        window.social_links = {
+            "youtube": "https://youtube.example",
+            "vk_group": "https://vk.example/group",
+        }
+        assert window.get_visible_social_links()[1] == ("vk", "https://vk.example/group")
         window.show_feedback_panel()
         assert not window.status_summary_timer.isActive()
         assert all(row.isHidden() for row in window.status_rows)
@@ -484,7 +492,9 @@ def main() -> None:
         assert all(not widget.isHidden() for widget in window.settings_widgets)
         assert window.memory_min_input.height() <= 32
         assert window.memory_max_input.height() <= 32
-        assert window.settings_scroll_area.verticalScrollBar().width() >= 14
+        assert window.memory_min_input.width() <= 160
+        assert window.memory_max_input.width() <= 160
+        assert window.settings_scroll_area.verticalScrollBar().width() >= 18
 
         window.info_panel_mode = "feedback"
         window.refresh_info_panel()
