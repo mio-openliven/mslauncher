@@ -96,6 +96,26 @@ def main() -> None:
         assert build["server"] == "play.example.com"
         assert build["port"] == "25565"
 
+        subprocess.run(
+            [
+                sys.executable,
+                str(PROJECT_ROOT / "generate_manifest.py"),
+                "--base-dir",
+                str(pack_path),
+                "--output-build",
+                "build-neoforge.json",
+                "--loader",
+                "neoforge",
+            ],
+            cwd=str(PROJECT_ROOT),
+            check=True,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+        neoforge_build = json.loads((pack_path / "build-neoforge.json").read_text(encoding="utf-8"))
+        assert neoforge_build["loader"] == "neoforge"
+
         missing_url_result = subprocess.run(
             [
                 sys.executable,
@@ -132,7 +152,7 @@ def main() -> None:
             encoding="utf-8",
         )
         assert bad_loader.returncode != 0
-        assert "loader must be vanilla or fabric" in bad_loader.stderr
+        assert "loader must be vanilla, fabric, quilt, or neoforge" in bad_loader.stderr
 
     print("generate manifest smoke test: OK")
 

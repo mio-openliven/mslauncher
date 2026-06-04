@@ -3,8 +3,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from loader_support import SUPPORTED_LOADERS, format_supported_loaders, normalize_loader
 
-SUPPORTED_LOADERS = ("vanilla", "fabric")
 MEMORY_PATTERN = re.compile(r"^(?P<amount>[1-9][0-9]*)(?P<unit>[mMgG])$")
 
 
@@ -32,9 +32,9 @@ def validate_launch_settings(settings: dict[str, object]) -> dict[str, object]:
 
 
 def validate_loader(loader: str) -> str:
-    normalized_loader = loader.strip().lower()
+    normalized_loader = normalize_loader(loader) or "vanilla"
     if normalized_loader not in SUPPORTED_LOADERS:
-        raise LaunchSettingsError(f"Unsupported loader: {loader}. Use vanilla or fabric.")
+        raise LaunchSettingsError(f"Unsupported loader: {loader}. Use {format_supported_loaders()}.")
     return normalized_loader
 
 

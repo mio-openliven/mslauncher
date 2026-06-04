@@ -4,9 +4,6 @@ import shutil
 import tempfile
 import hashlib
 import hmac
-import json
-import urllib.error
-import urllib.request
 from pathlib import Path
 from sqlite3 import Row
 from typing import Annotated
@@ -14,6 +11,8 @@ from typing import Annotated
 import uvicorn
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
+
+from loader_support import LOADER_LABELS, SUPPORTED_LOADERS, format_supported_loaders, normalize_loader
 
 from .db import connect, init_db
 from .html import esc, page
@@ -39,8 +38,6 @@ from .settings import (
     DEFAULT_HOST,
     DEFAULT_PORT,
     get_downloads_root,
-    get_github_report_repo,
-    get_github_report_token,
     get_public_base_url,
     get_session_secret,
     get_storage_root,
@@ -261,6 +258,16 @@ def dashboard(request: Request):
     return HTMLResponse(page(APP_NAME, body, user=user, lang=get_lang(request), project_name=get_project_name(user_project_slug(user)), project_slug=user_project_slug(user)))
 
 
+def render_loader_options(selected_loader: str = "fabric") -> str:
+    normalized_selected = normalize_loader(selected_loader) or "fabric"
+    options: list[str] = []
+    for loader_id in SUPPORTED_LOADERS:
+        selected = " selected" if loader_id == normalized_selected else ""
+        label = LOADER_LABELS.get(loader_id, loader_id.title())
+        options.append(f'<option value="{esc(loader_id)}"{selected}>{esc(label)}</option>')
+    return "".join(options)
+
+
 @app.get("/builds", response_class=HTMLResponse)
 def builds_page(request: Request):
     user = get_current_user(request)
@@ -284,7 +291,7 @@ def builds_page(request: Request):
           <div><label>Build ID</label><input name="build_id" placeholder="nukem-1-20-1"></div>
           <div><label>Name</label><input name="name" placeholder="MS Nuckem 1.20.1"></div>
           <div><label>Minecraft</label><input name="minecraft_version" placeholder="1.20.1"></div>
-          <div><label>Loader</label><select name="loader"><option>fabric</option><option>vanilla</option></select></div>
+          <div><label>Loader</label><select name="loader">{render_loader_options()}</select></div>
           <div><label>Loader version</label><input name="loader_version" value="latest"></div>
           <div><label>Server</label><input name="server"></div>
           <div><label>Port</label><input name="port"></div>
@@ -342,8 +349,9 @@ def create_build(
         project = safe_segment(project_slug)
         require_project_access(user, project)
         build = safe_segment(build_id)
-        if loader not in ("vanilla", "fabric"):
-            raise UploadValidationError("Loader must be vanilla or fabric.")
+        loader = normalize_loader(loader) or "vanilla"
+        if loader not in SUPPORTED_LOADERS:
+            raise UploadValidationError(f"Loader must be {format_supported_loaders()}.")
         if port and (not port.isdigit() or not 1 <= int(port) <= 65535):
             raise UploadValidationError("Port must be 1..65535.")
 
@@ -739,7 +747,7 @@ async def api_reports(request: Request) -> JSONResponse:
         "technical_details": clean_text(payload.get("technical_details"), 20000),
     }
     with connect() as connection:
-        connection.execute(
+        cursor = connection.execute(
             """
             INSERT INTO reports (
                 project, build_id, username, launcher_version, error_type, user_message, technical_details
@@ -756,58 +764,8 @@ async def api_reports(request: Request) -> JSONResponse:
                 report_payload["technical_details"],
             ),
         )
-    github_url = maybe_create_github_report(report_payload)
-    return JSONResponse({"ok": True, "github_url": github_url})
-
-
-def maybe_create_github_report(payload: dict[str, str]) -> str:
-    project = payload.get("project", "").lower()
-    if project in {"nukem", "ms_nuckem", "msnukem"}:
-        return ""
-
-    token = get_github_report_token()
-    repo = get_github_report_repo()
-    if not token or "/" not in repo:
-        return ""
-
-    title = f"[Launcher report] {payload.get('error_type') or 'manual'} / {payload.get('username') or 'unknown'}"
-    body = "\n".join(
-        [
-            "Automatic report from MSLaunch.",
-            "",
-            f"Project: {payload.get('project')}",
-            f"Build: {payload.get('build_id')}",
-            f"Player: {payload.get('username')}",
-            f"Launcher: {payload.get('launcher_version')}",
-            f"Type: {payload.get('error_type')}",
-            "",
-            "User message:",
-            payload.get("user_message") or "-",
-            "",
-            "Technical details:",
-            "```text",
-            payload.get("technical_details") or "-",
-            "```",
-        ]
-    )
-    request = urllib.request.Request(
-        f"https://api.github.com/repos/{repo}/issues",
-        data=json.dumps({"title": title[:250], "body": body, "labels": ["launcher-report"]}).encode("utf-8"),
-        headers={
-            "Accept": "application/vnd.github+json",
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-            "User-Agent": "MSLaunch-Panel",
-            "X-GitHub-Api-Version": "2022-11-28",
-        },
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(request, timeout=8) as response:
-            data = json.loads(response.read().decode("utf-8"))
-    except (OSError, urllib.error.HTTPError, ValueError):
-        return ""
-    return str(data.get("html_url", ""))
+        report_id = cursor.lastrowid
+    return JSONResponse({"ok": True, "report_id": report_id})
 
 
 def clean_text(value: object, limit: int) -> str:

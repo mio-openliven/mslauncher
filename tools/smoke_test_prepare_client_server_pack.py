@@ -45,6 +45,17 @@ def make_forge_jar(version: str = "1.20.1") -> bytes:
         return jar_path.read_bytes()
 
 
+def make_neoforge_jar(version: str = "1.21.1") -> bytes:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        jar_path = Path(temp_dir) / "neoforge.jar"
+        with zipfile.ZipFile(jar_path, "w") as jar:
+            jar.writestr(
+                "META-INF/neoforge.mods.toml",
+                f'modLoader="javafml"\nmodId="example"\nversionRange="[{version}]"\n',
+            )
+        return jar_path.read_bytes()
+
+
 def expect_prepare_error(callback) -> str:
     try:
         callback()
@@ -138,7 +149,26 @@ def main() -> None:
                 report_path=root / "forge-report.md",
             )
         )
-        assert "supports vanilla/fabric only" in error
+        assert "Forge packs still need" in error
+
+        neoforge_archive = root / "neoforge.zip"
+        write_zip(
+            neoforge_archive,
+            {
+                "mods/neoforge-one.jar": make_neoforge_jar(),
+                "mods/neoforge-two.jar": make_neoforge_jar(),
+            },
+        )
+        neoforge_output = root / "neoforge_output"
+        neoforge_result = prepare_server_pack(
+            archive_path=neoforge_archive,
+            output_dir=neoforge_output,
+            base_url=RAW_BASE_URL,
+            report_path=root / "neoforge-report.md",
+        )
+        assert neoforge_result.loader == "neoforge"
+        neoforge_build = json.loads((neoforge_output / "build.json").read_text(encoding="utf-8"))
+        assert neoforge_build["loader"] == "neoforge"
 
     print("prepare client server pack smoke test: OK")
 

@@ -55,6 +55,21 @@ def main() -> None:
                     follow_redirects=False,
                 )
             assert created.status_code == 303
+            created_neoforge = client.post(
+                "/builds/create",
+                data={
+                    "project_slug": "nukem",
+                    "build_id": "nukem-neoforge",
+                    "name": "Nukem NeoForge",
+                    "minecraft_version": "1.21.1",
+                    "loader": "neoforge",
+                    "loader_version": "latest",
+                    "server": "",
+                    "port": "",
+                },
+                follow_redirects=False,
+            )
+            assert created_neoforge.status_code == 303
 
             active = client.get("/api/projects/nukem/active-build")
             assert active.status_code == 200
@@ -121,6 +136,10 @@ def main() -> None:
                 },
             )
             assert report.status_code == 200
+            report_data = report.json()
+            assert report_data["ok"] is True
+            assert isinstance(report_data["report_id"], int)
+            assert "github_url" not in report_data
             reports_page = client.get("/reports")
             assert "sync_failed" in reports_page.text
 
@@ -137,6 +156,8 @@ def main() -> None:
             assert "VibeCraft" not in dashboard.text
             builds_page = client.get("/builds")
             assert "MS Nuckem" in builds_page.text
+            assert "NeoForge" in builds_page.text
+            assert "Quilt" in builds_page.text
             assert "VibeCraft" not in builds_page.text
             forbidden = client.post(
                 "/builds/create",

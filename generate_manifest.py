@@ -8,11 +8,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import quote
 
+from loader_support import SUPPORTED_LOADERS, format_supported_loaders, normalize_loader
+
 
 SCAN_DIRECTORIES = ("mods", "config", "resourcepacks")
 MANIFEST_FILE = "manifest.json"
 BUILD_FILE = "build.json"
-SUPPORTED_LOADERS = ("vanilla", "fabric")
 SKIPPED_SUFFIXES = (".part",)
 SKIPPED_NAMES = {
     ".gitkeep",
@@ -92,7 +93,7 @@ def generate_build_config(
     server: str,
     port: str,
 ) -> dict[str, str]:
-    normalized_loader = loader.strip().lower()
+    normalized_loader = normalize_loader(loader) or "vanilla"
     validate_loader(normalized_loader)
     validate_port(port)
 
@@ -113,8 +114,8 @@ def generate_build_config(
 
 
 def validate_loader(loader: str) -> None:
-    if loader not in SUPPORTED_LOADERS:
-        raise ValueError("loader must be vanilla or fabric.")
+    if normalize_loader(loader) not in SUPPORTED_LOADERS:
+        raise ValueError(f"loader must be {format_supported_loaders()}.")
 
 
 def validate_port(port: str) -> None:
@@ -144,7 +145,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--base-dir", default=".", help="Directory with mods/config/resourcepacks.")
     parser.add_argument("--base-url", default="", help="Raw base URL used to download files.")
     parser.add_argument("--minecraft-version", default="", help="Minecraft version for build.json.")
-    parser.add_argument("--loader", default="vanilla", help="Loader for build.json: vanilla or fabric.")
+    parser.add_argument("--loader", default="vanilla", help=f"Loader for build.json: {format_supported_loaders()}.")
     parser.add_argument("--server", default="", help="Server address for build.json.")
     parser.add_argument("--port", default="", help="Server port for build.json.")
     parser.add_argument("--build-name", default="Main Server", help="Build name shown in launcher.")
