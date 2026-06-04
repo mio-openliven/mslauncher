@@ -221,6 +221,9 @@ TRANSLATIONS = {
         "profile_personal": "Personal",
         "profile_other": "Other",
         "build": "Build",
+        "add_build": "Add local build",
+        "add_build_prompt": "Enter a local build name.",
+        "build_saved": "Local build saved.",
         "username": "Nick",
         "version": "Version",
         "play": "Play",
@@ -364,6 +367,9 @@ TRANSLATIONS = {
         "profile_personal": "\u041b\u0438\u0447\u043d\u044b\u0435",
         "profile_other": "\u0414\u0440\u0443\u0433\u043e\u0435",
         "build": "\u0421\u0431\u043e\u0440\u043a\u0430",
+        "add_build": "\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u0443\u044e \u0441\u0431\u043e\u0440\u043a\u0443",
+        "add_build_prompt": "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0438\u043c\u044f \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e\u0439 \u0441\u0431\u043e\u0440\u043a\u0438.",
+        "build_saved": "\u041b\u043e\u043a\u0430\u043b\u044c\u043d\u0430\u044f \u0441\u0431\u043e\u0440\u043a\u0430 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0430.",
         "username": "\u041d\u0438\u043a",
         "version": "\u0412\u0435\u0440\u0441\u0438\u044f",
         "play": "\u0418\u0433\u0440\u0430\u0442\u044c",
@@ -1793,6 +1799,17 @@ class MSLauncherWindow(QMainWindow):
         self.build_combo = QComboBox()
         self.build_combo.setEditable(True)
         self.populate_builds()
+        build_field = QFrame()
+        build_field.setObjectName("inlineFieldFrame")
+        build_field_layout = QHBoxLayout(build_field)
+        build_field_layout.setContentsMargins(0, 0, 0, 0)
+        build_field_layout.setSpacing(6)
+        self.add_build_button = QPushButton("+")
+        self.add_build_button.setObjectName("miniIconButton")
+        self.add_build_button.setFixedSize(42, 42)
+        self.add_build_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        build_field_layout.addWidget(self.build_combo, 1)
+        build_field_layout.addWidget(self.add_build_button, 0)
 
         self.version_label = QLabel()
         self.version_combo = QComboBox()
@@ -1851,7 +1868,7 @@ class MSLauncherWindow(QMainWindow):
         self.feedback_button.setMinimumHeight(34)
 
         username_group = self.create_control_group(self.username_label, username_field)
-        self.build_group = self.create_control_group(self.build_label, self.build_combo)
+        self.build_group = self.create_control_group(self.build_label, build_field)
         self.version_group = self.create_control_group(self.version_label, self.version_combo)
         username_group.setMaximumWidth(170)
         self.build_group.setMaximumWidth(146)
@@ -1982,6 +1999,7 @@ class MSLauncherWindow(QMainWindow):
         self.language_combo.currentTextChanged.connect(self.change_language)
         self.profile_combo.currentIndexChanged.connect(self.on_profile_changed)
         self.build_combo.currentIndexChanged.connect(self.on_build_changed)
+        self.add_build_button.clicked.connect(self.add_local_build)
         self.mslaunch_tab.clicked.connect(lambda: self.handle_project_tab(CLIENT_MODE_INDEPENDENT))
         self.nukem_tab.clicked.connect(lambda: self.handle_project_tab(CLIENT_MODE_NUKEM))
         self.vibecraft_tab.clicked.connect(lambda: self.handle_project_tab("vibecraft"))
@@ -2322,6 +2340,7 @@ class MSLauncherWindow(QMainWindow):
         self.profile_label.setText(self.translate("profile"))
         self.refresh_profile_labels()
         self.build_label.setText(self.translate("build"))
+        self.add_build_button.setToolTip(self.translate("add_build"))
         self.username_label.setText(self.translate("username"))
         self.version_label.setText(self.translate("version"))
         self.loader_label.setText(self.translate("loader"))
@@ -2856,6 +2875,9 @@ class MSLauncherWindow(QMainWindow):
         nukem_locked = self.client_mode == CLIENT_MODE_NUKEM
         self.build_combo.setEnabled(not nukem_locked)
         self.build_combo.setEditable(not nukem_locked)
+        if hasattr(self, "add_build_button"):
+            self.add_build_button.setVisible(not nukem_locked)
+            self.add_build_button.setEnabled(not nukem_locked)
         self.version_combo.setEnabled(not nukem_locked and self.version_combo.count() > 0)
         if hasattr(self, "admin_unlock_button"):
             self.admin_unlock_button.setVisible(
@@ -2889,6 +2911,58 @@ class MSLauncherWindow(QMainWindow):
         if build is None:
             return ""
         return str(build.get("id", "")).strip()
+
+    def make_local_build_id(self, build_name: str) -> str:
+        build_id = []
+        previous_dash = False
+        for char in build_name.strip().lower():
+            if char.isalnum():
+                build_id.append(char)
+                previous_dash = False
+            elif not previous_dash:
+                build_id.append("-")
+                previous_dash = True
+        normalized = "".join(build_id).strip("-")
+        return normalized or "local-build"
+
+    def add_local_build(self) -> None:
+        if self.client_mode == CLIENT_MODE_NUKEM:
+            return
+        build_name, accepted = QInputDialog.getText(
+            self,
+            self.translate("add_build"),
+            self.translate("add_build_prompt"),
+            text=self.build_combo.currentText().strip(),
+        )
+        build_name = build_name.strip()
+        if not accepted:
+            return
+        if not build_name:
+            self.show_error(self.translate("empty_build"))
+            return
+
+        build_id = self.make_local_build_id(build_name)
+        build = {
+            "id": build_id,
+            "name": build_name,
+            "minecraft_version": self.version_combo.currentText().strip(),
+            "loader": self.loader_setting_combo.currentText().strip() or "vanilla",
+            "loader_version": "latest",
+            "manifest_url": "",
+            "source_key": "",
+            "server": "",
+            "port": "",
+        }
+        self.builds = [existing for existing in self.builds if str(existing.get("id", "")).strip() != build_id]
+        self.builds.append(build)
+        self.config["builds"] = self.builds
+        self.config["default_build"] = build_id
+        self.populate_builds()
+        index = self.build_combo.findData(build)
+        if index >= 0:
+            self.build_combo.setCurrentIndex(index)
+        self.set_status_text(self.translate("build_saved"))
+        self.save_user_preferences()
 
     def get_project_access_config(self) -> dict[str, object]:
         access_config = self.config.get("project_access")
