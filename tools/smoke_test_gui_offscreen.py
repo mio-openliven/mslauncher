@@ -52,6 +52,7 @@ def main() -> None:
         assert window.get_current_username() == "SmokePlayer"
         assert window.recent_usernames[0] == "SmokePlayer"
         assert window.config["default_username"] == "SmokePlayer"
+        assert window.add_build_button.isHidden()
         assert window.project_switcher_expanded is False
         active_project_tab = window.project_tabs[window.client_mode]
         inactive_project_tabs = [
@@ -105,6 +106,17 @@ def main() -> None:
         window.social_links = gui.get_social_links(window.config, window.client_mode)
         window.refresh_project_backgrounds()
         window.refresh_social_buttons()
+        window.refresh_nukem_control_policy()
+        assert not window.add_build_button.isHidden()
+        original_get_text = gui.QInputDialog.getText
+        gui.QInputDialog.getText = lambda *args, **kwargs: ("Local Test Build", True)
+        try:
+            window.add_local_build()
+        finally:
+            gui.QInputDialog.getText = original_get_text
+        assert window.config["default_build"] == "local-test-build"
+        assert any(build.get("id") == "local-test-build" for build in window.builds)
+        assert window.get_selected_build_id() == "local-test-build"
         assert not window.social_buttons
         assert window.get_mods_action_key() == "game_folder"
         assert not window.hero_frame._slideshow_enabled
