@@ -96,6 +96,49 @@ def main() -> None:
             "owner panel" in window.info_body_label.text()
             or "\u043f\u0430\u043d\u0435\u043b\u044c" in window.info_body_label.text()
         )
+        assert "bug" not in window.open_crash_reports_button.text().lower()
+        sent_reports: list[tuple[str, str, str]] = []
+        original_request_report_message = window.request_player_report_message
+        original_send_panel_report = window.send_panel_report
+        original_save_manual_report_fallback = window.save_manual_report_fallback
+        original_open_crash_reports_folder = window.open_crash_reports_folder
+        opened_folders: list[bool] = []
+        window.request_player_report_message = lambda: "Player typed problem"
+        window.send_panel_report = lambda context, user_message="", technical_details="": sent_reports.append(
+            (context, user_message, technical_details)
+        ) or True
+        window.open_crash_reports_folder = lambda: opened_folders.append(True)
+        try:
+            window.handle_panel_report_action()
+            assert sent_reports
+            assert sent_reports[-1][0] == "manual_report"
+            assert sent_reports[-1][1] == "Player typed problem"
+            assert "Manual report" in sent_reports[-1][2]
+            assert not opened_folders
+            assert window.status_label.text() == window.translate("report_sent")
+
+            sent_reports.clear()
+            window.request_player_report_message = lambda: None
+            window.handle_panel_report_action()
+            assert not sent_reports
+            assert not opened_folders
+
+            fallback_reports: list[tuple[str, str]] = []
+            window.request_player_report_message = lambda: "Panel is down"
+            window.send_panel_report = lambda context, user_message="", technical_details="": False
+            window.save_manual_report_fallback = lambda user_message, technical_details: fallback_reports.append(
+                (user_message, technical_details)
+            ) or None
+            window.handle_panel_report_action()
+            assert fallback_reports
+            assert fallback_reports[-1][0] == "Panel is down"
+            assert not opened_folders
+            assert window.status_label.text() == window.translate("report_send_failed")
+        finally:
+            window.request_player_report_message = original_request_report_message
+            window.send_panel_report = original_send_panel_report
+            window.save_manual_report_fallback = original_save_manual_report_fallback
+            window.open_crash_reports_folder = original_open_crash_reports_folder
         window.client_mode = gui.CLIENT_MODE_INDEPENDENT
         window.social_links = gui.get_social_links(window.config, window.client_mode)
         window.refresh_project_backgrounds()

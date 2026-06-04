@@ -28,6 +28,7 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QMainWindow,
     QMessageBox,
+    QPlainTextEdit,
     QPushButton,
     QProgressBar,
     QFileDialog,
@@ -232,13 +233,18 @@ TRANSLATIONS = {
         "feedback_ok": "Everything OK?",
         "feedback_problem": "Click if there is a problem",
         "feedback_card_title": "Problems?",
-        "feedback_card_body": "Report a bug or open logs if something does not launch cleanly.",
-        "report_bug": "Report a bug",
-        "support_offline": "Could not send the report to the owner panel. Opening local reports instead.",
+        "feedback_card_body": "Send a report if something does not work cleanly.",
+        "report_bug": "Report",
+        "report_dialog_title": "Report a problem",
+        "report_dialog_body": "Write what happened. This helps the owner fix launcher and modpack issues.",
+        "report_dialog_placeholder": "Problem, critique, wish or request...",
+        "report_send": "Send",
+        "report_empty": "Write a short message before sending.",
+        "support_offline": "Could not send the report to the owner panel. Report saved locally.",
         "report_sent": "Report sent to the owner panel.",
-        "report_send_failed": "Could not send the report to the owner panel. Opening local reports instead.",
+        "report_send_failed": "Could not send the report to the owner panel. Report saved locally.",
         "feedback_panel_title": "Need help?",
-        "feedback_panel_body": "Sends a short report to the owner panel. If the panel is unavailable, the launcher opens local reports instead.",
+        "feedback_panel_body": "Write what happened. If the owner panel is unavailable, the launcher saves the report locally.",
         "news_title": "News",
         "news_empty": "No news yet.",
         "status_card_mods": "Mods ready",
@@ -375,13 +381,18 @@ TRANSLATIONS = {
         "feedback_ok": "\u0412\u0441\u0435 \u043e\u043a?",
         "feedback_problem": "\u041d\u0430\u0436\u043c\u0438, \u0435\u0441\u043b\u0438 \u043f\u0440\u043e\u0431\u043b\u0435\u043c\u0430",
         "feedback_card_title": "\u041f\u0440\u043e\u0431\u043b\u0435\u043c\u044b?",
-        "feedback_card_body": "\u0421\u043e\u043e\u0431\u0449\u0438\u0442\u0435 \u043e \u0431\u0430\u0433\u0435 \u0438\u043b\u0438 \u043e\u0442\u043a\u0440\u043e\u0439\u0442\u0435 \u043e\u0442\u0447\u0435\u0442\u044b, \u0435\u0441\u043b\u0438 \u0447\u0442\u043e-\u0442\u043e \u043d\u0435 \u0437\u0430\u043f\u0443\u0441\u043a\u0430\u0435\u0442\u0441\u044f.",
-        "report_bug": "\u0421\u043e\u043e\u0431\u0449\u0438\u0442\u044c \u043e \u0431\u0430\u0433\u0435",
-        "support_offline": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u043e\u0442\u0447\u0451\u0442 \u0432 \u043f\u0430\u043d\u0435\u043b\u044c \u0432\u043b\u0430\u0434\u0435\u043b\u044c\u0446\u0430. \u041e\u0442\u043a\u0440\u044b\u0432\u0430\u044e \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u044b\u0435 \u043e\u0442\u0447\u0451\u0442\u044b.",
+        "feedback_card_body": "\u041e\u0442\u043f\u0440\u0430\u0432\u044c\u0442\u0435 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435, \u0435\u0441\u043b\u0438 \u0447\u0442\u043e-\u0442\u043e \u0440\u0430\u0431\u043e\u0442\u0430\u0435\u0442 \u043d\u0435\u0447\u0438\u0441\u0442\u043e.",
+        "report_bug": "\u0421\u043e\u043e\u0431\u0449\u0438\u0442\u044c",
+        "report_dialog_title": "\u0421\u043e\u043e\u0431\u0449\u0438\u0442\u044c \u043e \u043f\u0440\u043e\u0431\u043b\u0435\u043c\u0435",
+        "report_dialog_body": "\u041d\u0430\u043f\u0438\u0448\u0438\u0442\u0435, \u0447\u0442\u043e \u0441\u043b\u0443\u0447\u0438\u043b\u043e\u0441\u044c. \u042d\u0442\u043e \u043f\u043e\u043c\u043e\u0436\u0435\u0442 \u0432\u043b\u0430\u0434\u0435\u043b\u044c\u0446\u0443 \u0438\u0441\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u043b\u0430\u0443\u043d\u0447\u0435\u0440 \u0438 \u0441\u0431\u043e\u0440\u043a\u0443.",
+        "report_dialog_placeholder": "\u041f\u0440\u043e\u0431\u043b\u0435\u043c\u0430, \u043a\u0440\u0438\u0442\u0438\u043a\u0430, \u043f\u043e\u0436\u0435\u043b\u0430\u043d\u0438\u0435 \u0438\u043b\u0438 \u043f\u0440\u043e\u0441\u044c\u0431\u0430...",
+        "report_send": "\u041e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c",
+        "report_empty": "\u041d\u0430\u043f\u0438\u0448\u0438\u0442\u0435 \u043a\u043e\u0440\u043e\u0442\u043a\u043e\u0435 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435 \u043f\u0435\u0440\u0435\u0434 \u043e\u0442\u043f\u0440\u0430\u0432\u043a\u043e\u0439.",
+        "support_offline": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u043e\u0442\u0447\u0451\u0442 \u0432 \u043f\u0430\u043d\u0435\u043b\u044c \u0432\u043b\u0430\u0434\u0435\u043b\u044c\u0446\u0430. \u041e\u0442\u0447\u0451\u0442 \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e.",
         "report_sent": "\u041e\u0442\u0447\u0451\u0442 \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d \u0432 \u043f\u0430\u043d\u0435\u043b\u044c \u0432\u043b\u0430\u0434\u0435\u043b\u044c\u0446\u0430.",
-        "report_send_failed": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u043e\u0442\u0447\u0451\u0442 \u0432 \u043f\u0430\u043d\u0435\u043b\u044c \u0432\u043b\u0430\u0434\u0435\u043b\u044c\u0446\u0430. \u041e\u0442\u043a\u0440\u044b\u0432\u0430\u044e \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u044b\u0435 \u043e\u0442\u0447\u0451\u0442\u044b.",
+        "report_send_failed": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u043e\u0442\u0447\u0451\u0442 \u0432 \u043f\u0430\u043d\u0435\u043b\u044c \u0432\u043b\u0430\u0434\u0435\u043b\u044c\u0446\u0430. \u041e\u0442\u0447\u0451\u0442 \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e.",
         "feedback_panel_title": "\u041d\u0443\u0436\u043d\u0430 \u043f\u043e\u043c\u043e\u0449\u044c?",
-        "feedback_panel_body": "\u041e\u0442\u043f\u0440\u0430\u0432\u0438\u0442 \u043a\u043e\u0440\u043e\u0442\u043a\u0438\u0439 \u043e\u0442\u0447\u0451\u0442 \u0432 \u043f\u0430\u043d\u0435\u043b\u044c \u0432\u043b\u0430\u0434\u0435\u043b\u044c\u0446\u0430. \u0415\u0441\u043b\u0438 \u043f\u0430\u043d\u0435\u043b\u044c \u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u043d\u0430, \u043b\u0430\u0443\u043d\u0447\u0435\u0440 \u043e\u0442\u043a\u0440\u043e\u0435\u0442 \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u044b\u0435 \u043e\u0442\u0447\u0451\u0442\u044b.",
+        "feedback_panel_body": "\u041d\u0430\u043f\u0438\u0448\u0438\u0442\u0435, \u0447\u0442\u043e \u0441\u043b\u0443\u0447\u0438\u043b\u043e\u0441\u044c. \u0415\u0441\u043b\u0438 \u043f\u0430\u043d\u0435\u043b\u044c \u0432\u043b\u0430\u0434\u0435\u043b\u044c\u0446\u0430 \u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u043d\u0430, \u043b\u0430\u0443\u043d\u0447\u0435\u0440 \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442 \u043e\u0442\u0447\u0451\u0442 \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e.",
         "news_title": "\u041d\u043e\u0432\u043e\u0441\u0442\u0438",
         "news_empty": "\u041d\u043e\u0432\u043e\u0441\u0442\u0435\u0439 \u043f\u043e\u043a\u0430 \u043d\u0435\u0442.",
         "status_card_mods": "\u041c\u043e\u0434\u044b \u0433\u043e\u0442\u043e\u0432\u044b",
@@ -3746,13 +3757,139 @@ class MSLauncherWindow(QMainWindow):
 
     def handle_panel_report_action(self) -> None:
         if self.info_panel_mode in ("help", "feedback"):
-            if self.send_panel_report("manual_report"):
+            user_message = self.request_player_report_message()
+            if user_message is None:
+                return
+            technical_details = self.build_manual_report_details()
+            if self.send_panel_report("manual_report", user_message, technical_details):
                 self.set_status_text(self.translate("report_sent"))
                 return
+            self.save_manual_report_fallback(user_message, technical_details)
             self.set_status_text(self.translate("report_send_failed"))
-            self.open_crash_reports_folder()
             return
         self.open_crash_reports_folder()
+
+    def request_player_report_message(self) -> str | None:
+        dialog = QDialog(self)
+        dialog.setWindowTitle(self.translate("report_dialog_title"))
+        dialog.setModal(True)
+        dialog.setMinimumWidth(420)
+
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setSpacing(12)
+
+        title = QLabel(self.translate("report_dialog_title"))
+        title.setObjectName("accessTitle")
+        title.setWordWrap(True)
+
+        body = QLabel(self.translate("report_dialog_body"))
+        body.setObjectName("accessBody")
+        body.setWordWrap(True)
+
+        message_input = QPlainTextEdit()
+        message_input.setObjectName("reportInput")
+        message_input.setPlaceholderText(self.translate("report_dialog_placeholder"))
+        message_input.setMinimumHeight(120)
+
+        button_row = QHBoxLayout()
+        button_row.addStretch()
+        cancel_button = QPushButton(self.translate("cancel_close"))
+        cancel_button.setObjectName("accessCancelButton")
+        send_button = QPushButton(self.translate("report_send"))
+        send_button.setObjectName("accessDownloadButton")
+        self.set_button_icon(send_button, "report_bug", 18)
+        button_row.addWidget(cancel_button)
+        button_row.addWidget(send_button)
+
+        layout.addWidget(title)
+        layout.addWidget(body)
+        layout.addWidget(message_input)
+        layout.addLayout(button_row)
+        dialog.setStyleSheet(self.report_dialog_stylesheet())
+
+        cancel_button.clicked.connect(dialog.reject)
+        send_button.clicked.connect(dialog.accept)
+        message_input.setFocus()
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return None
+
+        message = message_input.toPlainText().strip()
+        if not message:
+            self.set_status_text(self.translate("report_empty"))
+            return None
+        return message[:4000]
+
+    def report_dialog_stylesheet(self) -> str:
+        return """
+            QDialog {
+                background: #081012;
+                border: 1px solid rgba(116, 231, 186, 80);
+                font-family: "Segoe UI", "Arial";
+            }
+            QLabel#accessTitle {
+                color: #ffffff;
+                font-size: 22px;
+                font-weight: 800;
+            }
+            QLabel#accessBody {
+                color: #d8e0dc;
+                font-size: 14px;
+            }
+            QPlainTextEdit#reportInput {
+                background: rgba(0, 0, 0, 150);
+                color: #ffffff;
+                border: 1px solid rgba(116, 231, 186, 95);
+                border-radius: 8px;
+                padding: 10px 12px;
+                font-size: 14px;
+            }
+            QPushButton#accessCancelButton,
+            QPushButton#accessDownloadButton {
+                border-radius: 8px;
+                min-height: 38px;
+                padding: 8px 14px;
+                font-size: 14px;
+                font-weight: 800;
+            }
+            QPushButton#accessCancelButton {
+                color: rgba(255, 255, 255, 190);
+                background: rgba(255, 255, 255, 18);
+                border: 1px solid rgba(255, 255, 255, 42);
+            }
+            QPushButton#accessDownloadButton {
+                color: #ffffff;
+                background: rgba(12, 38, 52, 230);
+                border: 1px solid #46b8ee;
+            }
+        """
+
+    def build_manual_report_details(self) -> str:
+        return "\n".join(
+            [
+                f"Manual report from {APP_DISPLAY_NAME} {APP_VERSION}.",
+                f"client_mode: {self.client_mode}",
+                f"build_id: {self.get_selected_build_id()}",
+                f"profile: {self.get_selected_profile_id()}",
+                f"last_error: {self.last_error_message}",
+            ]
+        )
+
+    def save_manual_report_fallback(self, user_message: str, technical_details: str) -> Path | None:
+        try:
+            profile = self.profile_manager.get_profile(self.get_selected_profile_id())
+            report_path = write_error_report(
+                technical_details,
+                user_message=user_message,
+                context="manual_report",
+                base_directory=profile.directory,
+            )
+        except OSError:
+            return None
+
+        self.last_error_message = user_message
+        self.last_error_report_path = report_path
+        return report_path
 
     def send_panel_report(self, context: str, user_message: str = "", technical_details: str = "") -> bool:
         if self.client_mode != "nukem":
