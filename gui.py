@@ -10,15 +10,15 @@ import shutil
 import sys
 import threading
 import traceback
+import time
 from pathlib import Path
 from urllib.parse import quote_plus
 
 import requests
-from PyQt6.QtCore import QEvent, QPointF, QSize, QTimer, QThread, Qt, QUrl, pyqtSignal
-from PyQt6.QtGui import QColor, QCursor, QDesktopServices, QIcon, QMovie, QPainter, QPainterPath, QPen, QPixmap
+from PyQt6.QtCore import QEvent, QPointF, QSignalBlocker, QSize, QTimer, QThread, Qt, QUrl, pyqtSignal
+from PyQt6.QtGui import QAction, QColor, QCursor, QDesktopServices, QIcon, QImage, QMovie, QPainter, QPainterPath, QPen, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
-    QButtonGroup,
     QComboBox,
     QDialog,
     QFrame,
@@ -29,11 +29,15 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QMainWindow,
     QMessageBox,
+    QMenu,
     QPlainTextEdit,
     QPushButton,
     QProgressBar,
     QFileDialog,
     QScrollArea,
+    QSizePolicy,
+    QSpinBox,
+    QSystemTrayIcon,
     QVBoxLayout,
     QWidget,
 )
@@ -73,8 +77,10 @@ REQUEST_TIMEOUT = 60
 BACKGROUND_DIR = get_asset_path("backgrounds")
 ICON_DIR = get_asset_path("icons")
 PROJECT_ICON_DIR = get_asset_path("project_icons")
+MASCOT_DIR = get_asset_path("mascots")
 APP_ICON_PATH = get_asset_path("app_icon.ico")
 UPDATE_MASCOT_PATH = get_asset_path("shigure-ui-dance.gif")
+MASCOT_FEATURE_ENABLED = False
 BACKGROUND_FILES = (
     "bg_01.jpg",
     "bg_02.jpg",
@@ -100,6 +106,13 @@ PROJECT_ICON_FILES = {
     CLIENT_MODE_NUKEM: "nukem.png",
     "vibecraft": "vibecraft.png",
 }
+MASCOT_FILES = (
+    "shigure_original_wide.gif",
+    "shigure_dance_tall.gif",
+    "shigure_vtuber.gif",
+    "shigure_ui_jp.gif",
+    "shigure_anime.gif",
+)
 SOCIAL_ICON_NAMES = {
     "discord": "discord",
     "telegram": "telegram",
@@ -131,29 +144,57 @@ ACTION_ICON_FILES = {
     "report_bug": "report.svg",
     "open_error_report": "report.svg",
 }
-
 SYSTEM_DIALOG_STYLESHEET = """
 QMessageBox,
-QInputDialog {
+QInputDialog,
+QDialog#accessDialog {
     background: #f5f5f5;
 }
 QMessageBox QLabel,
-QInputDialog QLabel {
+QInputDialog QLabel,
+QDialog#accessDialog QLabel {
     color: #151515;
     font-family: "Segoe UI", "Arial";
     font-size: 12px;
 }
 QMessageBox QPushButton,
-QInputDialog QPushButton {
+QInputDialog QPushButton,
+QDialog#accessDialog QPushButton {
     color: #151515;
     min-width: 72px;
     min-height: 24px;
 }
-QInputDialog QLineEdit {
+QInputDialog QLineEdit,
+QDialog#accessDialog QLineEdit,
+QDialog#accessDialog QPlainTextEdit {
     color: #151515;
     background: #ffffff;
     border: 1px solid #7a7a7a;
     padding: 4px 6px;
+}
+QDialog#accessDialog {
+    background: #071016;
+}
+QDialog#accessDialog QLabel {
+    color: #eef8ff;
+}
+QDialog#accessDialog QPlainTextEdit {
+    color: #ffffff;
+    background: #03090d;
+    border: 1px solid rgba(93, 202, 235, 130);
+    border-radius: 8px;
+    padding: 8px;
+}
+QDialog#accessDialog QPushButton {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 18);
+    border: 1px solid rgba(255, 255, 255, 44);
+    border-radius: 8px;
+    padding: 6px 12px;
+}
+QDialog#accessDialog QPushButton#primaryDialogButton {
+    background: rgba(93, 202, 235, 34);
+    border: 1px solid rgba(93, 202, 235, 150);
 }
 """
 
@@ -212,6 +253,9 @@ TRANSLATIONS = {
         "loader": "Loader",
         "memory_min": "Min RAM",
         "memory_max": "Max RAM",
+        "memory_hint_good": "Perfect for your PC!",
+        "memory_hint_warm": "High allocation. Close heavy apps before launch.",
+        "memory_hint_hot": "Risky allocation. This can starve the system.",
         "java_path": "Java path",
         "java_browse": "Browse",
         "skin": "Skin",
@@ -235,6 +279,8 @@ TRANSLATIONS = {
         "profile_personal": "Personal",
         "profile_other": "Other",
         "build": "Build",
+        "build_source_nukem": "NK Team",
+        "build_source_local": "My builds",
         "add_build": "Add local build",
         "add_build_prompt": "Enter a local build name.",
         "build_saved": "Local build saved.",
@@ -252,16 +298,19 @@ TRANSLATIONS = {
         "feedback_ok": "Everything OK?",
         "feedback_problem": "Click if there is a problem",
         "feedback_card_title": "Problems?",
-        "feedback_card_body": "Send a report if something does not work cleanly.",
-        "report_bug": "Report",
+        "feedback_card_body": "Send a problem, critique, or wish for this project.",
+        "report_bug": "Report a problem",
         "report_dialog_title": "Report a problem",
-        "report_dialog_body": "Write what happened. This helps the owner fix launcher and modpack issues.",
-        "report_dialog_placeholder": "Problem, critique, wish or request...",
+        "report_dialog_body": "Write what happened, what you dislike, or what you want changed.",
+        "report_dialog_placeholder": "Example: the launcher is confusing here, the button does not work, or I want...",
         "report_send": "Send",
+        "report_dialog_send": "Send",
+        "report_dialog_cancel": "Cancel",
         "report_empty": "Write a short message before sending.",
         "support_offline": "Could not send the report to the owner panel. Report saved locally.",
         "report_sent": "Report sent to the owner panel.",
         "report_send_failed": "Could not send the report to the owner panel. Report saved locally.",
+        "report_saved_local": "Report saved locally.",
         "feedback_panel_title": "Need help?",
         "feedback_panel_body": "Write what happened. If the owner panel is unavailable, the launcher saves the report locally.",
         "news_title": "News",
@@ -274,6 +323,9 @@ TRANSLATIONS = {
         "runtime_auto": "Runtime auto",
         "update_available": "Launcher update available: {version}",
         "update_mascot_found": "Found an update!",
+        "update_mascot_ok": "All good!",
+        "mascot_welcome": "Hi! Launcher is ready.",
+        "mascot_updated": "Updated to {version}!",
         "manual_update_tooltip": "Check updates",
         "manual_update_checking": "Checking launcher updates...",
         "manual_update_ok": "Launcher is up to date.",
@@ -377,6 +429,9 @@ TRANSLATIONS = {
         "loader": "\u0417\u0430\u0433\u0440\u0443\u0437\u0447\u0438\u043a",
         "memory_min": "\u041c\u0438\u043d. RAM",
         "memory_max": "\u041c\u0430\u043a\u0441. RAM",
+        "memory_hint_good": "\u0418\u0434\u0435\u0430\u043b\u044c\u043d\u043e \u0434\u043b\u044f \u0442\u0432\u043e\u0435\u0433\u043e \u041f\u041a!",
+        "memory_hint_warm": "\u0412\u044b\u0441\u043e\u043a\u043e\u0435 \u0432\u044b\u0434\u0435\u043b\u0435\u043d\u0438\u0435. \u0417\u0430\u043a\u0440\u043e\u0439\u0442\u0435 \u0442\u044f\u0436\u0451\u043b\u044b\u0435 \u043f\u0440\u0438\u043b\u043e\u0436\u0435\u043d\u0438\u044f \u043f\u0435\u0440\u0435\u0434 \u0437\u0430\u043f\u0443\u0441\u043a\u043e\u043c.",
+        "memory_hint_hot": "\u0420\u0438\u0441\u043a\u043e\u0432\u0430\u043d\u043d\u043e\u0435 \u0437\u043d\u0430\u0447\u0435\u043d\u0438\u0435. \u0421\u0438\u0441\u0442\u0435\u043c\u0435 \u043c\u043e\u0436\u0435\u0442 \u043d\u0435 \u0445\u0432\u0430\u0442\u0438\u0442\u044c RAM.",
         "java_path": "\u041f\u0443\u0442\u044c Java",
         "java_browse": "\u041e\u0431\u0437\u043e\u0440",
         "skin": "Skin",
@@ -400,6 +455,8 @@ TRANSLATIONS = {
         "profile_personal": "\u041b\u0438\u0447\u043d\u044b\u0435",
         "profile_other": "\u0414\u0440\u0443\u0433\u043e\u0435",
         "build": "\u0421\u0431\u043e\u0440\u043a\u0430",
+        "build_source_nukem": "NK Team",
+        "build_source_local": "\u041c\u043e\u0438 \u0441\u0431\u043e\u0440\u043a\u0438",
         "add_build": "\u0414\u043e\u0431\u0430\u0432\u0438\u0442\u044c \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u0443\u044e \u0441\u0431\u043e\u0440\u043a\u0443",
         "add_build_prompt": "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0438\u043c\u044f \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e\u0439 \u0441\u0431\u043e\u0440\u043a\u0438.",
         "build_saved": "\u041b\u043e\u043a\u0430\u043b\u044c\u043d\u0430\u044f \u0441\u0431\u043e\u0440\u043a\u0430 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0430.",
@@ -417,18 +474,21 @@ TRANSLATIONS = {
         "feedback_ok": "\u0412\u0441\u0435 \u043e\u043a?",
         "feedback_problem": "\u041d\u0430\u0436\u043c\u0438, \u0435\u0441\u043b\u0438 \u043f\u0440\u043e\u0431\u043b\u0435\u043c\u0430",
         "feedback_card_title": "\u041f\u0440\u043e\u0431\u043b\u0435\u043c\u044b?",
-        "feedback_card_body": "\u041e\u0442\u043f\u0440\u0430\u0432\u044c\u0442\u0435 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435, \u0435\u0441\u043b\u0438 \u0447\u0442\u043e-\u0442\u043e \u0440\u0430\u0431\u043e\u0442\u0430\u0435\u0442 \u043d\u0435\u0447\u0438\u0441\u0442\u043e.",
-        "report_bug": "\u0421\u043e\u043e\u0431\u0449\u0438\u0442\u044c",
-        "report_dialog_title": "\u0421\u043e\u043e\u0431\u0449\u0438\u0442\u044c \u043e \u043f\u0440\u043e\u0431\u043b\u0435\u043c\u0435",
-        "report_dialog_body": "\u041d\u0430\u043f\u0438\u0448\u0438\u0442\u0435, \u0447\u0442\u043e \u0441\u043b\u0443\u0447\u0438\u043b\u043e\u0441\u044c. \u042d\u0442\u043e \u043f\u043e\u043c\u043e\u0436\u0435\u0442 \u0432\u043b\u0430\u0434\u0435\u043b\u044c\u0446\u0443 \u0438\u0441\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u043b\u0430\u0443\u043d\u0447\u0435\u0440 \u0438 \u0441\u0431\u043e\u0440\u043a\u0443.",
-        "report_dialog_placeholder": "\u041f\u0440\u043e\u0431\u043b\u0435\u043c\u0430, \u043a\u0440\u0438\u0442\u0438\u043a\u0430, \u043f\u043e\u0436\u0435\u043b\u0430\u043d\u0438\u0435 \u0438\u043b\u0438 \u043f\u0440\u043e\u0441\u044c\u0431\u0430...",
-        "report_send": "\u041e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c",
-        "report_empty": "\u041d\u0430\u043f\u0438\u0448\u0438\u0442\u0435 \u043a\u043e\u0440\u043e\u0442\u043a\u043e\u0435 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0435 \u043f\u0435\u0440\u0435\u0434 \u043e\u0442\u043f\u0440\u0430\u0432\u043a\u043e\u0439.",
+        "feedback_card_body": "\u0421\u043e\u043e\u0431\u0449\u0438\u0442\u0435 \u043e \u043f\u0440\u043e\u0431\u043b\u0435\u043c\u0435 \u0438\u043b\u0438 \u043e\u0442\u043a\u0440\u043e\u0439\u0442\u0435 \u043e\u0442\u0447\u0435\u0442\u044b, \u0435\u0441\u043b\u0438 \u0447\u0442\u043e-\u0442\u043e \u043d\u0435 \u0437\u0430\u043f\u0443\u0441\u043a\u0430\u0435\u0442\u0441\u044f.",
+        "report_bug": "\u0421\u043e\u043e\u0431\u0449\u0438\u0442\u044c \u043e \u043f\u0440\u043e\u0431\u043b\u0435\u043c\u0435",
         "support_offline": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u043e\u0442\u0447\u0451\u0442 \u0432 \u043f\u0430\u043d\u0435\u043b\u044c \u0432\u043b\u0430\u0434\u0435\u043b\u044c\u0446\u0430. \u041e\u0442\u0447\u0451\u0442 \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e.",
         "report_sent": "\u041e\u0442\u0447\u0451\u0442 \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d \u0432 \u043f\u0430\u043d\u0435\u043b\u044c \u0432\u043b\u0430\u0434\u0435\u043b\u044c\u0446\u0430.",
         "report_send_failed": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u043e\u0442\u0447\u0451\u0442 \u0432 \u043f\u0430\u043d\u0435\u043b\u044c \u0432\u043b\u0430\u0434\u0435\u043b\u044c\u0446\u0430. \u041e\u0442\u0447\u0451\u0442 \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e.",
         "feedback_panel_title": "\u041d\u0443\u0436\u043d\u0430 \u043f\u043e\u043c\u043e\u0449\u044c?",
-        "feedback_panel_body": "\u041d\u0430\u043f\u0438\u0448\u0438\u0442\u0435, \u0447\u0442\u043e \u0441\u043b\u0443\u0447\u0438\u043b\u043e\u0441\u044c. \u0415\u0441\u043b\u0438 \u043f\u0430\u043d\u0435\u043b\u044c \u0432\u043b\u0430\u0434\u0435\u043b\u044c\u0446\u0430 \u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u043d\u0430, \u043b\u0430\u0443\u043d\u0447\u0435\u0440 \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442 \u043e\u0442\u0447\u0451\u0442 \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e.",
+        "feedback_panel_body": "\u041e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u0435 \u043f\u0440\u043e\u0431\u043b\u0435\u043c\u0443, \u043a\u0440\u0438\u0442\u0438\u043a\u0443 \u0438\u043b\u0438 \u043f\u043e\u0436\u0435\u043b\u0430\u043d\u0438\u0435 \u043f\u043e \u044d\u0442\u043e\u043c\u0443 \u043f\u0440\u043e\u0435\u043a\u0442\u0443. \u0415\u0441\u043b\u0438 \u043f\u0430\u043d\u0435\u043b\u044c \u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u043d\u0430, \u043b\u0430\u0443\u043d\u0447\u0435\u0440 \u043e\u0442\u043a\u0440\u043e\u0435\u0442 \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u044b\u0435 \u043e\u0442\u0447\u0435\u0442\u044b.",
+        "report_dialog_title": "\u0421\u043e\u043e\u0431\u0449\u0438\u0442\u044c \u043e \u043f\u0440\u043e\u0431\u043b\u0435\u043c\u0435",
+        "report_dialog_body": "\u041d\u0430\u043f\u0438\u0448\u0438\u0442\u0435, \u0447\u0442\u043e \u0441\u043b\u0443\u0447\u0438\u043b\u043e\u0441\u044c, \u0447\u0442\u043e \u043d\u0435 \u043d\u0440\u0430\u0432\u0438\u0442\u0441\u044f \u0438\u043b\u0438 \u0447\u0442\u043e \u0445\u043e\u0442\u0438\u0442\u0435 \u0438\u0437\u043c\u0435\u043d\u0438\u0442\u044c.",
+        "report_dialog_placeholder": "\u041d\u0430\u043f\u0440\u0438\u043c\u0435\u0440: \u0442\u0443\u0442 \u043d\u0435\u043f\u043e\u043d\u044f\u0442\u043d\u043e, \u043a\u043d\u043e\u043f\u043a\u0430 \u043d\u0435 \u0440\u0430\u0431\u043e\u0442\u0430\u0435\u0442 \u0438\u043b\u0438 \u0445\u043e\u0447\u0443...",
+        "report_dialog_send": "\u041e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c",
+        "report_dialog_cancel": "\u041e\u0442\u043c\u0435\u043d\u0430",
+        "report_send": "\u041e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c",
+        "report_empty": "\u041d\u0430\u043f\u0438\u0448\u0438\u0442\u0435 \u043a\u043e\u043c\u043c\u0435\u043d\u0442\u0430\u0440\u0438\u0439 \u043f\u0435\u0440\u0435\u0434 \u043e\u0442\u043f\u0440\u0430\u0432\u043a\u043e\u0439.",
+        "report_saved_local": "\u041e\u0442\u0447\u0451\u0442 \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e.",
         "news_title": "\u041d\u043e\u0432\u043e\u0441\u0442\u0438",
         "news_empty": "\u041d\u043e\u0432\u043e\u0441\u0442\u0435\u0439 \u043f\u043e\u043a\u0430 \u043d\u0435\u0442.",
         "status_card_mods": "\u041c\u043e\u0434\u044b \u0433\u043e\u0442\u043e\u0432\u044b",
@@ -439,6 +499,9 @@ TRANSLATIONS = {
         "runtime_auto": "\u0410\u0432\u0442\u043e Java",
         "update_available": "\u0412\u044b\u0448\u043b\u043e \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435 \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430: {version}",
         "update_mascot_found": "\u041d\u0430\u0448\u043b\u0430 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435!",
+        "update_mascot_ok": "\u0412\u0441\u0451 \u043e\u043a!",
+        "mascot_welcome": "\u041f\u0440\u0438\u0432\u0435\u0442! \u041b\u0430\u0443\u043d\u0447\u0435\u0440 \u0433\u043e\u0442\u043e\u0432.",
+        "mascot_updated": "\u041e\u0431\u043d\u043e\u0432\u0438\u043b\u0430\u0441\u044c \u0434\u043e {version}!",
         "manual_update_tooltip": "\u041f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u044f",
         "manual_update_checking": "\u041f\u0440\u043e\u0432\u0435\u0440\u043a\u0430 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0439...",
         "manual_update_ok": "\u041e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0439 \u043d\u0435\u0442",
@@ -1056,6 +1119,7 @@ class LaunchWorker(QThread):
     status_changed = pyqtSignal(str)
     crash_detected = pyqtSignal(str)
     error_occurred = pyqtSignal(str, str)
+    game_started = pyqtSignal()
     finished_successfully = pyqtSignal()
 
     def __init__(
@@ -1072,6 +1136,7 @@ class LaunchWorker(QThread):
         self.launch_options = launch_options or {}
         self.detach_event = threading.Event()
         self.launch_options["detach_event"] = self.detach_event
+        self.launch_options["game_started_callback"] = self.game_started.emit
 
     def run(self) -> None:
         try:
@@ -1112,14 +1177,17 @@ class StatusGlyph(QFrame):
         super().paintEvent(event)
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        rect = self.rect().adjusted(1, 1, -1, -1)
-        border = QColor(116, 231, 186, 120)
-        ink = QColor("#9ff4cf")
+        rect = self.rect().adjusted(3, 3, -3, -3)
+        border = QColor(93, 202, 235, 110)
+        ink = QColor("#5dcaeb")
 
-        painter.setPen(QPen(border, 1.4))
-        painter.setBrush(QColor(116, 231, 186, 24 if self.glyph != "check" else 18))
-        painter.drawRoundedRect(rect, 8, 8)
-        painter.setPen(QPen(ink, 3.2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin))
+        painter.setPen(QPen(QColor(93, 202, 235, 38), 3.2))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawRoundedRect(rect.adjusted(1, 1, -1, -1), 7, 7)
+        painter.setPen(QPen(border, 1.0))
+        painter.setBrush(QColor(93, 202, 235, 16 if self.glyph != "check" else 10))
+        painter.drawRoundedRect(rect, 7, 7)
+        painter.setPen(QPen(ink, 1.85, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin))
 
         width = self.width()
         height = self.height()
@@ -1138,7 +1206,7 @@ class StatusGlyph(QFrame):
             for offset in (-10, 0, 10):
                 painter.drawLine(QPointF(width * 0.34 + offset, height * 0.68), QPointF(width * 0.62 + offset, height * 0.30))
                 painter.drawLine(QPointF(width * 0.36 + offset, height * 0.32), QPointF(width * 0.66 + offset, height * 0.66))
-            painter.setPen(QPen(ink, 2.0, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+            painter.setPen(QPen(ink, 1.25, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
             for x_position in (0.35, 0.50, 0.65):
                 painter.drawPoint(QPointF(width * x_position, height * 0.50))
         elif self.glyph == "java":
@@ -1154,6 +1222,142 @@ class StatusGlyph(QFrame):
     def _paint_check(self, painter: QPainter, width: int, height: int, shift: float) -> None:
         painter.drawLine(QPointF(width * (0.34 + shift), height * 0.52), QPointF(width * (0.45 + shift), height * 0.64))
         painter.drawLine(QPointF(width * (0.45 + shift), height * 0.64), QPointF(width * (0.68 + shift), height * 0.38))
+
+
+class MascotWindow(QWidget):
+    clicked = pyqtSignal()
+    hovered = pyqtSignal()
+
+    def __init__(self, mascot_paths: list[Path]) -> None:
+        super().__init__(None)
+        self.mascot_paths = mascot_paths
+        self.mascot_index = 0
+        self._drag_position = None
+        self._press_global = None
+        self._was_dragged = False
+        self.movie: QMovie | None = None
+        self._transparent_movie_frame = False
+        self.setWindowFlags(
+            Qt.WindowType.Tool
+            | Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.WindowStaysOnTopHint
+        )
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        self.setCursor(QCursor(Qt.CursorShape.OpenHandCursor))
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        self.message_label = QLabel()
+        self.message_label.setObjectName("floatingMascotMessage")
+        self.message_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.message_label.hide()
+        layout.addWidget(self.message_label)
+        self.image_label = QLabel()
+        self.image_label.setObjectName("floatingMascot")
+        self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.image_label)
+        self.set_mascot_index(0)
+
+    def set_mascot_index(self, index: int) -> None:
+        if not self.mascot_paths:
+            self.image_label.setText("MS")
+            self.image_label.setFixedSize(120, 120)
+            self.resize(120, 120)
+            return
+
+        self.mascot_index = index % len(self.mascot_paths)
+        path = self.mascot_paths[self.mascot_index]
+        if self.movie is not None:
+            self.movie.stop()
+        self.movie = QMovie(str(path))
+        self.movie.setCacheMode(QMovie.CacheMode.CacheAll)
+        self.movie.frameChanged.connect(self.refresh_movie_frame)
+        self.movie.jumpToFrame(0)
+        source_size = self.movie.currentPixmap().size()
+        if source_size.isEmpty():
+            source_size = QSize(180, 220)
+        target_size = self._fit_size(source_size)
+        self.movie.setScaledSize(target_size)
+        self.image_label.setFixedSize(target_size)
+        self._transparent_movie_frame = True
+        self.image_label.setMovie(None)
+        self.resize(target_size)
+        self.movie.start()
+        self.refresh_movie_frame()
+
+    def set_message(self, message: str) -> None:
+        self.message_label.setText(message)
+        self.message_label.setVisible(bool(message.strip()))
+        if self.message_label.isVisible():
+            self.message_label.setFixedWidth(max(self.image_label.width(), 230))
+        self.adjustSize()
+
+    def next_mascot(self) -> None:
+        self.set_mascot_index(self.mascot_index + 1)
+
+    def refresh_movie_frame(self, *_args) -> None:
+        if self.movie is None:
+            return
+        pixmap = self.movie.currentPixmap()
+        if pixmap.isNull():
+            return
+        if self._transparent_movie_frame:
+            pixmap = QPixmap.fromImage(self.make_near_black_transparent(pixmap.toImage()))
+        self.image_label.setPixmap(pixmap)
+
+    def make_near_black_transparent(self, image: QImage) -> QImage:
+        converted = image.convertToFormat(QImage.Format.Format_ARGB32)
+        for y in range(converted.height()):
+            for x in range(converted.width()):
+                color = QColor(converted.pixel(x, y))
+                if color.red() < 24 and color.green() < 24 and color.blue() < 24:
+                    color.setAlpha(0)
+                    converted.setPixelColor(x, y, color)
+        return converted
+
+    def _fit_size(self, source_size: QSize) -> QSize:
+        max_width = 240
+        max_height = 280
+        width = max(1, source_size.width())
+        height = max(1, source_size.height())
+        scale = min(max_width / width, max_height / height, 1.0)
+        return QSize(max(96, int(width * scale)), max(96, int(height * scale)))
+
+    def mousePressEvent(self, event) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            global_position = event.globalPosition().toPoint()
+            self._press_global = global_position
+            self._was_dragged = False
+            self._drag_position = global_position - self.frameGeometry().topLeft()
+            self.setCursor(QCursor(Qt.CursorShape.ClosedHandCursor))
+            event.accept()
+            return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event) -> None:
+        if self._drag_position is not None and event.buttons() & Qt.MouseButton.LeftButton:
+            global_position = event.globalPosition().toPoint()
+            if self._press_global is not None and (global_position - self._press_global).manhattanLength() > 8:
+                self._was_dragged = True
+            self.move(global_position - self._drag_position)
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event) -> None:
+        self._drag_position = None
+        self._press_global = None
+        self.setCursor(QCursor(Qt.CursorShape.OpenHandCursor))
+        if not self._was_dragged and event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
+
+    def enterEvent(self, event) -> None:
+        self.hovered.emit()
+        super().enterEvent(event)
 
 
 class ParallaxFrame(QFrame):
@@ -1434,6 +1638,7 @@ class MSLauncherWindow(QMainWindow):
         self.launcher_update_version = ""
         self.launcher_update_url = ""
         self.launcher_update_notes = ""
+        self.launcher_update_error = ""
         self.skin_path = get_config_text(self.config, "skin_path")
         self.info_panel_mode = "status"
         self.status_card_confirmed = True
@@ -1443,9 +1648,22 @@ class MSLauncherWindow(QMainWindow):
         self.unlocked_build_ids: set[str] = set()
         self.project_switcher_expanded = False
         self.large_window_enabled = False
+        self.mascot_paths = (
+            [MASCOT_DIR / name for name in MASCOT_FILES if (MASCOT_DIR / name).is_file()]
+            if MASCOT_FEATURE_ENABLED
+            else []
+        )
+        self.mascot_window: MascotWindow | None = None
+        self.mascot_user_enabled = False
+        self.mascot_click_times: list[float] = []
+        self.floating_mascot_message_active = False
+        self.tray_icon: QSystemTrayIcon | None = None
+        self.hidden_to_tray_for_game = False
         self.update_check_state = "ok"
         self.update_pulse_on = False
         self.update_mascot_dismissed = False
+        self.update_mascot_message_key = ""
+        self.update_ok_click_times: list[float] = []
         self.update_pulse_timer = QTimer(self)
         self.update_pulse_timer.setInterval(650)
         self.update_pulse_timer.timeout.connect(self.toggle_update_pulse)
@@ -1465,11 +1683,14 @@ class MSLauncherWindow(QMainWindow):
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Window)
         if APP_ICON_PATH.is_file():
             self.setWindowIcon(QIcon(str(APP_ICON_PATH)))
+        self.setup_tray_icon()
         self.refresh_project_backgrounds()
         self._connect_signals()
         self.apply_translations()
         self.update_poll_timer.start()
         QTimer.singleShot(1_000, self.auto_check_launcher_update)
+        if MASCOT_FEATURE_ENABLED:
+            QTimer.singleShot(1_600, self.show_startup_mascot_notice_if_needed)
         self.show_config_repair_warning_if_needed()
         self.load_versions()
 
@@ -1537,8 +1758,8 @@ class MSLauncherWindow(QMainWindow):
         self.project_switcher.setToolTip(self.translate("project_switcher_tooltip"))
         self.project_switcher.installEventFilter(self)
         self.project_layout = QHBoxLayout(self.project_switcher)
-        self.project_layout.setContentsMargins(6, 6, 6, 6)
-        self.project_layout.setSpacing(4)
+        self.project_layout.setContentsMargins(0, 0, 0, 0)
+        self.project_layout.setSpacing(6)
         self.mslaunch_tab = self.create_project_tab("MS", "MSLaunch")
         self.nukem_tab = self.create_project_tab("KH", "MS Nuckem")
         self.vibecraft_tab = self.create_project_tab("VC", "VibeCraft")
@@ -1554,35 +1775,35 @@ class MSLauncherWindow(QMainWindow):
 
         self.language_toggle_button = QPushButton()
         self.language_toggle_button.setObjectName("languageToggle")
-        self.language_toggle_button.setFixedSize(52, 42)
+        self.language_toggle_button.setFixedSize(42, 34)
         self.language_toggle_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.update_check_button = QPushButton("OK")
         self.update_check_button.setObjectName("updateCheckButton")
-        self.update_check_button.setFixedSize(48, 42)
+        self.update_check_button.setFixedSize(40, 34)
         self.update_check_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
         right_controls = QFrame()
         right_controls.setObjectName("topRightControls")
         right_controls_layout = QHBoxLayout(right_controls)
         right_controls_layout.setContentsMargins(0, 0, 0, 0)
-        right_controls_layout.setSpacing(8)
+        right_controls_layout.setSpacing(6)
 
         title_controls = QFrame()
         title_controls.setObjectName("windowControls")
         title_controls_layout = QHBoxLayout(title_controls)
         title_controls_layout.setContentsMargins(0, 0, 0, 0)
-        title_controls_layout.setSpacing(8)
+        title_controls_layout.setSpacing(6)
         self.minimize_button = QPushButton("-")
         self.minimize_button.setObjectName("windowButton")
-        self.minimize_button.setFixedSize(34, 34)
+        self.minimize_button.setFixedSize(30, 30)
         self.minimize_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.size_toggle_button = QPushButton("\u25a1")
         self.size_toggle_button.setObjectName("windowButton")
-        self.size_toggle_button.setFixedSize(34, 34)
+        self.size_toggle_button.setFixedSize(30, 30)
         self.size_toggle_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.close_button = QPushButton("x")
         self.close_button.setObjectName("windowButton")
-        self.close_button.setFixedSize(34, 34)
+        self.close_button.setFixedSize(30, 30)
         self.close_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         title_controls_layout.addWidget(self.minimize_button)
         title_controls_layout.addWidget(self.size_toggle_button)
@@ -1606,7 +1827,15 @@ class MSLauncherWindow(QMainWindow):
         self.settings_button.clicked.connect(self.toggle_info_panel)
         self.sidebar_layout.addWidget(self.settings_button)
 
+        self.mascot_button = self.create_side_button("mascot", "MS")
+        self.mascot_button.installEventFilter(self)
+        self.mascot_button.clicked.connect(self.toggle_floating_mascot)
+        self.sidebar_layout.addWidget(self.mascot_button)
+        self.mascot_button.setVisible(MASCOT_FEATURE_ENABLED)
+        self.mascot_button.setEnabled(MASCOT_FEATURE_ENABLED)
+
         self.report_button = self.create_side_button("report", "DOC")
+        self.report_button.setProperty("role", "report")
         self.report_button.clicked.connect(self.show_feedback_panel)
         self.sidebar_layout.addWidget(self.report_button)
 
@@ -1625,10 +1854,15 @@ class MSLauncherWindow(QMainWindow):
         self.info_panel = QFrame()
         self.info_panel.setObjectName("infoPanel")
         info_layout = QVBoxLayout(self.info_panel)
-        info_layout.setContentsMargins(28, 24, 28, 24)
+        info_layout.setContentsMargins(24, 24, 24, 24)
         info_layout.setSpacing(14)
         self.info_title_label = QLabel()
         self.info_title_label.setObjectName("infoTitle")
+        self.info_title_label.setWordWrap(True)
+        self.info_title_label.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.MinimumExpanding,
+        )
         self.info_body_label = QLabel()
         self.info_body_label.setObjectName("infoBody")
         self.info_body_label.setWordWrap(True)
@@ -1694,9 +1928,18 @@ class MSLauncherWindow(QMainWindow):
         self.loader_setting_combo = QComboBox()
         self.loader_setting_combo.addItems(list(SUPPORTED_LOADERS))
         self.memory_min_label = QLabel()
-        self.memory_min_input = QLineEdit()
+        self.memory_min_input = QSpinBox()
+        self.memory_min_input.setObjectName("memorySpin")
+        self.memory_min_input.setRange(1, 16)
+        self.memory_min_input.setSuffix("G")
         self.memory_max_label = QLabel()
-        self.memory_max_input = QLineEdit()
+        self.memory_max_input = QSpinBox()
+        self.memory_max_input.setObjectName("memorySpin")
+        self.memory_max_input.setRange(1, 32)
+        self.memory_max_input.setSuffix("G")
+        self.memory_hint_label = QLabel()
+        self.memory_hint_label.setObjectName("memoryHint")
+        self.memory_hint_label.setWordWrap(True)
         self.java_path_label = QLabel()
         self.java_path_input = QLineEdit()
         self.java_browse_button = QPushButton()
@@ -1716,9 +1959,18 @@ class MSLauncherWindow(QMainWindow):
 
         launch_options = get_config_launch_options(self.config)
         self.loader_setting_combo.setCurrentText(str(launch_options.get("loader", "vanilla")))
-        self.memory_min_input.setText(str(launch_options.get("memory_min", "512M")))
-        self.memory_max_input.setText(str(launch_options.get("memory_max", "2G")))
+        self.memory_min_input.setValue(self.memory_setting_to_gb(str(launch_options.get("memory_min", "512M"))))
+        self.memory_max_input.setValue(self.memory_setting_to_gb(str(launch_options.get("memory_max", "2G"))))
         self.java_path_input.setText(str(launch_options.get("java_path", "")))
+        self.refresh_memory_hint()
+        for hidden_launch_widget in (
+            self.loader_setting_label,
+            self.loader_setting_combo,
+            self.java_path_label,
+            self.java_path_input,
+            self.java_browse_button,
+        ):
+            hidden_launch_widget.hide()
 
         self.settings_scroll_area = QScrollArea()
         self.settings_scroll_area.setObjectName("settingsScrollArea")
@@ -1738,9 +1990,7 @@ class MSLauncherWindow(QMainWindow):
             self.memory_min_input,
             self.memory_max_label,
             self.memory_max_input,
-            self.java_path_label,
-            self.java_path_input,
-            self.java_browse_button,
+            self.memory_hint_label,
             self.skin_label,
             self.skin_status_label,
             self.skin_browse_button,
@@ -1755,15 +2005,11 @@ class MSLauncherWindow(QMainWindow):
         info_layout.addWidget(self.settings_scroll_area, 1)
         self.settings_widgets = [self.settings_scroll_area]
         self.launch_settings_widgets = [
-            self.loader_setting_label,
-            self.loader_setting_combo,
             self.memory_min_label,
             self.memory_min_input,
             self.memory_max_label,
             self.memory_max_input,
-            self.java_path_label,
-            self.java_path_input,
-            self.java_browse_button,
+            self.memory_hint_label,
         ]
         self.player_widgets = [
             self.skin_label,
@@ -1822,9 +2068,24 @@ class MSLauncherWindow(QMainWindow):
         self.update_mascot_frame.setFixedSize(196, 166)
         self.update_mascot_frame.hide()
 
+        self.mascot_picker_frame = QFrame()
+        self.mascot_picker_frame.setObjectName("mascotPicker")
+        self.mascot_picker_frame.installEventFilter(self)
+        mascot_picker_layout = QHBoxLayout(self.mascot_picker_frame)
+        mascot_picker_layout.setContentsMargins(8, 8, 8, 8)
+        mascot_picker_layout.setSpacing(6)
+        self.mascot_choice_buttons: list[QPushButton] = []
+        for index, mascot_path in enumerate(self.mascot_paths):
+            button = self.create_mascot_choice_button(mascot_path, index)
+            button.clicked.connect(lambda checked=False, choice=index: self.select_floating_mascot(choice))
+            self.mascot_choice_buttons.append(button)
+            mascot_picker_layout.addWidget(button)
+        self.mascot_picker_frame.hide()
+
         stage_layout = QHBoxLayout()
         stage_layout.setSpacing(18)
         stage_layout.addWidget(self.sidebar_frame, 0, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        stage_layout.addWidget(self.mascot_picker_frame, 0, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         stage_layout.addWidget(self.news_frame, 0, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         stage_layout.addStretch(1)
         stage_layout.addWidget(self.update_mascot_frame, 0, Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
@@ -1835,12 +2096,13 @@ class MSLauncherWindow(QMainWindow):
         control_frame = QFrame()
         control_frame.setObjectName("controlFrame")
         control_frame.setMinimumHeight(116)
+        control_frame.setMaximumHeight(120)
         outer_control_layout = QVBoxLayout(control_frame)
-        outer_control_layout.setContentsMargins(12, 12, 12, 10)
-        outer_control_layout.setSpacing(6)
+        outer_control_layout.setContentsMargins(8, 10, 8, 10)
+        outer_control_layout.setSpacing(0)
         control_layout = QHBoxLayout()
         control_layout.setContentsMargins(0, 0, 0, 0)
-        control_layout.setSpacing(6)
+        control_layout.setSpacing(3)
 
         self.language_label = QLabel()
         self.language_combo = QComboBox()
@@ -1851,98 +2113,85 @@ class MSLauncherWindow(QMainWindow):
         self.profile_combo = QComboBox()
         self.populate_profiles()
 
-        self.username_label = QLabel()
+        self.username_label, self.username_label_text = self.create_control_label("user")
         self.username_input = QComboBox()
         self.username_input.setEditable(True)
         self.username_input.setMaxVisibleItems(5)
         self.populate_usernames()
         username_field = QFrame()
         username_field.setObjectName("inlineFieldFrame")
+        username_field.setFixedHeight(38)
         username_field_layout = QHBoxLayout(username_field)
         username_field_layout.setContentsMargins(0, 0, 0, 0)
-        username_field_layout.setSpacing(6)
+        username_field_layout.setSpacing(0)
         self.add_username_button = QPushButton("+")
-        self.add_username_button.setObjectName("miniIconButton")
-        self.add_username_button.setFixedSize(42, 42)
+        self.add_username_button.setObjectName("labelActionButton")
+        self.add_username_button.setFixedSize(22, 20)
         self.add_username_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.skin_quick_button = QPushButton()
-        self.skin_quick_button.setObjectName("miniIconButton")
-        self.skin_quick_button.setFixedSize(42, 42)
+        self.skin_quick_button.setObjectName("labelActionButton")
+        self.skin_quick_button.setFixedSize(22, 20)
         self.skin_quick_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         skin_icon_path = ICON_DIR / "skin.svg"
         if skin_icon_path.is_file():
             self.skin_quick_button.setIcon(QIcon(str(skin_icon_path)))
-            self.skin_quick_button.setIconSize(QSize(20, 20))
+            self.skin_quick_button.setIconSize(QSize(14, 14))
         username_field_layout.addWidget(self.username_input, 1)
-        username_field_layout.addWidget(self.add_username_button, 0)
-        username_field_layout.addWidget(self.skin_quick_button, 0)
+        self.add_label_actions(self.username_label, self.add_username_button, self.skin_quick_button)
 
-        self.build_label = QLabel()
+        self.build_label, self.build_label_text = self.create_control_label("build")
         self.build_combo = QComboBox()
         self.build_combo.setEditable(True)
+        self.build_combo.setMinimumWidth(176)
         self.populate_builds()
         build_field = QFrame()
         build_field.setObjectName("inlineFieldFrame")
+        build_field.setFixedHeight(38)
         build_field_layout = QHBoxLayout(build_field)
         build_field_layout.setContentsMargins(0, 0, 0, 0)
-        build_field_layout.setSpacing(6)
+        build_field_layout.setSpacing(0)
         self.add_build_button = QPushButton("+")
-        self.add_build_button.setObjectName("miniIconButton")
-        self.add_build_button.setFixedSize(42, 42)
+        self.add_build_button.setObjectName("labelActionButton")
+        self.add_build_button.setFixedSize(22, 20)
         self.add_build_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         build_field_layout.addWidget(self.build_combo, 1)
-        build_field_layout.addWidget(self.add_build_button, 0)
+        self.add_label_actions(self.build_label, self.add_build_button)
 
-        self.version_label = QLabel()
+        self.version_label, self.version_label_text = self.create_control_label("version")
         self.version_combo = QComboBox()
 
-        self.loader_label = QLabel()
-        self.loader_group = QButtonGroup(self)
-        self.loader_segment_buttons: dict[str, QPushButton] = {}
-        for loader_id in SUPPORTED_LOADERS:
-            button = QPushButton(LOADER_LABELS.get(loader_id, loader_id.title()))
-            button.setObjectName("loaderSegment")
-            button.setCheckable(True)
-            self.loader_group.addButton(button)
-            self.loader_segment_buttons[loader_id] = button
-        self.loader_vanilla_button = self.loader_segment_buttons["vanilla"]
-        self.loader_fabric_button = self.loader_segment_buttons["fabric"]
-        self.loader_quilt_button = self.loader_segment_buttons["quilt"]
-        self.loader_neoforge_button = self.loader_segment_buttons["neoforge"]
-        self.sync_loader_segments(self.loader_setting_combo.currentText())
+        self.loader_label, self.loader_label_text = self.create_control_label("loader")
+        self.loader_combo = QComboBox()
+        self.loader_combo.addItems(list(SUPPORTED_LOADERS))
+        self.loader_combo.setCurrentText(self.loader_setting_combo.currentText())
 
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
         self.progress_bar.setTextVisible(False)
         self.progress_bar.setFixedHeight(8)
-        self.progress_bar.setMinimumWidth(150)
+        self.progress_bar.setMinimumWidth(118)
+        self.progress_bar.setMaximumWidth(132)
 
         self.status_label = QLabel()
         self.status_label.setObjectName("statusLabel")
-        self.status_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.status_label.setWordWrap(True)
         self.status_label.setMinimumHeight(18)
-
-        sync_status_frame = QFrame()
-        sync_status_frame.setObjectName("syncStatusFrame")
-        sync_status_layout = QHBoxLayout(sync_status_frame)
-        sync_status_layout.setContentsMargins(10, 0, 10, 0)
-        sync_status_layout.setSpacing(10)
-        sync_status_layout.addWidget(self.status_label, 1)
-        sync_status_layout.addWidget(self.progress_bar, 0)
+        self.status_label.setMinimumWidth(120)
+        self.status_label.setMaximumWidth(204)
 
         self.play_button = QPushButton()
         self.play_button.setObjectName("playButton")
-        self.play_button.setMinimumHeight(56)
-        self.play_button.setMinimumWidth(128)
-        self.play_button.setMaximumWidth(146)
+        self.play_button.setFixedHeight(38)
+        self.play_button.setMinimumWidth(132)
+        self.play_button.setMaximumWidth(140)
         self.play_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.mods_button = QPushButton()
         self.mods_button.setObjectName("modsButton")
-        self.mods_button.setMinimumHeight(56)
-        self.mods_button.setMinimumWidth(150)
-        self.mods_button.setMaximumWidth(166)
+        self.mods_button.setFixedHeight(38)
+        self.mods_button.setMinimumWidth(204)
+        self.mods_button.setMaximumWidth(212)
         self.mods_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.set_button_icon(self.play_button, "play", 22)
         self.set_button_icon(self.mods_button, self.get_mods_action_key(), 21)
@@ -1954,17 +2203,55 @@ class MSLauncherWindow(QMainWindow):
         username_group = self.create_control_group(self.username_label, username_field)
         self.build_group = self.create_control_group(self.build_label, build_field)
         self.version_group = self.create_control_group(self.version_label, self.version_combo)
-        username_group.setMaximumWidth(170)
-        self.build_group.setMaximumWidth(146)
-        self.version_group.setMaximumWidth(118)
+        username_group.setMinimumWidth(204)
+        username_group.setMaximumWidth(268)
+        self.build_group.setMinimumWidth(168)
+        self.build_group.setMaximumWidth(190)
+        self.version_group.setMinimumWidth(90)
+        self.version_group.setMaximumWidth(100)
+        loader_group = self.create_control_group(self.loader_label, self.loader_combo)
+        loader_group.setMinimumWidth(118)
+        loader_group.setMaximumWidth(132)
+        mods_group = QFrame()
+        mods_group.setObjectName("controlGroup")
+        mods_group.setFixedHeight(106)
+        mods_layout = QVBoxLayout(mods_group)
+        mods_layout.setContentsMargins(0, 0, 0, 0)
+        mods_layout.setSpacing(3)
+        mods_label_spacer = QLabel(" ")
+        mods_layout.addWidget(mods_label_spacer)
+        mods_layout.addWidget(self.mods_button)
+        mods_layout.addWidget(self.status_label, 0, Qt.AlignmentFlag.AlignHCenter)
+        mods_group.setMinimumWidth(204)
+        mods_group.setMaximumWidth(212)
+        play_group = QFrame()
+        play_group.setObjectName("controlGroup")
+        play_group.setFixedHeight(106)
+        play_layout = QVBoxLayout(play_group)
+        play_layout.setContentsMargins(0, 0, 0, 0)
+        play_layout.setSpacing(3)
+        play_layout.addWidget(QLabel(" "))
+        play_layout.addWidget(self.play_button)
+        progress_slot = QFrame()
+        progress_slot.setObjectName("progressSlot")
+        progress_slot_layout = QVBoxLayout(progress_slot)
+        progress_slot_layout.setContentsMargins(0, 6, 0, 6)
+        progress_slot_layout.setSpacing(0)
+        progress_slot_layout.addWidget(self.progress_bar, 0, Qt.AlignmentFlag.AlignHCenter)
+        play_layout.addWidget(progress_slot)
+        play_group.setMinimumWidth(132)
+        play_group.setMaximumWidth(140)
         control_layout.addWidget(username_group, 2)
+        control_layout.addWidget(self.create_control_separator(), 0)
         control_layout.addWidget(self.build_group, 2)
+        control_layout.addWidget(self.create_control_separator(), 0)
         control_layout.addWidget(self.version_group, 2)
-        control_layout.addWidget(self.create_loader_group(), 2)
-        control_layout.addWidget(self.mods_button, 0)
-        control_layout.addWidget(self.play_button, 0)
+        control_layout.addWidget(self.create_control_separator(), 0)
+        control_layout.addWidget(loader_group, 2)
+        control_layout.addWidget(self.create_control_separator(), 0)
+        control_layout.addWidget(mods_group, 0)
+        control_layout.addWidget(play_group, 0)
         outer_control_layout.addLayout(control_layout, 1)
-        outer_control_layout.addWidget(sync_status_frame, 0)
 
         hidden_controls = QFrame()
         hidden_controls.hide()
@@ -1976,14 +2263,16 @@ class MSLauncherWindow(QMainWindow):
         hidden_layout.addWidget(self.feedback_button)
         hero_layout.addWidget(hidden_controls)
 
-        for widget in (
-            self.username_input,
-            self.profile_combo,
-            self.build_combo,
-            self.version_combo,
-            self.language_combo,
+        for widget, minimum_width in (
+            (self.username_input, 82),
+            (self.profile_combo, 106),
+            (self.build_combo, 176),
+            (self.version_combo, 86),
+            (self.loader_combo, 122),
+            (self.language_combo, 106),
         ):
-            widget.setMinimumWidth(106)
+            widget.setMinimumWidth(minimum_width)
+            widget.setFixedHeight(38)
 
         hero_layout.addWidget(control_frame, 0)
         root_layout.addWidget(hero_frame, 1)
@@ -1998,7 +2287,7 @@ class MSLauncherWindow(QMainWindow):
         button.setObjectName("projectTab")
         button.setProperty("badge", badge)
         button.setProperty("label", label)
-        button.setFixedSize(54, 52)
+        button.setFixedSize(52, 46)
         button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         return button
 
@@ -2015,45 +2304,62 @@ class MSLauncherWindow(QMainWindow):
         icon_name = PROJECT_ICON_FILES.get(project_key, PROJECT_ICON_FILES[CLIENT_MODE_INDEPENDENT])
         return PROJECT_ICON_DIR / icon_name
 
-    def create_control_group(self, label: QLabel, field: QWidget) -> QFrame:
+    def create_control_label(self, icon_name: str) -> tuple[QFrame, QLabel]:
+        frame = QFrame()
+        frame.setObjectName("controlLabelFrame")
+        frame.setFixedHeight(22)
+        layout = QHBoxLayout(frame)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(4)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        icon_label = QLabel()
+        icon_label.setObjectName("controlLabelIcon")
+        icon_label.setFixedSize(14, 14)
+        icon_path = ICON_DIR / f"{icon_name}.svg"
+        if icon_path.is_file():
+            icon_label.setPixmap(QIcon(str(icon_path)).pixmap(QSize(14, 14)))
+        text_label = QLabel()
+        text_label.setObjectName("controlLabelText")
+        text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(icon_label, 0, Qt.AlignmentFlag.AlignVCenter)
+        layout.addWidget(text_label, 0, Qt.AlignmentFlag.AlignVCenter)
+        return frame, text_label
+
+    def add_label_actions(self, label_frame: QFrame, *buttons: QPushButton) -> None:
+        layout = label_frame.layout()
+        if layout is None:
+            return
+        layout.addSpacing(6)
+        for button in buttons:
+            layout.addWidget(button, 0, Qt.AlignmentFlag.AlignVCenter)
+
+    def create_control_group(self, label: QWidget, field: QWidget) -> QFrame:
         frame = QFrame()
         frame.setObjectName("controlGroup")
+        frame.setFixedHeight(62)
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(8)
+        layout.setSpacing(3)
         layout.addWidget(label)
         layout.addWidget(field)
         return frame
 
-    def create_loader_group(self) -> QFrame:
-        frame = QFrame()
-        frame.setObjectName("controlGroup")
-        frame.setMinimumWidth(178)
-        frame.setMaximumWidth(212)
-        layout = QVBoxLayout(frame)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(8)
-        layout.addWidget(self.loader_label)
-        segment_frame = QFrame()
-        segment_frame.setObjectName("loaderSegmentFrame")
-        segment_layout = QGridLayout(segment_frame)
-        segment_layout.setContentsMargins(4, 4, 4, 4)
-        segment_layout.setSpacing(4)
-        for index, loader_id in enumerate(SUPPORTED_LOADERS):
-            segment_layout.addWidget(self.loader_segment_buttons[loader_id], index // 2, index % 2)
-        layout.addWidget(segment_frame)
-        return frame
+    def create_control_separator(self) -> QFrame:
+        separator = QFrame()
+        separator.setObjectName("controlSeparator")
+        separator.setFixedSize(1, 46)
+        return separator
 
     def create_status_row(self, glyph: str, title: str, body: str) -> tuple[QLabel, QLabel, QFrame, QFrame]:
         row = QFrame()
         row.setObjectName("statusRow")
         layout = QHBoxLayout(row)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(20)
-        icon = StatusGlyph(glyph, 56)
+        layout.setSpacing(10)
         text_layout = QVBoxLayout()
         text_layout.setContentsMargins(0, 0, 0, 0)
-        text_layout.setSpacing(3)
+        text_layout.setSpacing(1)
         title_label = QLabel(title)
         title_label.setObjectName("statusTitle")
         body_label = QLabel(body)
@@ -2061,8 +2367,7 @@ class MSLauncherWindow(QMainWindow):
         body_label.setWordWrap(True)
         text_layout.addWidget(title_label)
         text_layout.addWidget(body_label)
-        check = StatusGlyph("check", 42)
-        layout.addWidget(icon)
+        check = StatusGlyph("check", 32)
         layout.addLayout(text_layout, 1)
         layout.addWidget(check)
         return title_label, body_label, check, row
@@ -2077,6 +2382,22 @@ class MSLauncherWindow(QMainWindow):
         else:
             button.setText(fallback_text or icon_name[:2].upper())
         button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        return button
+
+    def create_mascot_choice_button(self, mascot_path: Path, index: int) -> QPushButton:
+        button = QPushButton()
+        button.setObjectName("mascotChoice")
+        button.setFixedSize(54, 54)
+        button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        button.setToolTip(f"Mascot {index + 1}")
+        movie = QMovie(str(mascot_path))
+        movie.jumpToFrame(0)
+        pixmap = movie.currentPixmap()
+        if not pixmap.isNull():
+            button.setIcon(QIcon(pixmap))
+            button.setIconSize(QSize(38, 38))
+        else:
+            button.setText(str(index + 1))
         return button
 
     def _connect_signals(self) -> None:
@@ -2111,12 +2432,13 @@ class MSLauncherWindow(QMainWindow):
         self.skin_browse_button.clicked.connect(self.browse_skin_file)
         self.skin_url_button.clicked.connect(self.save_skin_url)
         self.skin_quick_button.clicked.connect(self.show_player_panel)
+        self.add_username_button.clicked.connect(self.add_local_username)
+        self.add_build_button.clicked.connect(self.add_local_build)
         self.loader_setting_combo.currentTextChanged.connect(lambda *_: self.save_user_preferences())
         self.loader_setting_combo.currentTextChanged.connect(self.sync_loader_segments)
-        for loader_id, button in self.loader_segment_buttons.items():
-            button.clicked.connect(lambda _checked=False, loader_id=loader_id: self.set_loader_mode(loader_id))
-        self.memory_min_input.editingFinished.connect(self.save_user_preferences)
-        self.memory_max_input.editingFinished.connect(self.save_user_preferences)
+        self.loader_combo.currentTextChanged.connect(self.set_loader_mode)
+        self.memory_min_input.valueChanged.connect(self.on_memory_setting_changed)
+        self.memory_max_input.valueChanged.connect(self.on_memory_setting_changed)
         self.java_path_input.editingFinished.connect(self.save_user_preferences)
         self.username_input.editTextChanged.connect(lambda *_: self.save_user_preferences())
         self.add_username_button.clicked.connect(self.add_local_username)
@@ -2132,9 +2454,11 @@ class MSLauncherWindow(QMainWindow):
             self.update_mascot_dismissed = True
             self.refresh_update_mascot()
             return True
-        if watched in (getattr(self, "project_switcher", None), *getattr(self, "project_tabs", {}).values()):
-            if event.type() == QEvent.Type.Leave:
-                QTimer.singleShot(80, self.collapse_project_switcher_if_cursor_left)
+        if watched in (getattr(self, "mascot_button", None), getattr(self, "mascot_picker_frame", None)):
+            if event.type() == QEvent.Type.Enter:
+                self.show_mascot_picker()
+            elif event.type() == QEvent.Type.Leave:
+                QTimer.singleShot(120, self.hide_mascot_picker_if_cursor_left)
         return super().eventFilter(watched, event)
 
     def collapse_project_switcher_if_cursor_left(self) -> None:
@@ -2172,6 +2496,155 @@ class MSLauncherWindow(QMainWindow):
         frame.moveCenter(screen_geometry.center())
         self.move(frame.topLeft())
 
+    def show_mascot_picker(self) -> None:
+        if not self.mascot_choice_buttons:
+            return
+        self.mascot_picker_frame.show()
+
+    def hide_mascot_picker_if_cursor_left(self) -> None:
+        if not hasattr(self, "mascot_picker_frame"):
+            return
+        cursor_position = QCursor.pos()
+        for widget in (self.mascot_button, self.mascot_picker_frame):
+            local_position = widget.mapFromGlobal(cursor_position)
+            if widget.rect().contains(local_position):
+                return
+        self.mascot_picker_frame.hide()
+
+    def setup_tray_icon(self) -> None:
+        if not QSystemTrayIcon.isSystemTrayAvailable():
+            return
+        self.tray_icon = QSystemTrayIcon(self)
+        if APP_ICON_PATH.is_file():
+            self.tray_icon.setIcon(QIcon(str(APP_ICON_PATH)))
+        else:
+            self.tray_icon.setIcon(self.windowIcon())
+        self.tray_icon.setToolTip(APP_DISPLAY_NAME)
+        menu = QMenu()
+        restore_action = QAction("Open MSLaunch", self)
+        restore_action.triggered.connect(self.restore_launcher_from_tray)
+        quit_action = QAction("Exit", self)
+        quit_action.triggered.connect(self.close)
+        menu.addAction(restore_action)
+        menu.addAction(quit_action)
+        self.tray_icon.setContextMenu(menu)
+        self.tray_icon.activated.connect(self.on_tray_activated)
+        self.tray_icon.show()
+
+    def on_tray_activated(self, reason: QSystemTrayIcon.ActivationReason) -> None:
+        if reason in (
+            QSystemTrayIcon.ActivationReason.Trigger,
+            QSystemTrayIcon.ActivationReason.DoubleClick,
+        ):
+            self.restore_launcher_from_tray()
+
+    def restore_launcher_from_tray(self) -> None:
+        self.hidden_to_tray_for_game = False
+        self.showNormal()
+        self.raise_()
+        self.activateWindow()
+
+    def hide_launcher_to_tray_for_game(self) -> None:
+        if self.tray_icon is None:
+            self.showMinimized()
+            return
+        self.hidden_to_tray_for_game = True
+        self.hide()
+
+    def get_or_create_mascot_window(self) -> MascotWindow:
+        if not MASCOT_FEATURE_ENABLED:
+            raise RuntimeError("Mascot feature is temporarily disabled")
+        if self.mascot_window is None:
+            self.mascot_window = MascotWindow(self.mascot_paths)
+            self.mascot_window.clicked.connect(self.register_floating_mascot_click)
+            self.mascot_window.hovered.connect(self.dismiss_floating_mascot_message)
+        return self.mascot_window
+
+    def toggle_floating_mascot(self) -> None:
+        if not MASCOT_FEATURE_ENABLED:
+            return
+        mascot = self.get_or_create_mascot_window()
+        if mascot.isVisible():
+            self.mascot_user_enabled = False
+            self.floating_mascot_message_active = False
+            mascot.set_message("")
+            mascot.hide()
+            return
+        self.mascot_user_enabled = True
+        self.show_floating_mascot()
+
+    def register_floating_mascot_click(self) -> None:
+        if not MASCOT_FEATURE_ENABLED:
+            return
+        now = time.monotonic()
+        self.mascot_click_times = [click for click in self.mascot_click_times if now - click <= 5.0]
+        self.mascot_click_times.append(now)
+        if len(self.mascot_click_times) < 3:
+            return
+        self.mascot_click_times.clear()
+        self.cycle_floating_mascot()
+
+    def select_floating_mascot(self, index: int) -> None:
+        if not MASCOT_FEATURE_ENABLED:
+            return
+        mascot = self.get_or_create_mascot_window()
+        mascot.set_mascot_index(index)
+        self.mascot_user_enabled = True
+        self.show_floating_mascot(mascot.message_label.text())
+        if hasattr(self, "mascot_picker_frame"):
+            self.mascot_picker_frame.hide()
+
+    def cycle_floating_mascot(self) -> None:
+        if not MASCOT_FEATURE_ENABLED:
+            return
+        mascot = self.get_or_create_mascot_window()
+        mascot.next_mascot()
+        if not mascot.isVisible():
+            mascot.show()
+
+    def show_floating_mascot(self, message: str = "") -> None:
+        if not MASCOT_FEATURE_ENABLED:
+            return
+        mascot = self.get_or_create_mascot_window()
+        self.floating_mascot_message_active = bool(message.strip())
+        mascot.set_message(message)
+        if not mascot.isVisible():
+            screen_geometry = self.screen().availableGeometry() if self.screen() else self.geometry()
+            mascot.move(
+                screen_geometry.right() - mascot.width() - 72,
+                screen_geometry.bottom() - mascot.height() - 86,
+            )
+        mascot.show()
+        mascot.raise_()
+
+    def dismiss_floating_mascot_message(self) -> None:
+        if not MASCOT_FEATURE_ENABLED:
+            return
+        if (
+            not self.floating_mascot_message_active
+            and not self.update_mascot_message_key
+            and self.update_check_state != "available"
+        ):
+            return
+        self.update_mascot_dismissed = True
+        self.update_mascot_message_key = ""
+        self.floating_mascot_message_active = False
+        if self.mascot_window is not None:
+            self.mascot_window.set_message("")
+            if not self.mascot_user_enabled:
+                self.mascot_window.hide()
+
+    def show_startup_mascot_notice_if_needed(self) -> None:
+        if not MASCOT_FEATURE_ENABLED:
+            return
+        previous_version = str(self.config.get("last_seen_launcher_version", "")).strip()
+        if previous_version == APP_VERSION:
+            return
+        self.config["last_seen_launcher_version"] = APP_VERSION
+        self.save_user_preferences()
+        message_key = "mascot_updated" if previous_version else "mascot_welcome"
+        self.show_floating_mascot(self.translate(message_key, version=APP_VERSION))
+
     def toggle_language(self) -> None:
         self.change_language("EN" if self.language == "RU" else "RU")
 
@@ -2187,8 +2660,45 @@ class MSLauncherWindow(QMainWindow):
         active_loader = loader or self.loader_setting_combo.currentText().strip() or "vanilla"
         if active_loader not in SUPPORTED_LOADERS:
             active_loader = "vanilla"
-        for loader_id, button in self.loader_segment_buttons.items():
-            button.setChecked(loader_id == active_loader)
+        if hasattr(self, "loader_combo") and self.loader_combo.currentText() != active_loader:
+            self.loader_combo.setCurrentText(active_loader)
+
+    def memory_setting_to_gb(self, memory_value: str) -> int:
+        value = memory_value.strip().upper()
+        if value.endswith("G") and value[:-1].isdigit():
+            return max(1, int(value[:-1]))
+        if value.endswith("M") and value[:-1].isdigit():
+            return max(1, round(int(value[:-1]) / 1024))
+        return 2
+
+    def on_memory_setting_changed(self) -> None:
+        if self.memory_min_input.value() > self.memory_max_input.value():
+            sender = self.sender()
+            if sender is self.memory_min_input:
+                self.memory_max_input.setValue(self.memory_min_input.value())
+            else:
+                self.memory_min_input.setValue(self.memory_max_input.value())
+        self.refresh_memory_hint()
+        self.save_user_preferences()
+
+    def refresh_memory_hint(self) -> None:
+        if not hasattr(self, "memory_hint_label"):
+            return
+        max_gb = self.memory_max_input.value()
+        if max_gb >= 12:
+            risk = "hot"
+            hint_key = "memory_hint_hot"
+        elif max_gb >= 8:
+            risk = "warm"
+            hint_key = "memory_hint_warm"
+        else:
+            risk = "good"
+            hint_key = "memory_hint_good"
+        for widget in (self.memory_min_input, self.memory_max_input, self.memory_hint_label):
+            widget.setProperty("risk", risk)
+            widget.style().unpolish(widget)
+            widget.style().polish(widget)
+        self.memory_hint_label.setText(self.translate(hint_key))
 
     def handle_project_tab(self, client_mode: str) -> None:
         if client_mode not in CLIENT_MODES:
@@ -2254,7 +2764,7 @@ class MSLauncherWindow(QMainWindow):
             button.clicked.connect(lambda checked=False, link=url: self.open_external_link(link))
             button.setVisible(True)
             self.social_buttons.append(button)
-            self.sidebar_layout.insertWidget(2 + offset, button)
+            self.sidebar_layout.insertWidget(3 + offset, button)
 
     def get_visible_social_links(self) -> list[tuple[str, str]]:
         if len(self.social_links) <= 3:
@@ -2372,7 +2882,7 @@ class MSLauncherWindow(QMainWindow):
             tab.setText(label if self.project_switcher_expanded and active else "")
             tab.setToolTip(label)
             tab.setVisible(project_key in ordered_keys)
-            tab.setFixedSize(158 if self.project_switcher_expanded and active else 54, 48)
+            tab.setFixedSize(154 if self.project_switcher_expanded and active else 52, 46)
             tab.style().unpolish(tab)
             tab.style().polish(tab)
             tab.update()
@@ -2411,10 +2921,12 @@ class MSLauncherWindow(QMainWindow):
         self.update_check_button.setToolTip(self.translate("manual_update_tooltip"))
         self.project_switcher.setToolTip(self.translate("project_switcher_tooltip"))
         self.skin_quick_button.setToolTip(self.translate("skin_button_tooltip"))
+        self.add_username_button.setToolTip(self.translate("add_username"))
+        self.add_build_button.setToolTip(self.translate("add_build"))
         self.refresh_info_panel()
-        self.loader_setting_label.setText(self.translate("loader"))
         self.memory_min_label.setText(self.translate("memory_min"))
         self.memory_max_label.setText(self.translate("memory_max"))
+        self.refresh_memory_hint()
         self.java_path_label.setText(self.translate("java_path"))
         self.java_browse_button.setText(self.translate("java_browse"))
         self.skin_label.setText(self.translate("skin"))
@@ -2427,11 +2939,18 @@ class MSLauncherWindow(QMainWindow):
         self.language_label.setText(self.translate("language"))
         self.profile_label.setText(self.translate("profile"))
         self.refresh_profile_labels()
-        self.build_label.setText(self.translate("build"))
         self.add_build_button.setToolTip(self.translate("add_build"))
-        self.username_label.setText(self.translate("username"))
-        self.version_label.setText(self.translate("version"))
-        self.loader_label.setText(self.translate("loader"))
+        self.build_label_text.setText(
+            self.translate("build_source_nukem")
+            if self.client_mode == CLIENT_MODE_NUKEM
+            else self.translate("build_source_local")
+        )
+        self.build_label_text.setProperty("role", "nukem" if self.client_mode == CLIENT_MODE_NUKEM else "")
+        self.build_label_text.style().unpolish(self.build_label_text)
+        self.build_label_text.style().polish(self.build_label_text)
+        self.username_label_text.setText(self.translate("username"))
+        self.version_label_text.setText(self.translate("version"))
+        self.loader_label_text.setText(self.translate("loader"))
         self.play_button.setText(self.translate(self.action_phrase_key))
         self.mods_button.setText(self.translate(self.get_mods_action_key()))
         self.refresh_action_button_icons()
@@ -2464,7 +2983,7 @@ class MSLauncherWindow(QMainWindow):
         self.set_button_icon(self.mods_button, self.get_mods_action_key(), 18)
 
     def apply_styles(self) -> None:
-        self.setStyleSheet(
+        stylesheet = (
             """
             QMainWindow {
                 background: #030607;
@@ -2490,13 +3009,12 @@ class MSLauncherWindow(QMainWindow):
                 border: 0;
             }
             #projectSwitcher {
-                background: rgba(8, 11, 15, 92);
-                border: 1px solid rgba(255, 255, 255, 18);
-                border-radius: 8px;
+                background: transparent;
+                border: 0;
             }
             #projectSwitcher[expanded="true"] {
-                background: rgba(8, 11, 15, 150);
-                border: 1px solid rgba(255, 255, 255, 32);
+                background: transparent;
+                border: 0;
             }
             #windowControls {
                 background: transparent;
@@ -2507,15 +3025,15 @@ class MSLauncherWindow(QMainWindow):
                 border: 0;
             }
             QPushButton#windowButton {
-                background: rgba(8, 11, 15, 88);
-                color: rgba(255, 255, 255, 190);
-                border: 1px solid rgba(255, 255, 255, 26);
+                background: rgba(8, 11, 15, 70);
+                color: rgba(255, 255, 255, 168);
+                border: 1px solid rgba(93, 202, 235, 24);
                 border-radius: 8px;
-                font-size: 15px;
+                font-size: 13px;
                 font-weight: 800;
             }
             QPushButton#windowButton:hover {
-                background: rgba(255, 255, 255, 22);
+                background: rgba(93, 202, 235, 18);
                 color: #ffffff;
             }
             #sidebarFrame {
@@ -2524,6 +3042,23 @@ class MSLauncherWindow(QMainWindow):
                 border-radius: 8px;
                 min-width: 64px;
                 max-width: 64px;
+            }
+            #mascotPicker {
+                background: rgba(8, 11, 15, 168);
+                border: 1px solid rgba(116, 231, 186, 46);
+                border-radius: 8px;
+            }
+            QPushButton#mascotChoice {
+                background: rgba(255, 255, 255, 12);
+                border: 1px solid rgba(255, 255, 255, 24);
+                border-radius: 8px;
+                padding: 3px;
+                color: #ffffff;
+                font-weight: 800;
+            }
+            QPushButton#mascotChoice:hover {
+                background: rgba(116, 231, 186, 28);
+                border: 1px solid rgba(116, 231, 186, 120);
             }
             #newsFrame {
                 background: rgba(7, 10, 11, 128);
@@ -2561,6 +3096,17 @@ class MSLauncherWindow(QMainWindow):
                 font-size: 34px;
                 font-weight: 900;
             }
+            #floatingMascot,
+            #floatingMascotMessage {
+                background: transparent;
+                border: 0;
+            }
+            #floatingMascotMessage {
+                color: #ffffff;
+                font-size: 22px;
+                font-weight: 900;
+                padding: 0 6px 6px 6px;
+            }
             #infoPanel {
                 background: rgba(10, 10, 10, 182);
                 border: 1px solid rgba(255, 255, 255, 36);
@@ -2587,9 +3133,58 @@ class MSLauncherWindow(QMainWindow):
                 height: 0;
             }
             #controlFrame {
-                background: rgba(7, 10, 11, 176);
-                border: 1px solid rgba(255, 255, 255, 26);
+                background: rgba(7, 10, 11, 164);
+                border: 1px solid rgba(255, 255, 255, 28);
                 border-radius: 8px;
+            }
+            #controlFrame QLineEdit,
+            #controlFrame QComboBox {
+                font-size: 13px;
+                padding-left: 9px;
+                padding-right: 24px;
+            }
+            #controlFrame QLabel {
+                color: rgba(255, 255, 255, 190);
+                font-size: 11px;
+                font-weight: 700;
+            }
+            #controlLabelFrame {
+                background: transparent;
+                border: 0;
+            }
+            #controlLabelIcon {
+                background: transparent;
+                border: 0;
+            }
+            #controlLabelText {
+                color: rgba(255, 255, 255, 205);
+                font-size: 11px;
+                font-weight: 800;
+            }
+            QLabel#controlLabelText[role="nukem"] {
+                color: #bdf7ff;
+                font-weight: 900;
+            }
+            #fieldActions {
+                background: transparent;
+                border: 0;
+            }
+            QPushButton#labelActionButton {
+                background: rgba(93, 202, 235, 12);
+                color: #eafcff;
+                border: 1px solid rgba(93, 202, 235, 58);
+                border-radius: 6px;
+                font-size: 10px;
+                font-weight: 800;
+                padding: 0;
+            }
+            QPushButton#labelActionButton:hover {
+                background: rgba(93, 202, 235, 30);
+                border: 1px solid rgba(93, 202, 235, 120);
+            }
+            #controlSeparator {
+                background: rgba(255, 255, 255, 34);
+                border: 0;
             }
             QLabel {
                 color: #f3f6f2;
@@ -2619,78 +3214,84 @@ class MSLauncherWindow(QMainWindow):
                 font-size: 14px;
             }
             #statusLabel {
-                color: #9ff4cf;
+                color: #8ddcf2;
             }
             #statusRow {
-                border-bottom: 1px solid rgba(255, 255, 255, 36);
-                min-height: 68px;
+                border-bottom: 1px solid rgba(93, 202, 235, 32);
+                min-height: 48px;
             }
             #statusIcon {
-                color: #9ff4cf;
-                background: rgba(116, 231, 186, 20);
-                border: 1px solid rgba(116, 231, 186, 70);
+                color: #5dcaeb;
+                background: transparent;
+                border: 0;
                 border-radius: 8px;
-                font-size: 18px;
-                font-weight: 900;
             }
             #statusTitle {
                 color: #ffffff;
-                font-size: 19px;
+                font-size: 17px;
                 font-weight: 800;
             }
             #statusBody {
                 color: #c8ccca;
-                font-size: 13px;
+                font-size: 12px;
             }
             #statusCheck {
-                color: #9ff4cf;
-                border: 2px solid #5fe6ac;
+                color: #5dcaeb;
+                background: transparent;
+                border: 0;
                 border-radius: 8px;
-                font-size: 14px;
-                font-weight: 900;
             }
             QPushButton#projectTab {
-                background: transparent;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(20, 38, 45, 150),
+                    stop:0.48 rgba(4, 11, 15, 182),
+                    stop:1 rgba(2, 6, 8, 212));
                 color: #f3f6f2;
-                border: 1px solid transparent;
-                border-radius: 8px;
-                padding: 0 7px;
+                border: 1px solid rgba(93, 202, 235, 58);
+                border-radius: 9px;
+                padding: 0 8px;
                 text-align: left;
-                font-size: 14px;
-                font-weight: 700;
-            }
-            QPushButton#projectTab:hover {
-                background: rgba(255, 255, 255, 16);
-                border: 1px solid rgba(255, 255, 255, 34);
-            }
-            QPushButton#projectTab[active="true"] {
-                background: rgba(255, 255, 255, 12);
-                border: 1px solid rgba(255, 255, 255, 34);
-                color: #ffffff;
-            }
-            QPushButton#projectTab:disabled {
-                color: rgba(255, 255, 255, 105);
-                background: transparent;
-                border: 1px solid transparent;
-            }
-            QPushButton#languageToggle {
-                background: rgba(8, 11, 15, 168);
-                color: #dffcf0;
-                border: 1px solid rgba(255, 255, 255, 42);
-                border-radius: 8px;
                 font-size: 13px;
                 font-weight: 800;
             }
-            QPushButton#languageToggle:hover {
-                background: rgba(116, 231, 186, 34);
-                border: 1px solid rgba(116, 231, 186, 110);
+            QPushButton#projectTab:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(35, 76, 88, 170),
+                    stop:0.50 rgba(5, 20, 28, 214),
+                    stop:1 rgba(2, 8, 12, 230));
+                border: 1px solid rgba(93, 202, 235, 130);
             }
-            QPushButton#updateCheckButton {
-                background: rgba(8, 11, 15, 150);
-                color: #9ff4cf;
-                border: 1px solid rgba(116, 231, 186, 70);
+            QPushButton#projectTab[active="true"] {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(27, 62, 73, 175),
+                    stop:0.46 rgba(4, 16, 22, 220),
+                    stop:1 rgba(2, 8, 12, 238));
+                border: 1px solid rgba(93, 202, 235, 112);
+                color: #ffffff;
+            }
+            QPushButton#projectTab:disabled {
+                color: rgba(255, 255, 255, 118);
+                background: rgba(6, 10, 12, 118);
+                border: 1px solid rgba(255, 255, 255, 24);
+            }
+            QPushButton#languageToggle {
+                background: rgba(8, 11, 15, 120);
+                color: #d8f7ff;
+                border: 1px solid rgba(93, 202, 235, 46);
                 border-radius: 8px;
                 font-size: 12px;
+                font-weight: 800;
+            }
+            QPushButton#languageToggle:hover {
+                background: rgba(93, 202, 235, 22);
+                border: 1px solid rgba(93, 202, 235, 100);
+            }
+            QPushButton#updateCheckButton {
+                background: rgba(8, 11, 15, 122);
+                color: #8ddcf2;
+                border: 1px solid rgba(93, 202, 235, 58);
+                border-radius: 8px;
+                font-size: 11px;
                 font-weight: 900;
             }
             QPushButton#updateCheckButton[state="checking"] {
@@ -2727,6 +3328,14 @@ class MSLauncherWindow(QMainWindow):
                 color: #ffffff;
                 border: 1px solid rgba(116, 231, 186, 130);
             }
+            QPushButton#sideButton[role="report"] {
+                background: rgba(7, 18, 26, 188);
+                border: 1px solid rgba(93, 202, 235, 82);
+            }
+            QPushButton#sideButton[role="report"]:hover {
+                background: rgba(12, 34, 48, 224);
+                border: 1px solid rgba(255, 211, 138, 150);
+            }
             QPushButton#panelButton {
                 background: rgba(255, 255, 255, 20);
                 color: #f3f6f2;
@@ -2747,63 +3356,130 @@ class MSLauncherWindow(QMainWindow):
                 border: 0;
             }
             QPushButton#miniIconButton {
-                background: rgba(255, 255, 255, 16);
+                background: rgba(93, 202, 235, 10);
                 color: #f3f6f2;
-                border: 1px solid rgba(255, 255, 255, 32);
+                border: 1px solid rgba(93, 202, 235, 44);
                 border-radius: 8px;
             }
             QPushButton#miniIconButton:hover {
-                background: rgba(116, 231, 186, 34);
-                border: 1px solid rgba(116, 231, 186, 110);
+                background: rgba(93, 202, 235, 24);
+                border: 1px solid rgba(93, 202, 235, 100);
             }
             QLineEdit,
-            QComboBox {
+            QComboBox,
+            QSpinBox {
                 background: rgba(3, 7, 9, 156);
                 color: #ffffff;
-                border: 1px solid rgba(255, 255, 255, 34);
+                border: 1px solid rgba(93, 202, 235, 36);
                 border-radius: 8px;
-                padding: 8px 10px;
-                min-height: 36px;
-                font-size: 15px;
+                padding: 4px 8px;
+                min-height: 28px;
+                max-height: 38px;
+                font-size: 13px;
             }
             QLineEdit:focus,
-            QComboBox:focus {
+            QComboBox:focus,
+            QSpinBox:focus {
                 border: 1px solid #74e7ba;
+            }
+            QSpinBox#memorySpin[risk="good"] {
+                border: 1px solid rgba(93, 202, 235, 132);
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 rgba(5, 18, 24, 190),
+                    stop:0.55 rgba(3, 9, 13, 172),
+                    stop:1 rgba(6, 34, 42, 210));
+            }
+            QSpinBox#memorySpin[risk="warm"] {
+                border: 1px solid rgba(255, 179, 71, 150);
+                background: rgba(44, 25, 7, 170);
+            }
+            QSpinBox#memorySpin[risk="hot"] {
+                border: 1px solid rgba(255, 78, 70, 180);
+                background: rgba(48, 8, 8, 190);
+            }
+            QLabel#memoryHint {
+                color: #8ddcf2;
+                font-size: 12px;
+                font-weight: 800;
+            }
+            QLabel#memoryHint[risk="good"] {
+                color: #a9f4ff;
+            }
+            QLabel#memoryHint[risk="warm"] {
+                color: #ffbf73;
+            }
+            QLabel#memoryHint[risk="hot"] {
+                color: #ff756e;
+            }
+            QSpinBox#memorySpin {
+                padding-right: 34px;
+            }
+            QSpinBox#memorySpin::up-button,
+            QSpinBox#memorySpin::down-button {
+                subcontrol-origin: border;
+                width: 28px;
+                background: rgba(93, 202, 235, 16);
+                border-left: 1px solid rgba(93, 202, 235, 42);
+            }
+            QSpinBox#memorySpin::up-button {
+                subcontrol-position: top right;
+                border-top-right-radius: 8px;
+            }
+            QSpinBox#memorySpin::down-button {
+                subcontrol-position: bottom right;
+                border-bottom-right-radius: 8px;
+            }
+            QSpinBox#memorySpin::up-arrow {
+                image: none;
+                width: 0;
+                height: 0;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-bottom: 6px solid #5dcaeb;
+            }
+            QSpinBox#memorySpin::down-arrow {
+                image: none;
+                width: 0;
+                height: 0;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-top: 6px solid #5dcaeb;
             }
             QComboBox::drop-down {
                 border: 0;
-                width: 30px;
+                width: 24px;
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
             }
-            #loaderSegmentFrame {
-                background: rgba(3, 7, 9, 154);
-                border: 1px solid rgba(255, 255, 255, 30);
+            QComboBox::down-arrow {
+                image: url("__CHEVRON_ICON__");
+                width: 14px;
+                height: 14px;
+                margin-right: 7px;
+            }
+            QComboBox QAbstractItemView {
+                background: rgba(3, 7, 9, 245);
+                color: #f3f6f2;
+                border: 1px solid rgba(93, 202, 235, 90);
                 border-radius: 8px;
+                padding: 4px;
+                outline: 0;
+                selection-background-color: rgba(93, 202, 235, 46);
+                selection-color: #ffffff;
             }
-            QPushButton#loaderSegment {
-                background: transparent;
-                color: rgba(255, 255, 255, 170);
-                border: 1px solid transparent;
-                border-radius: 7px;
-                min-height: 34px;
-                font-size: 13px;
-                font-weight: 800;
-            }
-            QPushButton#loaderSegment:checked {
-                background: rgba(116, 231, 186, 32);
-                color: #ffffff;
-                border: 1px solid rgba(116, 231, 186, 120);
-            }
-            QPushButton#loaderSegment:hover {
-                background: rgba(255, 255, 255, 18);
+            QComboBox QAbstractItemView::item {
+                min-height: 26px;
+                padding: 4px 8px;
+                border-radius: 6px;
             }
             QPushButton#playButton,
             QPushButton#modsButton {
                 color: #ffffff;
                 border-radius: 10px;
-                font-size: 15px;
+                font-size: 13px;
                 font-weight: 800;
                 letter-spacing: 0px;
-                padding: 6px 10px;
+                padding: 4px 10px;
             }
             QPushButton#playButton:hover {
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #ffa22b, stop:1 #ff7d12);
@@ -2840,6 +3516,7 @@ class MSLauncherWindow(QMainWindow):
             }
             """
         )
+        self.setStyleSheet(stylesheet.replace("__CHEVRON_ICON__", (ICON_DIR / "chevron.svg").as_posix()))
 
     def populate_profiles(self) -> None:
         self.profile_combo.clear()
@@ -2982,15 +3659,28 @@ class MSLauncherWindow(QMainWindow):
 
     def refresh_nukem_control_policy(self) -> None:
         nukem_locked = self.client_mode == CLIENT_MODE_NUKEM
+        if hasattr(self, "build_label_text"):
+            self.build_label_text.setText(
+                self.translate("build_source_nukem")
+                if nukem_locked
+                else self.translate("build_source_local")
+            )
+            self.build_label_text.setProperty("role", "nukem" if nukem_locked else "")
+            self.build_label_text.style().unpolish(self.build_label_text)
+            self.build_label_text.style().polish(self.build_label_text)
+        if nukem_locked:
+            self.select_nukem_managed_build()
         self.build_combo.setEnabled(not nukem_locked)
         self.build_combo.setEditable(not nukem_locked)
         if hasattr(self, "add_build_button"):
-            self.add_build_button.setVisible(not nukem_locked)
-            self.add_build_button.setEnabled(not nukem_locked)
+            self.add_build_button.setVisible(True)
+            self.add_build_button.setEnabled(True)
         self.version_combo.setEnabled(not nukem_locked and self.version_combo.count() > 0)
         if hasattr(self, "admin_unlock_button"):
             self.admin_unlock_button.setVisible(
-                self.client_mode == CLIENT_MODE_NUKEM and self.is_admin_access_configured()
+                self.info_panel_mode == "settings"
+                and self.client_mode == CLIENT_MODE_NUKEM
+                and self.is_admin_access_configured()
             )
         if hasattr(self, "build_group"):
             self.build_group.setToolTip(
@@ -3000,6 +3690,31 @@ class MSLauncherWindow(QMainWindow):
             self.version_group.setToolTip(
                 "Minecraft version comes from the active Nukem build." if nukem_locked else ""
             )
+
+    def select_nukem_managed_build(self) -> None:
+        if self.build_combo.count() <= 0:
+            return
+        current_data = self.build_combo.currentData()
+        if isinstance(current_data, dict) and self.is_nukem_managed_build(current_data):
+            return
+        for index in range(self.build_combo.count()):
+            build = self.build_combo.itemData(index)
+            if isinstance(build, dict) and self.is_nukem_managed_build(build):
+                with QSignalBlocker(self.build_combo):
+                    self.build_combo.setCurrentIndex(index)
+                return
+
+    def is_nukem_managed_build(self, build: dict[str, object]) -> bool:
+        project = str(build.get("project", "")).strip().lower()
+        build_id = str(build.get("id", "")).strip().lower()
+        source_key = str(build.get("source_key", "")).strip().lower()
+        manifest_url = str(build.get("manifest_url", "")).strip().lower()
+        return (
+            project == CLIENT_MODE_NUKEM
+            or build_id in {CLIENT_MODE_NUKEM, "main-server", "nk-team"}
+            or "msnukem" in source_key
+            or "msnukem" in manifest_url
+        )
 
     def get_selected_build(self) -> dict[str, object] | None:
         build = self.build_combo.currentData()
@@ -3036,7 +3751,7 @@ class MSLauncherWindow(QMainWindow):
 
     def add_local_build(self) -> None:
         if self.client_mode == CLIENT_MODE_NUKEM:
-            return
+            self.set_client_mode(CLIENT_MODE_INDEPENDENT)
         build_name, accepted = QInputDialog.getText(
             self,
             self.translate("add_build"),
@@ -3549,8 +4264,13 @@ class MSLauncherWindow(QMainWindow):
         self.launch_worker.status_changed.connect(self.set_status)
         self.launch_worker.crash_detected.connect(self.on_game_crashed)
         self.launch_worker.error_occurred.connect(self.on_launch_failed)
+        self.launch_worker.game_started.connect(self.on_game_started)
         self.launch_worker.finished_successfully.connect(self.on_game_closed)
         self.launch_worker.start()
+
+    def on_game_started(self) -> None:
+        self.set_status("status_game_running")
+        self.hide_launcher_to_tray_for_game()
 
     def on_download_failed(self, error_key: str, error: str) -> None:
         self.reset_action_buttons()
@@ -3562,10 +4282,12 @@ class MSLauncherWindow(QMainWindow):
     def evaluate_launcher_update(self, resolved_build: dict, *, show_panel: bool = True) -> bool:
         remote_version = str(resolved_build.get("launcher_version", "")).strip()
         if remote_version and not parse_version_numbers(remote_version):
+            self.launcher_update_error = f"Malformed launcher_version in build config: {remote_version}"
             self.write_launcher_warning_report(
-                f"Malformed launcher_version in build config: {remote_version}",
+                self.launcher_update_error,
                 "launcher_update",
             )
+            self.set_update_check_state("error")
             return False
 
         update_notice = get_launcher_update_notice(resolved_build, APP_VERSION)
@@ -3600,7 +4322,25 @@ class MSLauncherWindow(QMainWindow):
         if self.update_check_state == "available" and self.launcher_update_version:
             self.show_launcher_update_panel()
             return
+        if self.register_update_ok_click():
+            return
         self.start_launcher_update_check(manual=True)
+
+    def register_update_ok_click(self) -> bool:
+        if not MASCOT_FEATURE_ENABLED:
+            return False
+        if self.update_check_state not in {"ok", "checking"}:
+            return False
+        now = time.monotonic()
+        self.update_ok_click_times = [click for click in self.update_ok_click_times if now - click <= 5.0]
+        self.update_ok_click_times.append(now)
+        if len(self.update_ok_click_times) < 3:
+            return False
+        self.update_ok_click_times.clear()
+        self.update_mascot_message_key = "update_mascot_ok"
+        self.update_mascot_dismissed = False
+        self.refresh_update_mascot()
+        return True
 
     def auto_check_launcher_update(self) -> None:
         self.start_launcher_update_check(manual=False)
@@ -3623,22 +4363,36 @@ class MSLauncherWindow(QMainWindow):
         self.update_check_worker.start()
 
     def on_launcher_update_loaded(self, resolved_build: dict) -> None:
+        self.launcher_update_error = ""
         found_update = self.evaluate_launcher_update(resolved_build, show_panel=True)
         if found_update:
             self.set_update_check_state("available")
+            return
+        if self.launcher_update_error:
+            self.set_update_check_state("error")
+            if self.update_check_manual:
+                self.set_status_text(self.translate("manual_update_failed", error=self.launcher_update_error))
             return
         self.set_update_check_state("ok")
         if self.update_check_manual:
             self.set_status("manual_update_ok")
 
     def on_launcher_update_failed(self, error: str) -> None:
-        if self.update_check_manual:
+        self.launcher_update_error = str(error).strip() or "Unknown launcher update check error"
+        if self.launcher_update_version:
+            self.set_update_check_state("available")
+        else:
             self.set_update_check_state("error")
-            self.set_status_text(self.translate("manual_update_failed", error=error))
+        if self.update_check_manual:
+            self.set_status_text(self.translate("manual_update_failed", error=self.launcher_update_error))
 
     def set_update_check_state(self, state: str) -> None:
         self.update_check_state = state if state in {"available", "checking", "error", "ok"} else "ok"
-        if self.update_check_state != "available":
+        if self.update_check_state != "error":
+            self.launcher_update_error = ""
+        if self.update_check_state in {"available", "checking", "error"}:
+            self.update_mascot_message_key = ""
+        if self.update_check_state != "available" and not self.update_mascot_message_key:
             self.update_mascot_dismissed = False
         self.refresh_update_check_button()
         self.refresh_update_mascot()
@@ -3658,8 +4412,12 @@ class MSLauncherWindow(QMainWindow):
         }
         self.update_check_button.setText(labels.get(self.update_check_state, "OK"))
         tooltip = self.translate("manual_update_tooltip")
-        if self.update_check_state == "available" and self.launcher_update_version:
+        if self.update_check_state == "checking":
+            tooltip = self.translate("manual_update_checking")
+        elif self.update_check_state == "available" and self.launcher_update_version:
             tooltip = self.translate("update_available", version=self.launcher_update_version)
+        elif self.update_check_state == "error" and self.launcher_update_error:
+            tooltip = self.translate("manual_update_failed", error=self.launcher_update_error)
         self.update_check_button.setToolTip(tooltip)
         self.update_check_button.setProperty("state", self.update_check_state)
         self.update_check_button.setProperty("pulse", self.update_pulse_on and self.update_check_state == "available")
@@ -3675,17 +4433,30 @@ class MSLauncherWindow(QMainWindow):
     def refresh_update_mascot(self) -> None:
         if not hasattr(self, "update_mascot_frame"):
             return
-        visible = (
+        if not MASCOT_FEATURE_ENABLED:
+            self.update_mascot_frame.hide()
+            if self.update_mascot_movie is not None:
+                self.update_mascot_movie.stop()
+            return
+        custom_visible = bool(self.update_mascot_message_key) and not self.update_mascot_dismissed
+        update_visible = (
             self.update_check_state == "available"
             and bool(self.launcher_update_version)
             and not self.update_mascot_dismissed
         )
-        self.update_mascot_frame.setVisible(visible)
+        visible = custom_visible or update_visible
+        title_key = self.update_mascot_message_key if custom_visible else "update_mascot_found"
+        self.update_mascot_title.setText(self.translate(title_key))
+        self.update_mascot_frame.hide()
+        if visible:
+            self.show_floating_mascot(self.translate(title_key))
+        elif self.mascot_window is not None:
+            self.floating_mascot_message_active = False
+            self.mascot_window.set_message("")
+            if not self.mascot_user_enabled:
+                self.mascot_window.hide()
         if self.update_mascot_movie is not None:
-            if visible and self.update_mascot_movie.state() != QMovie.MovieState.Running:
-                self.update_mascot_movie.start()
-            elif not visible:
-                self.update_mascot_movie.stop()
+            self.update_mascot_movie.stop()
 
     def show_launcher_update_panel(self) -> None:
         if not self.launcher_update_version:
@@ -3715,6 +4486,8 @@ class MSLauncherWindow(QMainWindow):
         if hasattr(self, "admin_unlock_button"):
             self.admin_unlock_button.hide()
         self.info_panel.setMinimumHeight(220)
+        self.info_title_label.setMinimumHeight(0)
+        self.info_title_label.setWordWrap(False)
         if hasattr(self, "news_frame"):
             self.refresh_news_visibility()
 
@@ -3749,6 +4522,8 @@ class MSLauncherWindow(QMainWindow):
             self.set_settings_widgets_visible(False)
             self.info_title_label.show()
             self.info_body_label.show()
+            self.info_title_label.setWordWrap(True)
+            self.info_title_label.setMinimumHeight(76)
             self.info_title_label.setText(self.translate("update_available", version=self.launcher_update_version))
             body_parts = [self.translate("update_panel_body")]
             if self.launcher_update_notes:
@@ -3788,7 +4563,7 @@ class MSLauncherWindow(QMainWindow):
             return
 
         if self.info_panel_mode == "settings":
-            self.info_panel.setMinimumHeight(320)
+            self.info_panel.setMinimumHeight(300)
             self.set_status_rows_visible(False)
             self.set_settings_widgets_visible(True)
             self.set_launch_settings_visible(True)
@@ -3929,16 +4704,71 @@ class MSLauncherWindow(QMainWindow):
 
     def handle_panel_report_action(self) -> None:
         if self.info_panel_mode in ("help", "feedback"):
-            user_message = self.request_player_report_message()
-            if user_message is None:
-                return
-            technical_details = self.build_manual_report_details()
-            if self.send_panel_report("manual_report", user_message, technical_details):
-                self.set_status_text(self.translate("report_sent"))
-                return
-            self.save_manual_report_fallback(user_message, technical_details)
-            self.set_status_text(self.translate("report_send_failed"))
+            self.open_report_dialog()
             return
+        self.open_crash_reports_folder()
+
+    def open_report_dialog(self) -> None:
+        dialog = QDialog(self)
+        dialog.setObjectName("accessDialog")
+        dialog.setWindowTitle(self.translate("report_dialog_title"))
+        dialog.setModal(True)
+        dialog.setMinimumWidth(460)
+        dialog.setStyleSheet(SYSTEM_DIALOG_STYLESHEET)
+
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setSpacing(12)
+
+        title = QLabel(self.translate("report_dialog_title"))
+        title.setObjectName("accessTitle")
+        title.setWordWrap(True)
+        body = QLabel(self.translate("report_dialog_body"))
+        body.setObjectName("accessBody")
+        body.setWordWrap(True)
+        message_input = QPlainTextEdit()
+        message_input.setObjectName("reportTextInput")
+        message_input.setPlaceholderText(self.translate("report_dialog_placeholder"))
+        message_input.setMinimumHeight(150)
+
+        buttons = QHBoxLayout()
+        buttons.addStretch(1)
+        cancel_button = QPushButton(self.translate("report_dialog_cancel"))
+        send_button = QPushButton(self.translate("report_dialog_send"))
+        send_button.setObjectName("primaryDialogButton")
+        cancel_button.clicked.connect(dialog.reject)
+        send_button.clicked.connect(dialog.accept)
+        buttons.addWidget(cancel_button)
+        buttons.addWidget(send_button)
+
+        layout.addWidget(title)
+        layout.addWidget(body)
+        layout.addWidget(message_input)
+        layout.addLayout(buttons)
+
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        user_message = message_input.toPlainText().strip()
+        if not user_message:
+            self.show_error(self.translate("report_empty"))
+            return
+        self.submit_manual_report(user_message)
+
+    def submit_manual_report(self, user_message: str) -> None:
+        technical_details = f"Manual player report from {APP_DISPLAY_NAME} {APP_VERSION}."
+        if self.send_panel_report("manual_report", user_message, technical_details):
+            self.set_status_text(self.translate("report_sent"))
+            return
+        report_path = self.write_launcher_warning_report(
+            f"{technical_details}\n\nUser message:\n{user_message}",
+            "manual_report",
+        )
+        self.last_error_message = user_message
+        if report_path is not None:
+            self.last_error_report_path = report_path
+            self.set_status_text(self.translate("report_saved_local"))
+            return
+        self.set_status_text(self.translate("report_send_failed"))
         self.open_crash_reports_folder()
 
     def request_player_report_message(self) -> str | None:
@@ -4385,6 +5215,8 @@ class MSLauncherWindow(QMainWindow):
     def on_game_closed(self) -> None:
         self.reset_action_buttons()
         self.set_status("status_game_closed")
+        if self.hidden_to_tray_for_game:
+            self.restore_launcher_from_tray()
 
     def set_action_buttons_enabled(self, enabled: bool) -> None:
         self.play_button.setEnabled(enabled)
@@ -4449,8 +5281,8 @@ class MSLauncherWindow(QMainWindow):
     def get_current_launch_settings(self) -> dict[str, object]:
         launch_options = dict(get_config_launch_options(self.config))
         launch_options["loader"] = self.loader_setting_combo.currentText().strip() or "vanilla"
-        launch_options["memory_min"] = self.memory_min_input.text().strip() or "512M"
-        launch_options["memory_max"] = self.memory_max_input.text().strip() or "2G"
+        launch_options["memory_min"] = f"{self.memory_min_input.value()}G"
+        launch_options["memory_max"] = f"{self.memory_max_input.value()}G"
         launch_options["java_path"] = self.java_path_input.text().strip()
         return validate_launch_settings(launch_options)
 
@@ -4539,6 +5371,10 @@ class MSLauncherWindow(QMainWindow):
         if not self.wait_for_worker_shutdown(self.launch_worker):
             event.ignore()
             return
+        if self.mascot_window is not None:
+            self.mascot_window.close()
+        if self.tray_icon is not None:
+            self.tray_icon.hide()
         super().closeEvent(event)
 
     def ask_game_close_choice(self) -> str:
