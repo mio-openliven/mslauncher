@@ -48,6 +48,25 @@ def make_forge_jar() -> bytes:
         return jar_path.read_bytes()
 
 
+def make_quilt_jar() -> bytes:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        jar_path = Path(temp_dir) / "quilt-mod.jar"
+        with zipfile.ZipFile(jar_path, "w") as jar:
+            jar.writestr(
+                "quilt.mod.json",
+                json.dumps(
+                    {
+                        "schema_version": 1,
+                        "quilt_loader": {
+                            "id": "quilt_example",
+                            "depends": [{"id": "minecraft", "versions": "1.20.1"}],
+                        },
+                    }
+                ),
+            )
+        return jar_path.read_bytes()
+
+
 def expect_inspection_error(callback) -> None:
     try:
         callback()
@@ -89,6 +108,12 @@ def main() -> None:
         forge_report = inspect_archive(forge_archive, output_path=root / "forge-report.md")
         assert forge_report.loader_guess == "forge"
         assert "1.19.2" in forge_report.possible_versions
+
+        quilt_archive = root / "quilt.zip"
+        write_zip(quilt_archive, {"mods/quilt-mod.jar": make_quilt_jar()})
+        quilt_report = inspect_archive(quilt_archive, output_path=root / "quilt-report.md")
+        assert quilt_report.loader_guess == "quilt"
+        assert "1.20.1" in quilt_report.possible_versions
 
         traversal_archive = root / "traversal.zip"
         write_zip(traversal_archive, {"../evil.txt": b"nope"})

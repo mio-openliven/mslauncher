@@ -11,6 +11,7 @@ import sys
 import threading
 import traceback
 from pathlib import Path
+from urllib.parse import quote_plus
 
 import requests
 from PyQt6.QtCore import QEvent, QPointF, QSize, QTimer, QThread, Qt, QUrl, pyqtSignal
@@ -47,6 +48,7 @@ from app_paths import (
 )
 from launcher_core import MinecraftEngine
 from launcher_update import APP_DISPLAY_NAME, APP_VERSION, get_launcher_update_notice, parse_version_numbers
+from loader_support import LOADER_LABELS, SUPPORTED_LOADERS
 from manifest_validator import normalize_download_url, normalize_manifest_path
 from panel_client import (
     PanelClientError,
@@ -58,7 +60,7 @@ from panel_client import (
 )
 from profile_manager import LauncherProfile, LauncherProfileManager, PROFILE_IDS, PROFILE_SERVER
 from remote_config import resolve_build_config
-from settings_validator import LaunchSettingsError, validate_launch_settings
+from settings_validator import LaunchSettingsError, memory_to_mb, validate_launch_settings
 from url_policy import URLPolicyError, normalize_https_url
 from user_error_messages import explain_user_error, write_error_report
 
@@ -195,6 +197,17 @@ TRANSLATIONS = {
         "open_crash_reports": "Open crash reports",
         "open_error_report": "Open logs",
         "crash_panel_title": "Minecraft crashed",
+        "crash_help_title": "Minecraft crashed",
+        "crash_help_body": "MSLaunch found a likely cause. You can send it to the owner, try the steps yourself, or search the exact error.",
+        "crash_action_ok": "OK",
+        "crash_action_report": "Report",
+        "crash_action_self_help": "Fix myself",
+        "crash_action_google": "Ask Google",
+        "crash_action_try_fix": "Try fix",
+        "crash_self_help_title": "Crash details",
+        "crash_google_failed": "Could not open browser search.",
+        "crash_fix_title": "Fix applied",
+        "crash_fix_memory_applied": "Max RAM was set to {memory}. Try launching again.",
         "error_panel_title": "Last launcher error",
         "loader": "Loader",
         "memory_min": "Min RAM",
@@ -343,6 +356,17 @@ TRANSLATIONS = {
         "open_crash_reports": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c crash-reports",
         "open_error_report": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u043e\u0442\u0447\u0435\u0442\u044b",
         "crash_panel_title": "Minecraft \u0432\u044b\u043b\u0435\u0442\u0435\u043b",
+        "crash_help_title": "Minecraft \u0432\u044b\u043b\u0435\u0442\u0435\u043b",
+        "crash_help_body": "MSLaunch \u043d\u0430\u0448\u0435\u043b \u0432\u0435\u0440\u043e\u044f\u0442\u043d\u0443\u044e \u043f\u0440\u0438\u0447\u0438\u043d\u0443. \u041c\u043e\u0436\u043d\u043e \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u0435\u0435 \u0432\u043b\u0430\u0434\u0435\u043b\u044c\u0446\u0443, \u043f\u043e\u043f\u0440\u043e\u0431\u043e\u0432\u0430\u0442\u044c \u0448\u0430\u0433\u0438 \u0441\u0430\u043c\u043e\u043c\u0443 \u0438\u043b\u0438 \u043f\u043e\u0438\u0441\u043a\u0430\u0442\u044c \u0442\u043e\u0447\u043d\u0443\u044e \u043e\u0448\u0438\u0431\u043a\u0443.",
+        "crash_action_ok": "OK",
+        "crash_action_report": "\u0421\u043e\u043e\u0431\u0449\u0438\u0442\u044c",
+        "crash_action_self_help": "\u0425\u043e\u0447\u0443 \u0441\u0430\u043c",
+        "crash_action_google": "\u0421\u043f\u0440\u043e\u0441\u0438\u0442\u044c Google",
+        "crash_action_try_fix": "\u0418\u0441\u043f\u0440\u0430\u0432\u0438\u0442\u044c",
+        "crash_self_help_title": "\u041f\u043e\u0434\u0440\u043e\u0431\u043d\u043e\u0441\u0442\u0438 \u0432\u044b\u043b\u0435\u0442\u0430",
+        "crash_google_failed": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043a\u0440\u044b\u0442\u044c \u043f\u043e\u0438\u0441\u043a \u0432 \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u0435.",
+        "crash_fix_title": "\u0418\u0441\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435 \u043f\u0440\u0438\u043c\u0435\u043d\u0435\u043d\u043e",
+        "crash_fix_memory_applied": "Max RAM \u0443\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d \u043d\u0430 {memory}. \u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u0437\u0430\u043f\u0443\u0441\u0442\u0438\u0442\u044c \u0441\u043d\u043e\u0432\u0430.",
         "error_panel_title": "\u041f\u043e\u0441\u043b\u0435\u0434\u043d\u044f\u044f \u043e\u0448\u0438\u0431\u043a\u0430 \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430",
         "loader": "\u0417\u0430\u0433\u0440\u0443\u0437\u0447\u0438\u043a",
         "memory_min": "\u041c\u0438\u043d. RAM",
@@ -1620,7 +1644,7 @@ class MSLauncherWindow(QMainWindow):
 
         self.loader_setting_label = QLabel()
         self.loader_setting_combo = QComboBox()
-        self.loader_setting_combo.addItems(["vanilla", "fabric"])
+        self.loader_setting_combo.addItems(list(SUPPORTED_LOADERS))
         self.memory_min_label = QLabel()
         self.memory_min_input = QLineEdit()
         self.memory_max_label = QLabel()
@@ -1810,16 +1834,18 @@ class MSLauncherWindow(QMainWindow):
 
         self.loader_label = QLabel()
         self.loader_group = QButtonGroup(self)
-        self.loader_vanilla_button = QPushButton("Vanilla")
-        self.loader_vanilla_button.setObjectName("loaderSegment")
-        self.loader_vanilla_button.setCheckable(True)
-        self.loader_fabric_button = QPushButton("Fabric")
-        self.loader_fabric_button.setObjectName("loaderSegment")
-        self.loader_fabric_button.setCheckable(True)
-        self.loader_group.addButton(self.loader_vanilla_button)
-        self.loader_group.addButton(self.loader_fabric_button)
-        self.loader_fabric_button.setChecked(self.loader_setting_combo.currentText() == "fabric")
-        self.loader_vanilla_button.setChecked(self.loader_setting_combo.currentText() != "fabric")
+        self.loader_segment_buttons: dict[str, QPushButton] = {}
+        for loader_id in SUPPORTED_LOADERS:
+            button = QPushButton(LOADER_LABELS.get(loader_id, loader_id.title()))
+            button.setObjectName("loaderSegment")
+            button.setCheckable(True)
+            self.loader_group.addButton(button)
+            self.loader_segment_buttons[loader_id] = button
+        self.loader_vanilla_button = self.loader_segment_buttons["vanilla"]
+        self.loader_fabric_button = self.loader_segment_buttons["fabric"]
+        self.loader_quilt_button = self.loader_segment_buttons["quilt"]
+        self.loader_neoforge_button = self.loader_segment_buttons["neoforge"]
+        self.sync_loader_segments(self.loader_setting_combo.currentText())
 
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 100)
@@ -1938,19 +1964,19 @@ class MSLauncherWindow(QMainWindow):
     def create_loader_group(self) -> QFrame:
         frame = QFrame()
         frame.setObjectName("controlGroup")
-        frame.setMinimumWidth(118)
-        frame.setMaximumWidth(132)
+        frame.setMinimumWidth(178)
+        frame.setMaximumWidth(212)
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
         layout.addWidget(self.loader_label)
         segment_frame = QFrame()
         segment_frame.setObjectName("loaderSegmentFrame")
-        segment_layout = QHBoxLayout(segment_frame)
+        segment_layout = QGridLayout(segment_frame)
         segment_layout.setContentsMargins(4, 4, 4, 4)
         segment_layout.setSpacing(4)
-        segment_layout.addWidget(self.loader_vanilla_button)
-        segment_layout.addWidget(self.loader_fabric_button)
+        for index, loader_id in enumerate(SUPPORTED_LOADERS):
+            segment_layout.addWidget(self.loader_segment_buttons[loader_id], index // 2, index % 2)
         layout.addWidget(segment_frame)
         return frame
 
@@ -2022,8 +2048,8 @@ class MSLauncherWindow(QMainWindow):
         self.skin_quick_button.clicked.connect(self.show_player_panel)
         self.loader_setting_combo.currentTextChanged.connect(lambda *_: self.save_user_preferences())
         self.loader_setting_combo.currentTextChanged.connect(self.sync_loader_segments)
-        self.loader_vanilla_button.clicked.connect(lambda: self.set_loader_mode("vanilla"))
-        self.loader_fabric_button.clicked.connect(lambda: self.set_loader_mode("fabric"))
+        for loader_id, button in self.loader_segment_buttons.items():
+            button.clicked.connect(lambda _checked=False, loader_id=loader_id: self.set_loader_mode(loader_id))
         self.memory_min_input.editingFinished.connect(self.save_user_preferences)
         self.memory_max_input.editingFinished.connect(self.save_user_preferences)
         self.java_path_input.editingFinished.connect(self.save_user_preferences)
@@ -2084,7 +2110,7 @@ class MSLauncherWindow(QMainWindow):
         self.change_language("EN" if self.language == "RU" else "RU")
 
     def set_loader_mode(self, loader: str) -> None:
-        if loader not in ("vanilla", "fabric"):
+        if loader not in SUPPORTED_LOADERS:
             return
         if self.loader_setting_combo.currentText() != loader:
             self.loader_setting_combo.setCurrentText(loader)
@@ -2093,8 +2119,10 @@ class MSLauncherWindow(QMainWindow):
 
     def sync_loader_segments(self, loader: str = "") -> None:
         active_loader = loader or self.loader_setting_combo.currentText().strip() or "vanilla"
-        self.loader_vanilla_button.setChecked(active_loader != "fabric")
-        self.loader_fabric_button.setChecked(active_loader == "fabric")
+        if active_loader not in SUPPORTED_LOADERS:
+            active_loader = "vanilla"
+        for loader_id, button in self.loader_segment_buttons.items():
+            button.setChecked(loader_id == active_loader)
 
     def handle_project_tab(self, client_mode: str) -> None:
         if client_mode not in CLIENT_MODES:
@@ -4031,6 +4059,134 @@ class MSLauncherWindow(QMainWindow):
         for button in self.social_buttons:
             button.show()
         self.set_status("ready")
+        QTimer.singleShot(0, self.show_crash_help_dialog)
+
+    def show_crash_help_dialog(self) -> None:
+        if not self.last_crash_reason:
+            return
+
+        dialog = QMessageBox(self)
+        dialog.setIcon(QMessageBox.Icon.Warning)
+        dialog.setWindowTitle(self.translate("crash_help_title"))
+        dialog.setText(self.translate("crash_help_body"))
+        dialog.setInformativeText(self.truncate_dialog_text(self.last_crash_reason))
+        dialog.setStyleSheet(SYSTEM_DIALOG_STYLESHEET)
+
+        ok_button = dialog.addButton(self.translate("crash_action_ok"), QMessageBox.ButtonRole.AcceptRole)
+        report_button = dialog.addButton(self.translate("crash_action_report"), QMessageBox.ButtonRole.ActionRole)
+        self_help_button = dialog.addButton(
+            self.translate("crash_action_self_help"),
+            QMessageBox.ButtonRole.ActionRole,
+        )
+        google_button = dialog.addButton(self.translate("crash_action_google"), QMessageBox.ButtonRole.ActionRole)
+        quick_fix_button = None
+        if self.get_crash_memory_fix_value():
+            quick_fix_button = dialog.addButton(
+                self.translate("crash_action_try_fix"),
+                QMessageBox.ButtonRole.ActionRole,
+            )
+
+        dialog.setDefaultButton(ok_button)
+        dialog.exec()
+        clicked_button = dialog.clickedButton()
+        if clicked_button == report_button:
+            self.handle_crash_report_action()
+        elif clicked_button == self_help_button:
+            self.show_crash_self_help_dialog()
+        elif clicked_button == google_button:
+            self.open_crash_google_search()
+        elif quick_fix_button is not None and clicked_button == quick_fix_button:
+            self.apply_crash_memory_fix()
+
+    def handle_crash_report_action(self) -> None:
+        user_message = self.request_player_report_message()
+        if user_message is None:
+            return
+        self.submit_crash_report(user_message)
+
+    def submit_crash_report(self, user_message: str) -> bool:
+        technical_details = self.last_crash_reason or self.build_manual_report_details()
+        if self.send_panel_report("crash", user_message, technical_details):
+            self.set_status_text(self.translate("report_sent"))
+            return True
+        self.save_crash_report_fallback(user_message, technical_details)
+        self.set_status_text(self.translate("report_send_failed"))
+        return False
+
+    def save_crash_report_fallback(self, user_message: str, technical_details: str) -> Path | None:
+        try:
+            profile = self.profile_manager.get_profile(self.get_selected_profile_id())
+            report_path = write_error_report(
+                technical_details,
+                user_message=user_message,
+                context="crash",
+                base_directory=profile.directory,
+            )
+        except OSError:
+            return None
+
+        self.last_error_message = user_message
+        self.last_error_report_path = report_path
+        return report_path
+
+    def show_crash_self_help_dialog(self) -> None:
+        if not self.last_crash_reason:
+            return
+        QMessageBox.information(
+            self,
+            self.translate("crash_self_help_title"),
+            self.truncate_dialog_text(self.last_crash_reason, limit=3600),
+        )
+
+    def build_crash_google_url(self) -> str:
+        first_detail_line = ""
+        for line in self.last_crash_reason.splitlines():
+            stripped_line = line.strip()
+            if stripped_line:
+                first_detail_line = stripped_line
+                break
+        query_parts = [
+            "Minecraft",
+            self.version_combo.currentText().strip(),
+            self.loader_setting_combo.currentText().strip(),
+            first_detail_line[:180],
+        ]
+        query = " ".join(part for part in query_parts if part)
+        return "https://www.google.com/search?q=" + quote_plus(query)
+
+    def open_crash_google_search(self) -> None:
+        if not QDesktopServices.openUrl(QUrl(self.build_crash_google_url())):
+            self.set_status_text(self.translate("crash_google_failed"))
+
+    def get_crash_memory_fix_value(self) -> str:
+        lower_reason = self.last_crash_reason.lower()
+        if "outofmemoryerror" not in lower_reason and "java heap space" not in lower_reason and "памят" not in lower_reason:
+            return ""
+        try:
+            current_max_mb = memory_to_mb(self.memory_max_input.text().strip() or "2G")
+        except LaunchSettingsError:
+            return "4G"
+        if current_max_mb < 4096:
+            return "4G"
+        if current_max_mb < 6144:
+            return "6G"
+        return ""
+
+    def apply_crash_memory_fix(self) -> None:
+        memory_value = self.get_crash_memory_fix_value()
+        if not memory_value:
+            return
+        self.memory_max_input.setText(memory_value)
+        self.save_user_preferences()
+        message = self.translate("crash_fix_memory_applied", memory=memory_value)
+        self.set_status_text(message)
+        QMessageBox.information(self, self.translate("crash_fix_title"), message)
+
+    def truncate_dialog_text(self, text: str, *, limit: int = 2400) -> str:
+        stripped_text = text.strip()
+        if len(stripped_text) <= limit:
+            return stripped_text
+        return stripped_text[: limit - 3].rstrip() + "..."
 
     def write_launcher_crash_report(self, crash_reason: str, file_name: str) -> Path | None:
         profile = self.profile_manager.get_profile(self.get_selected_profile_id())

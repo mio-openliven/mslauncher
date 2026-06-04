@@ -29,8 +29,8 @@ from inspect_client_pack import (
 
 
 DEFAULT_PREPARE_REPORT = PROJECT_ROOT / "release" / "client_pack_prepare_report.md"
-SUPPORTED_RELEASE_LOADERS = ("vanilla", "fabric")
-KNOWN_LOADERS = ("vanilla", "fabric", "forge", "neoforge")
+SUPPORTED_RELEASE_LOADERS = ("vanilla", "fabric", "quilt", "neoforge")
+KNOWN_LOADERS = ("vanilla", "fabric", "quilt", "forge", "neoforge")
 UNKNOWN_VALUES = ("", "unknown", "unknown_if_needed", "auto")
 COPY_ROOTS = ("mods", "config", "resourcepacks")
 SKIPPED_FILE_NAMES = {
@@ -82,21 +82,21 @@ def choose_loader(raw_loader: str, report: InspectionReport) -> str:
     explicit_loader = normalize_optional_value(raw_loader).lower()
     if explicit_loader:
         if explicit_loader not in KNOWN_LOADERS:
-            raise PrepareClientPackError("Loader must be fabric, forge, neoforge, or vanilla.")
+            raise PrepareClientPackError("Loader must be fabric, quilt, forge, neoforge, or vanilla.")
         loader = explicit_loader
     else:
         if report.loader_guess == "unknown" or report.confidence != "high":
             raise PrepareClientPackError(
-                "Loader is unknown. Pass --loader fabric/forge/neoforge/vanilla after confirming with the client."
+                "Loader is unknown. Pass --loader fabric/quilt/neoforge/vanilla after confirming with the client."
             )
         loader = report.loader_guess
 
-    if loader in ("forge", "neoforge"):
+    if loader == "forge":
         raise PrepareClientPackError(
-            f"This launcher currently supports vanilla/fabric only. Client pack looks like {loader}. Confirm requirements before release."
+            "Forge packs still need a separate release pass. Use Quilt/NeoForge/Fabric/Vanilla only for this launcher pass."
         )
     if loader not in SUPPORTED_RELEASE_LOADERS:
-        raise PrepareClientPackError("This launcher currently supports vanilla/fabric only.")
+        raise PrepareClientPackError("This launcher currently supports vanilla/fabric/quilt/neoforge.")
     return loader
 
 
@@ -361,7 +361,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", required=True, help="Target server_pack directory.")
     parser.add_argument("--base-url", required=True, help="Raw base URL for manifest file URLs.")
     parser.add_argument("--minecraft-version", default="", help="Minecraft version. If omitted, high-confidence analyzer result is used.")
-    parser.add_argument("--loader", default="", help="Loader: vanilla or fabric. Forge/NeoForge are rejected for this release.")
+    parser.add_argument("--loader", default="", help="Loader: vanilla, fabric, quilt, or neoforge. Forge is rejected for this pass.")
     parser.add_argument("--loader-version", default="latest", help="Loader version for build.json.")
     parser.add_argument("--build-name", default="Main Server", help="Build name for build.json.")
     parser.add_argument("--server", default="", help="Minecraft server address for build.json.")

@@ -86,6 +86,14 @@ def main() -> None:
         assert all(not row.isHidden() for row in window.status_rows)
         assert window.fabric_status_title.text() == window.translate("status_card_fabric")
         assert window.loader_setting_combo.currentText() in window.fabric_status_body.text()
+        assert set(window.loader_segment_buttons) == {"vanilla", "fabric", "quilt", "neoforge"}
+        window.set_loader_mode("quilt")
+        assert window.loader_setting_combo.currentText() == "quilt"
+        assert window.loader_quilt_button.isChecked()
+        assert not window.loader_fabric_button.isChecked()
+        window.set_loader_mode("neoforge")
+        assert window.loader_setting_combo.currentText() == "neoforge"
+        assert window.loader_neoforge_button.isChecked()
         window.info_panel_mode = "feedback"
         window.refresh_info_panel()
         assert all(row.isHidden() for row in window.status_rows)
@@ -134,11 +142,41 @@ def main() -> None:
             assert fallback_reports[-1][0] == "Panel is down"
             assert not opened_folders
             assert window.status_label.text() == window.translate("report_send_failed")
+
+            sent_reports.clear()
+            window.send_panel_report = lambda context, user_message="", technical_details="": sent_reports.append(
+                (context, user_message, technical_details)
+            ) or True
+            window.last_crash_reason = "What happened: Minecraft ran out of memory.\nTechnical line: OutOfMemoryError"
+            assert window.submit_crash_report("Crash details from player")
+            assert sent_reports[-1][0] == "crash"
+            assert sent_reports[-1][1] == "Crash details from player"
+            assert "OutOfMemoryError" in sent_reports[-1][2]
         finally:
             window.request_player_report_message = original_request_report_message
             window.send_panel_report = original_send_panel_report
             window.save_manual_report_fallback = original_save_manual_report_fallback
             window.open_crash_reports_folder = original_open_crash_reports_folder
+        crash_dialog_calls: list[bool] = []
+        original_show_crash_help_dialog = window.show_crash_help_dialog
+        window.show_crash_help_dialog = lambda: crash_dialog_calls.append(True)
+        try:
+            window.on_game_crashed("What happened: Minecraft crashed\nTechnical line: OutOfMemoryError")
+            app.processEvents()
+            assert crash_dialog_calls
+            assert window.info_panel_mode == "crash"
+            assert window.last_crash_report_path is not None
+        finally:
+            window.show_crash_help_dialog = original_show_crash_help_dialog
+        window.last_crash_reason = "What happened: A mod does not match the selected loader."
+        window.version_combo.setCurrentText("1.20.1")
+        window.set_loader_mode("neoforge")
+        google_url = window.build_crash_google_url()
+        assert google_url.startswith("https://www.google.com/search?q=")
+        assert "neoforge" in google_url.lower()
+        window.last_crash_reason = "java.lang.OutOfMemoryError: Java heap space"
+        window.memory_max_input.setText("2G")
+        assert window.get_crash_memory_fix_value() == "4G"
         window.client_mode = gui.CLIENT_MODE_INDEPENDENT
         window.social_links = gui.get_social_links(window.config, window.client_mode)
         window.refresh_project_backgrounds()

@@ -19,6 +19,7 @@ import requests
 from crash_advisor import advise_crash
 from java_diagnostics import JavaDiagnosticError, diagnose_launch_environment
 from launcher_update import APP_DISPLAY_NAME, APP_VERSION
+from loader_support import INSTALLABLE_LOADERS, format_supported_loaders, normalize_loader
 from manifest_validator import ManifestValidationError, validate_manifest
 from profile_manager import MANAGED_MARKER
 from url_policy import URLPolicyError, normalize_https_url
@@ -275,7 +276,7 @@ class MinecraftEngine:
         callback_options: dict[str, Callable[..., None]],
         launch_options: dict[str, object] | None,
     ) -> str:
-        loader = self._clean_config_text((launch_options or {}).get("loader")).lower()
+        loader = normalize_loader(self._clean_config_text((launch_options or {}).get("loader")))
         loader_version = self._clean_config_text((launch_options or {}).get("loader_version"))
         java_path = self._clean_config_text((launch_options or {}).get("java_path"))
 
@@ -294,12 +295,12 @@ class MinecraftEngine:
             )
             return version
 
-        if loader != "fabric":
-            raise RuntimeError(f"Неподдерживаемый загрузчик модов: {loader}")
+        if loader not in INSTALLABLE_LOADERS:
+            raise RuntimeError(f"Unsupported mod loader: {loader}. Use {format_supported_loaders()}.")
 
-        fabric_loader = minecraft_launcher_lib.mod_loader.get_mod_loader("fabric")
+        mod_loader = minecraft_launcher_lib.mod_loader.get_mod_loader(loader)
         install_loader_version = None if loader_version in ("", "latest") else loader_version
-        return fabric_loader.install(
+        return mod_loader.install(
             version,
             str(self.minecraft_directory),
             loader_version=install_loader_version,

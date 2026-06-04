@@ -84,6 +84,33 @@ CRASH_TRANSLATIONS: dict[str, dict[str, dict[str, object]]] = {
                 "\u041d\u0435 \u0441\u043c\u0435\u0448\u0438\u0432\u0430\u0439\u0442\u0435 Forge-\u043c\u043e\u0434\u044b \u0441 Fabric-\u0441\u0431\u043e\u0440\u043a\u043e\u0439 \u0438 \u043d\u0430\u043e\u0431\u043e\u0440\u043e\u0442.",
             ),
         },
+        "loader_mismatch": {
+            "title": "Мод не подходит под выбранный загрузчик.",
+            "explanation": "В логе есть признаки, что мод ждёт другой loader: Fabric, Quilt, NeoForge или Forge.",
+            "actions": (
+                "Проверьте выбранный загрузчик в лаунчере.",
+                "Скачайте вариант мода именно под этот loader и версию Minecraft.",
+                "Не смешивайте Fabric/Quilt/NeoForge/Forge jar-файлы в одной сборке.",
+            ),
+        },
+        "resource_pack": {
+            "title": "Похоже, проблема в resource pack, shader pack или pack.mcmeta.",
+            "explanation": "Minecraft не смог прочитать пакет ресурсов или пакет не подходит под выбранную версию игры.",
+            "actions": (
+                "Отключите последний добавленный resource pack или shader pack и попробуйте запуск снова.",
+                "Проверьте, что pack.mcmeta лежит в корне архива и pack_format подходит версии Minecraft.",
+                "Если это серверная сборка, пересинхронизируйте профиль, чтобы вернуть проверенную версию пакета.",
+            ),
+        },
+        "config_error": {
+            "title": "Похоже, поврежден config одного из модов.",
+            "explanation": "Мод не смог прочитать JSON/TOML/config-файл. Часто это случается после ручной правки или обновления мода.",
+            "actions": (
+                "Если вы недавно меняли config, верните его назад или удалите только config проблемного мода.",
+                "Для серверной сборки запустите синхронизацию, чтобы получить проверенный config.",
+                "Отправьте отчет владельцу, если не уверены, какой config сломан.",
+            ),
+        },
         "duplicate_mods": {
             "title": "\u0412 \u043f\u0430\u043f\u043a\u0435 mods \u043d\u0430\u0439\u0434\u0435\u043d\u044b \u0434\u0443\u0431\u043b\u0438 \u043c\u043e\u0434\u043e\u0432.",
             "explanation": "Minecraft \u0432\u0438\u0434\u0438\u0442 \u0434\u0432\u0435 \u0432\u0435\u0440\u0441\u0438\u0438 \u043e\u0434\u043d\u043e\u0433\u043e \u0438 \u0442\u043e\u0433\u043e \u0436\u0435 \u043c\u043e\u0434\u0430 \u0438 \u043d\u0435 \u043f\u043e\u043d\u0438\u043c\u0430\u0435\u0442, \u043a\u0430\u043a\u0443\u044e \u0437\u0430\u0433\u0440\u0443\u0436\u0430\u0442\u044c.",
@@ -171,6 +198,26 @@ CRASH_RULES = (
         ),
     ),
     CrashAdviceRule(
+        rule_id="loader_mismatch",
+        needles=(
+            "wrong mod loader",
+            "different mod loader",
+            "not compatible with the current mod loader",
+            "is for forge",
+            "is for fabric",
+            "is for quilt",
+            "is for neoforge",
+            "cannot be loaded by this loader",
+        ),
+        title="A mod does not match the selected loader.",
+        explanation="The log points to a mod made for a different loader such as Fabric, Quilt, NeoForge, or Forge.",
+        actions=(
+            "Check the loader selected in the launcher.",
+            "Install the mod file made for this exact loader and Minecraft version.",
+            "Do not mix Fabric, Quilt, NeoForge, and Forge jars in the same modpack.",
+        ),
+    ),
+    CrashAdviceRule(
         rule_id="mixin_conflict",
         needles=("mixin", "spongepowered", "mixintransformererror", "mixin apply failed", "mixin prepare failed"),
         title="This looks like a Mixin conflict or a wrong mod version.",
@@ -190,6 +237,47 @@ CRASH_RULES = (
             "Install the mod version made exactly for the selected Minecraft version.",
             "Check common dependencies such as Fabric API, Cloth Config, Architectury, GeckoLib, and similar libraries.",
             "Do not mix Forge mods into a Fabric modpack, or Fabric mods into a Forge modpack.",
+        ),
+    ),
+    CrashAdviceRule(
+        rule_id="resource_pack",
+        needles=(
+            "resource pack",
+            "resourcepack",
+            "resourcepacks",
+            "shader pack",
+            "shaderpack",
+            "pack.mcmeta",
+            "pack_format",
+            "failed to reload resources",
+            "failed to load resource",
+            "broken or incompatible",
+        ),
+        title="A resource pack, shader pack, or pack.mcmeta likely failed.",
+        explanation="Minecraft could not read a resource pack, or the pack does not match this game version.",
+        actions=(
+            "Disable the last added resource pack or shader pack and try again.",
+            "Check that pack.mcmeta is at the pack root and uses the correct pack_format for this Minecraft version.",
+            "For a server modpack, run sync again to restore the tested pack files.",
+        ),
+    ),
+    CrashAdviceRule(
+        rule_id="config_error",
+        needles=(
+            "error loading config",
+            "failed loading config",
+            "toml parse error",
+            "json parse error",
+            "malformed config",
+            "invalid config",
+            "could not parse config",
+        ),
+        title="A mod config file looks broken.",
+        explanation="A mod could not read a JSON, TOML, or config file. This often follows a manual edit or a mod update.",
+        actions=(
+            "Undo the last config edit, or remove only the config for the mod named in the log.",
+            "For a server modpack, run sync to restore the tested config.",
+            "Send the report to the owner if you are not sure which config is broken.",
         ),
     ),
     CrashAdviceRule(

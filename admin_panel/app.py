@@ -12,6 +12,8 @@ import uvicorn
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 
+from loader_support import LOADER_LABELS, SUPPORTED_LOADERS, format_supported_loaders, normalize_loader
+
 from .db import connect, init_db
 from .html import esc, page
 from .modpack import (
@@ -256,6 +258,16 @@ def dashboard(request: Request):
     return HTMLResponse(page(APP_NAME, body, user=user, lang=get_lang(request), project_name=get_project_name(user_project_slug(user)), project_slug=user_project_slug(user)))
 
 
+def render_loader_options(selected_loader: str = "fabric") -> str:
+    normalized_selected = normalize_loader(selected_loader) or "fabric"
+    options: list[str] = []
+    for loader_id in SUPPORTED_LOADERS:
+        selected = " selected" if loader_id == normalized_selected else ""
+        label = LOADER_LABELS.get(loader_id, loader_id.title())
+        options.append(f'<option value="{esc(loader_id)}"{selected}>{esc(label)}</option>')
+    return "".join(options)
+
+
 @app.get("/builds", response_class=HTMLResponse)
 def builds_page(request: Request):
     user = get_current_user(request)
@@ -279,7 +291,7 @@ def builds_page(request: Request):
           <div><label>Build ID</label><input name="build_id" placeholder="nukem-1-20-1"></div>
           <div><label>Name</label><input name="name" placeholder="MS Nuckem 1.20.1"></div>
           <div><label>Minecraft</label><input name="minecraft_version" placeholder="1.20.1"></div>
-          <div><label>Loader</label><select name="loader"><option>fabric</option><option>vanilla</option></select></div>
+          <div><label>Loader</label><select name="loader">{render_loader_options()}</select></div>
           <div><label>Loader version</label><input name="loader_version" value="latest"></div>
           <div><label>Server</label><input name="server"></div>
           <div><label>Port</label><input name="port"></div>
@@ -337,8 +349,9 @@ def create_build(
         project = safe_segment(project_slug)
         require_project_access(user, project)
         build = safe_segment(build_id)
-        if loader not in ("vanilla", "fabric"):
-            raise UploadValidationError("Loader must be vanilla or fabric.")
+        loader = normalize_loader(loader) or "vanilla"
+        if loader not in SUPPORTED_LOADERS:
+            raise UploadValidationError(f"Loader must be {format_supported_loaders()}.")
         if port and (not port.isdigit() or not 1 <= int(port) <= 65535):
             raise UploadValidationError("Port must be 1..65535.")
 
