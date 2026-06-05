@@ -1,8 +1,11 @@
 param(
   [string]$HostTarget = "root@186.246.12.238",
   [string]$RemoteDir = "/opt/mslaunch/data/downloads",
+  [string]$RemoteAppDir = "/opt/mslaunch/app",
+  [string]$PanelService = "mslaunch-panel.service",
   [string]$ArtifactDir = "",
   [switch]$DryRun,
+  [switch]$SkipPanelRestart,
   [switch]$SkipPublicVerify
 )
 
@@ -28,16 +31,28 @@ $expectedFiles = @(
   }
 )
 
+$expectedAppFiles = @(
+  @{
+    Name = "loader_support.py"
+    Path = Join-Path $projectRoot "loader_support.py"
+    Sha256 = "3024C90BCBB86668369804649C5F191D7915839C98BAB9DD4B94DF33A7C3B2A4"
+  }
+)
+
 function Assert-ToolAvailable([string]$Name) {
   if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
     throw "Required tool not found in PATH: $Name"
   }
 }
 
-function Assert-LocalArtifact([hashtable]$FileSpec) {
-  $path = Join-Path $ArtifactDir $FileSpec.Name
+function Assert-LocalFile([hashtable]$FileSpec) {
+  if ($FileSpec.ContainsKey("Path")) {
+    $path = $FileSpec.Path
+  } else {
+    $path = Join-Path $ArtifactDir $FileSpec.Name
+  }
   if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
-    throw "Missing local artifact: $path"
+    throw "Missing local file: $path"
   }
   $hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToUpperInvariant()
   if ($hash -ne $FileSpec.Sha256) {
@@ -61,17 +76,23 @@ function Invoke-CheckedProcess([string]$FileName, [string[]]$Arguments) {
 Assert-ToolAvailable "ssh"
 Assert-ToolAvailable "scp"
 
+if ($PanelService -notmatch '^[A-Za-z0-9_.@-]+$') {
+  throw "Unsafe panel service name: $PanelService"
+}
+
 $localPaths = @()
-foreach ($fileSpec in $expectedFiles) {
-  $localPaths += Assert-LocalArtifact $fileSpec
+foreach ($fileSpec in ($expectedFiles + $expectedAppFiles)) {
+  $localPaths += Assert-LocalFile $fileSpec
 }
 
 $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $remoteTemp = "/tmp/mslaunch-upload-$timestamp"
 $backupDir = "$RemoteDir/backup-$timestamp"
+$appBackupDir = "$backupDir/app"
 
 $names = $expectedFiles | ForEach-Object { $_.Name }
-$mkdirScript = "set -eu; mkdir -p '$RemoteDir' '$remoteTemp' '$backupDir'"
+$appNames = $expectedAppFiles | ForEach-Object { $_.Name }
+$mkdirScript = "set -eu; mkdir -p '$RemoteDir' '$RemoteAppDir' '$remoteTemp' '$backupDir' '$appBackupDir'"
 Invoke-CheckedProcess "ssh" @($HostTarget, $mkdirScript)
 
 foreach ($path in $localPaths) {
@@ -79,7 +100,7 @@ foreach ($path in $localPaths) {
 }
 
 $verifyLines = @("set -eu", "cd '$remoteTemp'")
-foreach ($fileSpec in $expectedFiles) {
+foreach ($fileSpec in ($expectedFiles + $expectedAppFiles)) {
   $verifyLines += "printf '%s  %s\n' '$($fileSpec.Sha256.ToLowerInvariant())' '$($fileSpec.Name)' | sha256sum -c -"
 }
 foreach ($name in $names) {
@@ -88,6 +109,16 @@ foreach ($name in $names) {
 foreach ($name in $names) {
   $verifyLines += "mv -f '$remoteTemp/$name' '$RemoteDir/$name'"
   $verifyLines += "chmod 0644 '$RemoteDir/$name'"
+}
+foreach ($name in $appNames) {
+  $verifyLines += "if [ -f '$RemoteAppDir/$name' ]; then cp '$RemoteAppDir/$name' '$appBackupDir/$name'; fi"
+}
+foreach ($name in $appNames) {
+  $verifyLines += "mv -f '$remoteTemp/$name' '$RemoteAppDir/$name'"
+  $verifyLines += "chmod 0644 '$RemoteAppDir/$name'"
+}
+if (-not $SkipPanelRestart) {
+  $verifyLines += "systemctl restart '$PanelService'"
 }
 $verifyLines += "rmdir '$remoteTemp'"
 $verifyScript = $verifyLines -join "; "
