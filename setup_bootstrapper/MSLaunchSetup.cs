@@ -18,7 +18,7 @@ internal static class Program
     private const string AppName = "MSLaunch";
     private const string ExeName = "MSLauncher.exe";
     private const string PackageName = "MSLaunchPayload.dat";
-    private const string PackageSha256 = "885a99ecb8fa8c6e29ed071ddb64542249dfa492476fe96318861e9f500553ab";
+    private const string PackageSha256 = "c5110a0780234de894d9a7318b43187004562e4fe698c1fcde6d0b957567e150";
     private const int ChunkSize = 262144;
 
     private static readonly string[] BootstrapManifests =
