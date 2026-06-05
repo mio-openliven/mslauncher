@@ -298,18 +298,18 @@ def builds_page(request: Request):
       <form method="post" action="/builds/create" enctype="multipart/form-data">
         <div class="row">
           <div><label>Project</label><select name="project_slug">{project_options}</select></div>
-          <div><label>Build ID</label><input name="build_id" placeholder="nukem-1-20-1"></div>
-          <div><label>Name</label><input name="name" placeholder="MS Nuckem 1.20.1"></div>
-          <div><label>Minecraft</label><input name="minecraft_version" placeholder="1.20.1"></div>
+          <div><label>Build ID (technical slug)</label><input name="build_id" placeholder="nukem-1-20-1"></div>
+          <div><label>Build name shown in launcher</label><input name="name" placeholder="MS Nuckem 1.20.1"></div>
+          <div><label>Minecraft version</label><input name="minecraft_version" placeholder="1.20.1"></div>
           <div><label>Loader</label><select name="loader">{render_loader_options()}</select></div>
           <div><label>Loader version</label><input name="loader_version" value="latest"></div>
           <div><label>Server</label><input name="server"></div>
           <div><label>Port</label><input name="port"></div>
           <div><label>Build password</label><input name="access_password" type="password" placeholder="optional per-build code"></div>
         </div>
-        <label>Modpack ZIP with mods/config/resourcepacks</label><input name="archive" type="file" accept=".zip">
-        <p><label><input name="make_active" type="checkbox" value="1" style="width:auto"> Make active today</label></p>
-        <button>Create build</button>
+        <label>Upload modpack ZIP with mods/config/resourcepacks</label><input name="archive" type="file" accept=".zip">
+        <p><label><input name="make_active" type="checkbox" value="1" style="width:auto"> Make active for actors</label></p>
+        <button>Create/update build</button>
       </form>
     </div>
     <div class="card">
