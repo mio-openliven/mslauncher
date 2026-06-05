@@ -270,6 +270,13 @@ class MinecraftEngine:
             with self._process_lock:
                 self._current_process = process
 
+            game_started_callback = effective_launch_options.get("game_started_callback")
+            if callable(game_started_callback):
+                try:
+                    game_started_callback()
+                except Exception:
+                    pass
+
             detach_event = effective_launch_options.get("detach_event")
             if not isinstance(detach_event, threading.Event):
                 detach_event = None
