@@ -141,7 +141,7 @@ def client_page(request: Request) -> HTMLResponse:
     body = f"""
     <section class="hero">
       <div>
-        <div class="eyebrow">MS Nuckem beta</div>
+        <div class="eyebrow">MS Nuckem Release Beta</div>
         <h1>Скачать лаунчер</h1>
         <p>Для актёров: скачайте один файл, запустите его, откройте MS Nuckem, введите ник и пароль сборки. Моды подтянутся автоматически.</p>
         <p><a class="button primary" href="{esc(download_url)}">Скачать и запустить</a></p>

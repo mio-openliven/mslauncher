@@ -218,8 +218,8 @@ TRANSLATIONS = {
     "EN": {
         "app_title": APP_DISPLAY_NAME,
         "brand_title": APP_DISPLAY_NAME,
-        "brand_credit": f"Beta {APP_VERSION}",
-        "brand_credit_nukem": f"Beta {APP_VERSION}",
+        "brand_credit": f"Release Beta {APP_VERSION}",
+        "brand_credit_nukem": f"Release Beta {APP_VERSION}",
         "brand_subtitle_project": "Project entry point",
         "brand_subtitle_crew": "Built for the crew",
         "brand_subtitle_places": "Everything in its place",
@@ -397,8 +397,8 @@ TRANSLATIONS = {
     "RU": {
         "app_title": APP_DISPLAY_NAME,
         "brand_title": APP_DISPLAY_NAME,
-        "brand_credit": f"Beta {APP_VERSION}",
-        "brand_credit_nukem": f"Beta {APP_VERSION}",
+        "brand_credit": f"Release Beta {APP_VERSION}",
+        "brand_credit_nukem": f"Release Beta {APP_VERSION}",
         "brand_subtitle_project": "\u0422\u043e\u0447\u043a\u0430 \u0432\u0445\u043e\u0434\u0430 \u0432 \u043f\u0440\u043e\u0435\u043a\u0442",
         "brand_subtitle_crew": "\u0421\u043e\u0431\u0440\u0430\u043d\u043e \u0434\u043b\u044f \u0441\u0432\u043e\u0435\u0439 \u043a\u043e\u043c\u0430\u043d\u0434\u044b",
         "brand_subtitle_places": "\u0412\u0441\u0435 \u043d\u0430 \u0441\u0432\u043e\u0438\u0445 \u043c\u0435\u0441\u0442\u0430\u0445",
