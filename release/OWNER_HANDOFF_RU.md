@@ -97,9 +97,9 @@ Agent 0 в текущем release pass:
 - Version: `1.9.7`
 - Public client: `https://mslaunch.186.246.12.238.sslip.io/client`
 - Direct setup: `https://mslaunch.186.246.12.238.sslip.io/downloads/MSLaunchSetup.exe`
-- Setup SHA-256: `166e36d6075787fe310fa45af1431e16dc7cb452133a54cd0d06c4d2922b04a3`
-- Payload SHA-256: `c859a9338100f74d1a1f420c2f22209a4f0c4271f7b86170398dc08adb341c37`
-- Bootstrap SHA-256: `38e21ae303a524f616fa39a2d8bdcae1ea9ca350739b5f313775780bb46f2971`
+- Setup SHA-256: `7f2897f5eb7a93b6d707bac3d58546b56cf11e246a9e202bfdca77d1f2e82977`
+- Payload SHA-256: `5247144f2df8657320524a2f0e3664ed388a7e1d25afcb9bd310ac1686fa7931`
+- Bootstrap SHA-256: `68de708d0e4403fc6729f310fc66284011bd5dcd19f94caf76598acc954eae66`
 
 ## Что не делать
 

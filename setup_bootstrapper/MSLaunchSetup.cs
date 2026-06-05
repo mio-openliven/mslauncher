@@ -13,12 +13,21 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Web.Script.Serialization;
 
+[assembly: AssemblyTitle("MSLaunch Setup")]
+[assembly: AssemblyDescription("MSLaunch launcher installer and updater")]
+[assembly: AssemblyCompany("MSLaunch Team")]
+[assembly: AssemblyProduct("MSLaunch")]
+[assembly: AssemblyCopyright("Copyright (c) 2026 MSLaunch Team")]
+[assembly: AssemblyVersion("1.9.7.0")]
+[assembly: AssemblyFileVersion("1.9.7.0")]
+[assembly: AssemblyInformationalVersion("Release Beta 1.9.7")]
+
 internal static class Program
 {
     private const string AppName = "MSLaunch";
     private const string ExeName = "MSLauncher.exe";
     private const string PackageName = "MSLaunchPayload.dat";
-    private const string PackageSha256 = "c859a9338100f74d1a1f420c2f22209a4f0c4271f7b86170398dc08adb341c37";
+    private const string PackageSha256 = "5247144f2df8657320524a2f0e3664ed388a7e1d25afcb9bd310ac1686fa7931";
     private const int ChunkSize = 262144;
 
     private static readonly string[] BootstrapManifests =
