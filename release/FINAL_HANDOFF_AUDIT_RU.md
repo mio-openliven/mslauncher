@@ -2,7 +2,7 @@
 
 Дата: 2026-06-05
 
-Source truth: `main` после PR #30, #31 и #32.
+Source truth: `main` после PR #30, #31, #32 и #34.
 
 Текущий release path: hosted setup + GitHub fallback, версия `1.9.7`.
 
@@ -12,16 +12,16 @@ First-client handoff: YES, для текущего GitHub fallback release path.
 
 Commercial wide release: NOT YET, пока не пройдены ручные проверки на чистой Windows и реальный запуск Minecraft/Fabric.
 
-Progress: 94/100.
+Progress: 95/100.
 
 ## Current Public Truth
 
 - Public client: `https://mslaunch.186.246.12.238.sslip.io/client`
 - Direct setup: `https://mslaunch.186.246.12.238.sslip.io/downloads/MSLaunchSetup.exe`
-- Bootstrap SHA-256: `38e21ae303a524f616fa39a2d8bdcae1ea9ca350739b5f313775780bb46f2971`
-- Setup SHA-256: `166e36d6075787fe310fa45af1431e16dc7cb452133a54cd0d06c4d2922b04a3`
-- Payload SHA-256: `c859a9338100f74d1a1f420c2f22209a4f0c4271f7b86170398dc08adb341c37`
-- `/api/launcher/update`: `200`, version `1.9.7`, setup SHA matches current public setup.
+- Bootstrap SHA-256: `68de708d0e4403fc6729f310fc66284011bd5dcd19f94caf76598acc954eae66`
+- Setup SHA-256: `7f2897f5eb7a93b6d707bac3d58546b56cf11e246a9e202bfdca77d1f2e82977`
+- Payload SHA-256: `5247144f2df8657320524a2f0e3664ed388a7e1d25afcb9bd310ac1686fa7931`
+- `/api/launcher/update`: must point to version `1.9.7` and setup SHA `7f2897f5eb7a93b6d707bac3d58546b56cf11e246a9e202bfdca77d1f2e82977` after host upload.
 - `/api/projects/nukem/active-build`: `404 No active build`; accepted for the current fallback release path.
 
 ## Current Source Truth

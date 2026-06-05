@@ -52,10 +52,10 @@
   "project_access": {
     "nukem": {
       "password_enabled": true,
-      "password_hash_sha256": "b49c430845403cc609360a61bf424ce7bd01bad57b1aadb6794c76dcd07be0ef",
+      "password_hash_sha256": "dd0a9377bcc2357a5cd258481e2bb270b2bbf9b9982129de5bcc7a8fe8a4b428",
       "admin_password_hash_sha256": "",
       "build_passwords": {
-        "main": "b49c430845403cc609360a61bf424ce7bd01bad57b1aadb6794c76dcd07be0ef"
+        "main": "dd0a9377bcc2357a5cd258481e2bb270b2bbf9b9982129de5bcc7a8fe8a4b428"
       },
       "password_hint": "Ask the project admin for the access password."
     }

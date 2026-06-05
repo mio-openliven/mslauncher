@@ -15,9 +15,9 @@
 
 ## SHA-256
 
-- `bootstrap.json`: `38e21ae303a524f616fa39a2d8bdcae1ea9ca350739b5f313775780bb46f2971`
-- `MSLaunchSetup.exe`: `166e36d6075787fe310fa45af1431e16dc7cb452133a54cd0d06c4d2922b04a3`
-- `MSLaunchPayload.dat`: `c859a9338100f74d1a1f420c2f22209a4f0c4271f7b86170398dc08adb341c37`
+- `bootstrap.json`: `68de708d0e4403fc6729f310fc66284011bd5dcd19f94caf76598acc954eae66`
+- `MSLaunchSetup.exe`: `7f2897f5eb7a93b6d707bac3d58546b56cf11e246a9e202bfdca77d1f2e82977`
+- `MSLaunchPayload.dat`: `5247144f2df8657320524a2f0e3664ed388a7e1d25afcb9bd310ac1686fa7931`
 
 ## GitHub fallback
 
@@ -39,7 +39,7 @@ The host and GitHub fallback assets must stay hash-consistent. Do not replace on
 - `python tools\smoke_test_launcher_update.py`: OK
 - `python tools\smoke_test_release_package.py`: OK
 - Public `/client`: 200
-- Public `/api/launcher/update`: 200, points to setup SHA `166e36d6075787fe310fa45af1431e16dc7cb452133a54cd0d06c4d2922b04a3`
+- Public `/api/launcher/update`: must point to setup SHA `7f2897f5eb7a93b6d707bac3d58546b56cf11e246a9e202bfdca77d1f2e82977` after host upload.
 - Public `/api/projects/nukem/active-build`: 404, accepted for current fallback release.
 
 ## Not checked by automation

@@ -49,14 +49,14 @@ If both teams need the same file:
 
 - Repository: `mio-openliven/mslauncher`
 - Main release worktree on this PC: `C:\Users\Li2Fox\Documents\Лаунчер_integration_host`
-- Progress: 94%/100
+- Progress: 95%/100
 - `main` includes PR #30 host upload safety and PR #31 `Release Beta 1.9.7` source label/version sync.
 - Open PR list was empty at the last Agent 0 release check.
 - Public release path is `v1.9.7` and currently accepts GitHub fallback.
-- Public `/downloads/bootstrap.json` SHA-256: `38e21ae303a524f616fa39a2d8bdcae1ea9ca350739b5f313775780bb46f2971`
-- Public `/downloads/MSLaunchSetup.exe` SHA-256: `166e36d6075787fe310fa45af1431e16dc7cb452133a54cd0d06c4d2922b04a3`
-- Public `/downloads/MSLaunchPayload.dat` SHA-256: `c859a9338100f74d1a1f420c2f22209a4f0c4271f7b86170398dc08adb341c37`
-- Public `/api/launcher/update` points to version `1.9.7` and setup SHA `166e36d6075787fe310fa45af1431e16dc7cb452133a54cd0d06c4d2922b04a3`.
+- Prepared `/downloads/bootstrap.json` SHA-256: `68de708d0e4403fc6729f310fc66284011bd5dcd19f94caf76598acc954eae66`
+- Prepared `/downloads/MSLaunchSetup.exe` SHA-256: `7f2897f5eb7a93b6d707bac3d58546b56cf11e246a9e202bfdca77d1f2e82977`
+- Prepared `/downloads/MSLaunchPayload.dat` SHA-256: `5247144f2df8657320524a2f0e3664ed388a7e1d25afcb9bd310ac1686fa7931`
+- Public `/api/launcher/update` must point to version `1.9.7` and setup SHA `7f2897f5eb7a93b6d707bac3d58546b56cf11e246a9e202bfdca77d1f2e82977` after host upload.
 - Public `/api/projects/nukem/active-build` still returns `404 No active build`; this is accepted for the current GitHub fallback release and remains P-007 follow-up work.
 - Supported launcher loaders in the current code stack: `vanilla`, `fabric`, `quilt`, `neoforge`. Forge remains outside release scope until separately approved.
 - Mascot remains parked until post-MVP approval.
