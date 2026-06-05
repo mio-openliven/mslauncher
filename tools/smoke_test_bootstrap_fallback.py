@@ -11,7 +11,7 @@ import bootstrapper
 
 
 EXPECTED_PAYLOAD_NAME = "MSLaunchPayload.dat"
-EXPECTED_PAYLOAD_SHA = "5247144f2df8657320524a2f0e3664ed388a7e1d25afcb9bd310ac1686fa7931"
+EXPECTED_PAYLOAD_SHA = "91835ffbd508827ccdcc3bf66a37d9e06a6838a48c9ce304100f043c2e31b656"
 
 
 def main() -> None:
@@ -20,8 +20,8 @@ def main() -> None:
     assert bootstrapper.SOURCES
     assert all(source[2] == EXPECTED_PAYLOAD_SHA for source in bootstrapper.SOURCES)
     assert any(EXPECTED_PAYLOAD_NAME in source[1] for source in bootstrapper.SOURCES)
-    assert any("/v1.9.7/bootstrap.json" in url for url in bootstrapper.BOOTSTRAP_MANIFESTS)
-    assert any("/v1.9.7/MSLaunchPayload.dat" in source[1] for source in bootstrapper.SOURCES)
+    assert any("/v1.9.8/bootstrap.json" in url for url in bootstrapper.BOOTSTRAP_MANIFESTS)
+    assert any("/v1.9.8/MSLaunchPayload.dat" in source[1] for source in bootstrapper.SOURCES)
     assert bootstrapper.parse_bootstrap_manifest(
         {
             "package_name": EXPECTED_PAYLOAD_NAME,
@@ -53,8 +53,8 @@ def main() -> None:
     assert f'private const string PackageName = "{EXPECTED_PAYLOAD_NAME}";' in setup_source
     assert f'private const string PackageSha256 = "{EXPECTED_PAYLOAD_SHA}";' in setup_source
     assert "MSLaunch-1.9.0-beta.zip" not in setup_source
-    assert "/v1.9.7/bootstrap.json" in setup_source
-    assert "/v1.9.7/MSLaunchPayload.dat" in setup_source
+    assert "/v1.9.8/bootstrap.json" in setup_source
+    assert "/v1.9.8/MSLaunchPayload.dat" in setup_source
 
     print("bootstrap fallback smoke test: OK")
 

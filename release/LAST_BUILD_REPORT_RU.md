@@ -2,7 +2,7 @@
 
 Дата: 2026-06-05
 
-Версия: `1.9.7`
+Версия: `1.9.8`
 
 Текущий release path: hosted setup + GitHub fallback.
 
@@ -15,13 +15,13 @@
 
 ## SHA-256
 
-- `bootstrap.json`: `68de708d0e4403fc6729f310fc66284011bd5dcd19f94caf76598acc954eae66`
-- `MSLaunchSetup.exe`: `7f2897f5eb7a93b6d707bac3d58546b56cf11e246a9e202bfdca77d1f2e82977`
-- `MSLaunchPayload.dat`: `5247144f2df8657320524a2f0e3664ed388a7e1d25afcb9bd310ac1686fa7931`
+- `bootstrap.json`: `e066b63f350d444b656863433a7ed98fa8275aed845851bcc7e97c134d152392`
+- `MSLaunchSetup.exe`: `7d2ae7c9cec048a9d2cf287445533162b458a9c865677193cf7ba827e983695c`
+- `MSLaunchPayload.dat`: `91835ffbd508827ccdcc3bf66a37d9e06a6838a48c9ce304100f043c2e31b656`
 
 ## GitHub fallback
 
-GitHub release: `mio-openliven/MSNukem`, tag `v1.9.7`.
+GitHub release: `mio-openliven/MSNukem`, tag `v1.9.8`.
 
 The host and GitHub fallback assets must stay hash-consistent. Do not replace only one asset.
 
@@ -39,7 +39,7 @@ The host and GitHub fallback assets must stay hash-consistent. Do not replace on
 - `python tools\smoke_test_launcher_update.py`: OK
 - `python tools\smoke_test_release_package.py`: OK
 - Public `/client`: 200
-- Public `/api/launcher/update`: must point to setup SHA `7f2897f5eb7a93b6d707bac3d58546b56cf11e246a9e202bfdca77d1f2e82977` after host upload.
+- Public `/api/launcher/update`: must point to setup SHA `7d2ae7c9cec048a9d2cf287445533162b458a9c865677193cf7ba827e983695c` after host upload.
 - Public `/api/projects/nukem/active-build`: 404, accepted for current fallback release.
 
 ## Not checked by automation

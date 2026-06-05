@@ -4,7 +4,7 @@
 
 Source truth: `main` после PR #30, #31, #32 и #34.
 
-Текущий release path: hosted setup + GitHub fallback, версия `1.9.7`.
+Текущий release path: hosted setup + GitHub fallback, версия `1.9.8`.
 
 ## Verdict
 
@@ -18,16 +18,16 @@ Progress: 95/100.
 
 - Public client: `https://mslaunch.186.246.12.238.sslip.io/client`
 - Direct setup: `https://mslaunch.186.246.12.238.sslip.io/downloads/MSLaunchSetup.exe`
-- Bootstrap SHA-256: `68de708d0e4403fc6729f310fc66284011bd5dcd19f94caf76598acc954eae66`
-- Setup SHA-256: `7f2897f5eb7a93b6d707bac3d58546b56cf11e246a9e202bfdca77d1f2e82977`
-- Payload SHA-256: `5247144f2df8657320524a2f0e3664ed388a7e1d25afcb9bd310ac1686fa7931`
-- `/api/launcher/update`: must point to version `1.9.7` and setup SHA `7f2897f5eb7a93b6d707bac3d58546b56cf11e246a9e202bfdca77d1f2e82977` after host upload.
+- Bootstrap SHA-256: `e066b63f350d444b656863433a7ed98fa8275aed845851bcc7e97c134d152392`
+- Setup SHA-256: `7d2ae7c9cec048a9d2cf287445533162b458a9c865677193cf7ba827e983695c`
+- Payload SHA-256: `91835ffbd508827ccdcc3bf66a37d9e06a6838a48c9ce304100f043c2e31b656`
+- `/api/launcher/update`: must point to version `1.9.8` and setup SHA `7d2ae7c9cec048a9d2cf287445533162b458a9c865677193cf7ba827e983695c` after host upload.
 - `/api/projects/nukem/active-build`: `404 No active build`; accepted for the current fallback release path.
 
 ## Current Source Truth
 
-- `launcher_update.APP_VERSION = "1.9.7"`.
-- Launcher source label is `Release Beta 1.9.7`.
+- `launcher_update.APP_VERSION = "1.9.8"`.
+- Launcher source label is `Release Beta 1.9.8`.
 - Public panel eyebrow is `MS Nuckem Release Beta`.
 - `TEAM_SYNC_MSLAUNCH.md` contains the current team route and release guardrail.
 - Supported loaders in source/docs: `vanilla`, `fabric`, `quilt`, `neoforge`.
