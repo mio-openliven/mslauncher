@@ -18,13 +18,13 @@ internal static class Program
     private const string AppName = "MSLaunch";
     private const string ExeName = "MSLauncher.exe";
     private const string PackageName = "MSLaunchPayload.dat";
-    private const string PackageSha256 = "6af86a819d500550a8c4462d17568fdab577dc266d33d6b11558ed49eaf98b0c";
+    private const string PackageSha256 = "c859a9338100f74d1a1f420c2f22209a4f0c4271f7b86170398dc08adb341c37";
     private const int ChunkSize = 262144;
 
     private static readonly string[] BootstrapManifests =
     {
         "https://mslaunch.186.246.12.238.sslip.io/downloads/bootstrap.json",
-        "https://github.com/mio-openliven/MSNukem/releases/download/v1.9.0-beta.1/bootstrap.json",
+        "https://github.com/mio-openliven/MSNukem/releases/download/v1.9.7/bootstrap.json",
     };
 
     [STAThread]
@@ -193,7 +193,7 @@ internal static class Program
             return new List<Source>
             {
                 new Source("Host", "https://mslaunch.186.246.12.238.sslip.io/downloads/" + PackageName, PackageSha256),
-                new Source("GitHub", "https://github.com/mio-openliven/MSNukem/releases/download/v1.9.0-beta.1/MSLaunchPayload.dat", PackageSha256),
+                new Source("GitHub", "https://github.com/mio-openliven/MSNukem/releases/download/v1.9.7/MSLaunchPayload.dat", PackageSha256),
             };
         }
 
@@ -202,6 +202,13 @@ internal static class Program
             var result = new List<Source>();
             var root = new JavaScriptSerializer().DeserializeObject(json) as Dictionary<string, object>;
             if (root == null || !root.ContainsKey("sources"))
+            {
+                return result;
+            }
+            var packageName = Convert.ToString(root.ContainsKey("package_name") ? root["package_name"] : "");
+            var packageSha = Convert.ToString(root.ContainsKey("package_sha256") ? root["package_sha256"] : "").ToLowerInvariant();
+            if (!String.Equals(packageName, PackageName, StringComparison.Ordinal) ||
+                !String.Equals(packageSha, PackageSha256, StringComparison.OrdinalIgnoreCase))
             {
                 return result;
             }
@@ -220,7 +227,8 @@ internal static class Program
                 var name = Convert.ToString(source.ContainsKey("name") ? source["name"] : "Source");
                 var url = Convert.ToString(source.ContainsKey("url") ? source["url"] : "");
                 var sha = Convert.ToString(source.ContainsKey("sha256") ? source["sha256"] : "").ToLowerInvariant();
-                if (url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) && sha.Length == 64)
+                if (url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) &&
+                    String.Equals(sha, PackageSha256, StringComparison.OrdinalIgnoreCase))
                 {
                     result.Add(new Source(name, url, sha));
                 }

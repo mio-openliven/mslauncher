@@ -16,15 +16,15 @@ if (-not $ArtifactDir) {
 $expectedFiles = @(
   @{
     Name = "MSLaunchPayload.dat"
-    Sha256 = "6AF86A819D500550A8C4462D17568FDAB577DC266D33D6B11558ED49EAF98B0C"
+    Sha256 = "C859A9338100F74D1A1F420C2F22209A4F0C4271F7B86170398DC08ADB341C37"
   },
   @{
     Name = "MSLaunchSetup.exe"
-    Sha256 = "45E55F4B389925838E294770F8C3C2C95E57F118B64F246CF611DBB2EF5C2ABF"
+    Sha256 = "166E36D6075787FE310FA45AF1431E16DC7CB452133A54CD0D06C4D2922B04A3"
   },
   @{
     Name = "bootstrap.json"
-    Sha256 = "95400D0F8CBF94676E0ED5E1281F7F9D42C55467D76A242778BCA8556207DD1E"
+    Sha256 = "38E21AE303A524F616FA39A2D8BDCAE1EA9CA350739B5F313775780BB46F2971"
   }
 )
 
@@ -101,10 +101,10 @@ if ($DryRun) {
 
 if (-not $SkipPublicVerify) {
   $bootstrap = Invoke-RestMethod -Uri "https://mslaunch.186.246.12.238.sslip.io/downloads/bootstrap.json" -TimeoutSec 30
-  if ($bootstrap.package_sha256 -ne "6af86a819d500550a8c4462d17568fdab577dc266d33d6b11558ed49eaf98b0c") {
+  if ($bootstrap.package_sha256 -ne "c859a9338100f74d1a1f420c2f22209a4f0c4271f7b86170398dc08adb341c37") {
     throw "Public bootstrap package_sha256 mismatch: $($bootstrap.package_sha256)"
   }
-  if ($bootstrap.setup_sha256 -ne "45e55f4b389925838e294770f8c3c2c95e57f118b64f246cf611dbb2ef5c2abf") {
+  if ($bootstrap.setup_sha256 -ne "166e36d6075787fe310fa45af1431e16dc7cb452133a54cd0d06c4d2922b04a3") {
     throw "Public bootstrap setup_sha256 mismatch: $($bootstrap.setup_sha256)"
   }
 }

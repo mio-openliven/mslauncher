@@ -9,7 +9,7 @@ from pathlib import Path
 
 FIXED_ZIP_TIME = (2024, 1, 1, 0, 0, 0)
 DEFAULT_BASE_URL = "https://mslaunch.186.246.12.238.sslip.io/downloads"
-DEFAULT_GITHUB_URL = "https://github.com/mio-openliven/MSNukem/releases/download/v1.9.0-beta.1"
+DEFAULT_GITHUB_URL = "https://github.com/mio-openliven/MSNukem/releases/download/v1.9.7"
 
 
 def sha256_file(path: Path) -> str:

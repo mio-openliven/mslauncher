@@ -23,10 +23,10 @@ DESKTOP = Path(os.environ.get("USERPROFILE", str(Path.home()))) / "Desktop"
 SHORTCUT_PATH = DESKTOP / "MSLaunch.lnk"
 EXE_NAME = "MSLauncher.exe"
 PACKAGE_NAME = "MSLaunchPayload.dat"
-PACKAGE_SHA256 = "6af86a819d500550a8c4462d17568fdab577dc266d33d6b11558ed49eaf98b0c"
+PACKAGE_SHA256 = "c859a9338100f74d1a1f420c2f22209a4f0c4271f7b86170398dc08adb341c37"
 BOOTSTRAP_MANIFESTS = [
     "https://mslaunch.186.246.12.238.sslip.io/downloads/bootstrap.json",
-    "https://github.com/mio-openliven/MSNukem/releases/download/v1.9.0-beta.1/bootstrap.json",
+    "https://github.com/mio-openliven/MSNukem/releases/download/v1.9.7/bootstrap.json",
 ]
 PROBE_BYTES = 64 * 1024
 CHUNK_SIZE = 1024 * 256
@@ -35,7 +35,7 @@ SOURCES = [
     ("Host", f"https://mslaunch.186.246.12.238.sslip.io/downloads/{PACKAGE_NAME}", PACKAGE_SHA256),
     (
         "GitHub",
-        "https://github.com/mio-openliven/MSNukem/releases/download/v1.9.0-beta.1/MSLaunchPayload.dat",
+        "https://github.com/mio-openliven/MSNukem/releases/download/v1.9.7/MSLaunchPayload.dat",
         PACKAGE_SHA256,
     ),
 ]
@@ -111,6 +111,10 @@ def load_bootstrap_sources() -> list[tuple[str, str, str]]:
 def parse_bootstrap_manifest(payload: object) -> list[tuple[str, str, str]]:
     if not isinstance(payload, dict):
         return []
+    if str(payload.get("package_name", "")).strip() != PACKAGE_NAME:
+        return []
+    if str(payload.get("package_sha256", "")).strip().lower() != PACKAGE_SHA256:
+        return []
     parsed: list[tuple[str, str, str]] = []
     raw_sources = payload.get("sources")
     if not isinstance(raw_sources, list):
@@ -121,7 +125,7 @@ def parse_bootstrap_manifest(payload: object) -> list[tuple[str, str, str]]:
         name = str(item.get("name", "")).strip()[:40] or "Source"
         url = str(item.get("url", "")).strip()
         sha256_value = str(item.get("sha256", "")).strip().lower()
-        if not url.startswith("https://") or len(sha256_value) != 64:
+        if not url.startswith("https://") or sha256_value != PACKAGE_SHA256:
             continue
         parsed.append((name, url, sha256_value))
     return parsed
