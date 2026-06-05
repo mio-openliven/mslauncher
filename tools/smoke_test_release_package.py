@@ -47,15 +47,25 @@ def main() -> None:
     assert len(nukem_builds) == 1
     assert nukem_template["client_mode"] == "nukem"
     assert nukem_template["default_build"] == "nukem"
-    assert nukem_template["social_links"]["nukem"]["youtube"] == "https://youtube.com/@nuckem?si=8B60TLzrzN8HVh98"
-    assert nukem_template["social_links"]["nukem"]["discord"] == "https://discord.com/invite/P35nvXQ"
+    assert nukem_template["social_links"]["nukem"]["youtube"] == "https://www.youtube.com/@Nuckem"
+    assert nukem_template["social_links"]["nukem"]["discord"] == "https://discord.gg/P35nvXQ"
+    assert nukem_template["panel"]["enabled"] is True
+    assert nukem_template["panel"]["base_url"] == "https://mslaunch.186.246.12.238.sslip.io"
     assert nukem_template["project_access"]["nukem"]["password_enabled"] is True
-    assert nukem_template["project_access"]["nukem"]["password_hash_sha256"] == ""
+    assert (
+        nukem_template["project_access"]["nukem"]["password_hash_sha256"]
+        == "b49c430845403cc609360a61bf424ce7bd01bad57b1aadb6794c76dcd07be0ef"
+    )
+    assert (
+        nukem_template["project_access"]["nukem"]["build_passwords"]["nukem"]
+        == "b49c430845403cc609360a61bf424ce7bd01bad57b1aadb6794c76dcd07be0ef"
+    )
     assert "admin_password_hash_sha256" in nukem_template["project_access"]["nukem"]
     assert len(nukem_template["news"]["nukem"]) <= 5
     assert nukem_builds[0]["id"] == "nukem"
     assert nukem_builds[0]["name"] == "Nukem Project"
-    assert nukem_builds[0]["source_key"] == "https://raw.githubusercontent.com/OWNER/REPO/BRANCH/mslauncher/build.json"
+    assert nukem_builds[0]["minecraft_version"] == "1.20.1"
+    assert nukem_builds[0]["source_key"] == "https://raw.githubusercontent.com/mio-openliven/MSNukem/main/build.json"
 
     checklist_text = checklist_path.read_text(encoding="utf-8")
     backlog_text = backlog_path.read_text(encoding="utf-8")
@@ -85,6 +95,7 @@ def main() -> None:
     assert "MSLauncher.exe" in player_readme_text
     assert "mslauncher-last-error.txt" in player_readme_text
     assert "prepare_release.ps1 -Preset nukem" in nukem_setup_text
+    assert "mio-openliven/MSNukem" in nukem_setup_text
     assert "password_hash_sha256" in nukem_setup_text
     assert "публичный GitHub не скрывает файлы" in nukem_setup_text
 

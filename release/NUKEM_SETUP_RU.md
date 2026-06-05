@@ -6,11 +6,11 @@
 .\release\prepare_release.ps1 -Preset nukem
 ```
 
-## Что заменить перед сборкой
+## Что проверить перед сборкой
 
-Откройте `release/launcher_config.nukem.template.json` и замените:
+Откройте `release/launcher_config.nukem.template.json` и проверьте:
 
-- `OWNER` / `REPO` / `BRANCH` в `source_key`;
+- `source_key` уже указывает на `mio-openliven/MSNukem`;
 - `minecraft_version` после анализа архива клиента;
 - `server` и `port`, если лаунчер должен сразу подключать сервер;
 - `password_hash_sha256`, если включен password gate.
@@ -18,13 +18,13 @@
 Пример `source_key`:
 
 ```json
-"source_key": "https://raw.githubusercontent.com/OWNER/REPO/BRANCH/mslauncher/build.json"
+"source_key": "https://raw.githubusercontent.com/mio-openliven/MSNukem/main/build.json"
 ```
 
 Проверьте в браузере, что открывается:
 
 ```text
-https://raw.githubusercontent.com/OWNER/REPO/BRANCH/mslauncher/build.json
+https://raw.githubusercontent.com/mio-openliven/MSNukem/main/build.json
 ```
 
 ## Password gate
@@ -35,7 +35,7 @@ https://raw.githubusercontent.com/OWNER/REPO/BRANCH/mslauncher/build.json
 "project_access": {
   "nukem": {
     "password_enabled": true,
-    "password_hash_sha256": "",
+    "password_hash_sha256": "b49c430845403cc609360a61bf424ce7bd01bad57b1aadb6794c76dcd07be0ef",
     "password_hint": "Ask the project admin for the access password."
   }
 }
