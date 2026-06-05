@@ -345,13 +345,22 @@ def main() -> None:
         original_show_crash_help_dialog = window.show_crash_help_dialog
         window.show_crash_help_dialog = lambda: crash_dialog_calls.append(True)
         try:
+            window.hidden_to_tray_for_game = True
             window.on_game_crashed("What happened: Minecraft crashed\nTechnical line: OutOfMemoryError")
             app.processEvents()
             assert crash_dialog_calls
+            assert not window.hidden_to_tray_for_game
+            assert window.isVisible()
             assert window.info_panel_mode == "crash"
             assert window.last_crash_report_path is not None
         finally:
             window.show_crash_help_dialog = original_show_crash_help_dialog
+        window.hidden_to_tray_for_game = True
+        window.on_launch_failed("java.lang.UnsupportedClassVersionError")
+        app.processEvents()
+        assert not window.hidden_to_tray_for_game
+        assert window.isVisible()
+        assert window.info_panel_mode == "error"
         window.last_crash_reason = "What happened: A mod does not match the selected loader."
         window.version_combo.setCurrentText("1.20.1")
         window.set_loader_mode("neoforge")

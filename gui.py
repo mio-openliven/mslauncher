@@ -5137,6 +5137,8 @@ class MSLauncherWindow(QMainWindow):
         self.skin_status_label.setText(self.translate("skin_empty"))
 
     def on_launch_failed(self, error: str, technical_report: str = "") -> None:
+        if self.hidden_to_tray_for_game:
+            self.restore_launcher_from_tray()
         self.reset_action_buttons()
         user_error = explain_user_error(error, language=self.language, context="launch")
         report_path = self.write_launcher_error_report(user_error, technical_report or error, "launch")
@@ -5144,6 +5146,8 @@ class MSLauncherWindow(QMainWindow):
         self.set_status("ready")
 
     def on_game_crashed(self, crash_reason: str) -> None:
+        if self.hidden_to_tray_for_game:
+            self.restore_launcher_from_tray()
         self.reset_action_buttons()
         self.last_crash_reason = crash_reason
         self.last_crash_report_path = self.write_launcher_crash_report(crash_reason, "mslauncher-last-crash.txt")
