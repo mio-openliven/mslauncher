@@ -46,16 +46,22 @@ def main() -> None:
     assert isinstance(nukem_builds, list)
     assert len(nukem_builds) == 1
     assert nukem_template["client_mode"] == "nukem"
-    assert nukem_template["default_build"] == "nukem"
-    assert nukem_template["social_links"]["nukem"]["youtube"] == "https://youtube.com/@nuckem?si=8B60TLzrzN8HVh98"
-    assert nukem_template["social_links"]["nukem"]["discord"] == "https://discord.com/invite/P35nvXQ"
+    assert nukem_template["default_build"] == "main"
+    assert nukem_template["panel"]["enabled"] is True
+    assert nukem_template["panel"]["base_url"] == "https://mslaunch.186.246.12.238.sslip.io"
+    assert nukem_template["social_links"]["nukem"]["youtube"] == "https://www.youtube.com/@Nuckem"
+    assert nukem_template["social_links"]["nukem"]["discord"] == "https://discord.gg/P35nvXQ"
+    assert nukem_template["social_links"]["nukem"]["vk_group"] == "https://vk.com/nuckem_garage"
+    assert nukem_template["social_links"]["nukem"]["rutube"] == "https://rutube.ru/channel/64641198"
     assert nukem_template["project_access"]["nukem"]["password_enabled"] is True
-    assert nukem_template["project_access"]["nukem"]["password_hash_sha256"] == ""
+    assert len(nukem_template["project_access"]["nukem"]["password_hash_sha256"]) == 64
     assert "admin_password_hash_sha256" in nukem_template["project_access"]["nukem"]
+    assert nukem_template["project_access"]["nukem"]["build_passwords"]["main"] == nukem_template["project_access"]["nukem"]["password_hash_sha256"]
     assert len(nukem_template["news"]["nukem"]) <= 5
-    assert nukem_builds[0]["id"] == "nukem"
-    assert nukem_builds[0]["name"] == "Nukem Project"
-    assert nukem_builds[0]["source_key"] == "https://raw.githubusercontent.com/OWNER/REPO/BRANCH/mslauncher/build.json"
+    assert nukem_builds[0]["id"] == "main"
+    assert nukem_builds[0]["name"] == "Main Server"
+    assert nukem_builds[0]["source_key"] == "https://raw.githubusercontent.com/mio-openliven/MSNukem/main/build.json"
+    assert "OWNER/REPO/BRANCH" not in json.dumps(nukem_template)
 
     checklist_text = checklist_path.read_text(encoding="utf-8")
     backlog_text = backlog_path.read_text(encoding="utf-8")

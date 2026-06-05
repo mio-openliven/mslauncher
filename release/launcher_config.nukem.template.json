@@ -10,35 +10,25 @@
   "skin_path": "",
   "social_links": {
     "nukem": {
-      "youtube": "https://youtube.com/@nuckem?si=8B60TLzrzN8HVh98",
-      "discord": "https://discord.com/invite/P35nvXQ"
+      "youtube": "https://www.youtube.com/@Nuckem",
+      "discord": "https://discord.gg/P35nvXQ",
+      "vk": "https://vk.com/belchak",
+      "vk_group": "https://vk.com/nuckem_garage",
+      "rutube": "https://rutube.ru/channel/64641198"
     }
   },
+  "support_url": "https://github.com/mio-openliven/mslauncher/issues/new",
+  "support_urls": {
+    "independent": "https://github.com/mio-openliven/mslauncher/issues/new"
+  },
   "panel": {
-    "enabled": false,
-    "base_url": "",
+    "enabled": true,
+    "base_url": "https://mslaunch.186.246.12.238.sslip.io",
     "project": "nukem",
     "timeout_seconds": 8,
     "allow_insecure_http": false
   },
-  "project_access": {
-    "nukem": {
-      "password_enabled": true,
-      "password_hash_sha256": "",
-      "admin_password_hash_sha256": "",
-      "build_passwords": {},
-      "password_hint": "Ask the project admin for the access password."
-    }
-  },
-  "news": {
-    "nukem": [
-      {
-        "title": "MS Nuckem",
-        "body": "Новости отдела появятся здесь. До пяти сообщений, автопереключение каждые 30 секунд."
-      }
-    ]
-  },
-  "default_build": "nukem",
+  "default_build": "main",
   "launch": {
     "memory_min": "512M",
     "memory_max": "4G",
@@ -48,15 +38,41 @@
   },
   "builds": [
     {
-      "id": "nukem",
-      "name": "Nukem Project",
-      "minecraft_version": "",
+      "id": "main",
+      "name": "Main Server",
+      "minecraft_version": "1.20.1",
       "loader": "fabric",
       "loader_version": "latest",
-      "source_key": "https://raw.githubusercontent.com/OWNER/REPO/BRANCH/mslauncher/build.json",
-      "server": "",
-      "port": "",
+      "source_key": "https://raw.githubusercontent.com/mio-openliven/MSNukem/main/build.json",
+      "server": "play.example.com",
+      "port": "25565",
       "manifest_url": ""
     }
-  ]
+  ],
+  "project_access": {
+    "nukem": {
+      "password_enabled": true,
+      "password_hash_sha256": "b49c430845403cc609360a61bf424ce7bd01bad57b1aadb6794c76dcd07be0ef",
+      "admin_password_hash_sha256": "",
+      "build_passwords": {
+        "main": "b49c430845403cc609360a61bf424ce7bd01bad57b1aadb6794c76dcd07be0ef"
+      },
+      "password_hint": "Ask the project admin for the access password."
+    }
+  },
+  "admin_links": {
+    "nukem": {
+      "repo_url": "https://github.com/mio-openliven/MSNukem",
+      "manifest_url": "https://raw.githubusercontent.com/mio-openliven/MSNukem/main/manifest.json"
+    }
+  },
+  "news": {
+    "nukem": [
+      {
+        "title": "MS Nuckem",
+        "body": "Новости отдела появятся здесь. До пяти сообщений, автопереключение каждые 30 секунд."
+      }
+    ],
+    "independent": []
+  }
 }
