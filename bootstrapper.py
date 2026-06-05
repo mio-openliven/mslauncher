@@ -23,10 +23,10 @@ DESKTOP = Path(os.environ.get("USERPROFILE", str(Path.home()))) / "Desktop"
 SHORTCUT_PATH = DESKTOP / "MSLaunch.lnk"
 EXE_NAME = "MSLauncher.exe"
 PACKAGE_NAME = "MSLaunchPayload.dat"
-PACKAGE_SHA256 = "5247144f2df8657320524a2f0e3664ed388a7e1d25afcb9bd310ac1686fa7931"
+PACKAGE_SHA256 = "91835ffbd508827ccdcc3bf66a37d9e06a6838a48c9ce304100f043c2e31b656"
 BOOTSTRAP_MANIFESTS = [
     "https://mslaunch.186.246.12.238.sslip.io/downloads/bootstrap.json",
-    "https://github.com/mio-openliven/MSNukem/releases/download/v1.9.7/bootstrap.json",
+    "https://github.com/mio-openliven/MSNukem/releases/download/v1.9.8/bootstrap.json",
 ]
 PROBE_BYTES = 64 * 1024
 CHUNK_SIZE = 1024 * 256
@@ -35,7 +35,7 @@ SOURCES = [
     ("Host", f"https://mslaunch.186.246.12.238.sslip.io/downloads/{PACKAGE_NAME}", PACKAGE_SHA256),
     (
         "GitHub",
-        "https://github.com/mio-openliven/MSNukem/releases/download/v1.9.7/MSLaunchPayload.dat",
+        "https://github.com/mio-openliven/MSNukem/releases/download/v1.9.8/MSLaunchPayload.dat",
         PACKAGE_SHA256,
     ),
 ]

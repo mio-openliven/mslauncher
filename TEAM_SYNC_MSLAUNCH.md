@@ -50,13 +50,13 @@ If both teams need the same file:
 - Repository: `mio-openliven/mslauncher`
 - Main release worktree on this PC: `C:\Users\Li2Fox\Documents\Лаунчер_integration_host`
 - Progress: 95%/100
-- `main` includes PR #30 host upload safety and PR #31 `Release Beta 1.9.7` source label/version sync.
+- `main` includes PR #30 host upload safety, PR #31 source label/version sync, PR #35 Nukem password sync, and the active `Release Beta 1.9.8` follow-up.
 - Open PR list was empty at the last Agent 0 release check.
-- Public release path is `v1.9.7` and currently accepts GitHub fallback.
-- Prepared `/downloads/bootstrap.json` SHA-256: `68de708d0e4403fc6729f310fc66284011bd5dcd19f94caf76598acc954eae66`
-- Prepared `/downloads/MSLaunchSetup.exe` SHA-256: `7f2897f5eb7a93b6d707bac3d58546b56cf11e246a9e202bfdca77d1f2e82977`
-- Prepared `/downloads/MSLaunchPayload.dat` SHA-256: `5247144f2df8657320524a2f0e3664ed388a7e1d25afcb9bd310ac1686fa7931`
-- Public `/api/launcher/update` must point to version `1.9.7` and setup SHA `7f2897f5eb7a93b6d707bac3d58546b56cf11e246a9e202bfdca77d1f2e82977` after host upload.
+- Public release path is `v1.9.8` and currently accepts GitHub fallback.
+- Prepared `/downloads/bootstrap.json` SHA-256: `e066b63f350d444b656863433a7ed98fa8275aed845851bcc7e97c134d152392`
+- Prepared `/downloads/MSLaunchSetup.exe` SHA-256: `7d2ae7c9cec048a9d2cf287445533162b458a9c865677193cf7ba827e983695c`
+- Prepared `/downloads/MSLaunchPayload.dat` SHA-256: `91835ffbd508827ccdcc3bf66a37d9e06a6838a48c9ce304100f043c2e31b656`
+- Public `/api/launcher/update` must point to version `1.9.8` and setup SHA `7d2ae7c9cec048a9d2cf287445533162b458a9c865677193cf7ba827e983695c` after host upload.
 - Public `/api/projects/nukem/active-build` still returns `404 No active build`; this is accepted for the current GitHub fallback release and remains P-007 follow-up work.
 - Supported launcher loaders in the current code stack: `vanilla`, `fabric`, `quilt`, `neoforge`. Forge remains outside release scope until separately approved.
 - Mascot remains parked until post-MVP approval.
@@ -65,7 +65,7 @@ If both teams need the same file:
 
 Do not rebuild or deploy only one public artifact for a cosmetic label change.
 
-If the visible downloaded client must change from `Beta 1.9.7` to `Release Beta 1.9.7`, route a full artifact-sync pass:
+If the visible downloaded client must change, route a full artifact-sync pass:
 
 1. Rebuild `dist/MSLauncher`.
 2. Rebuild `MSLaunchPayload.dat` and record its SHA-256.

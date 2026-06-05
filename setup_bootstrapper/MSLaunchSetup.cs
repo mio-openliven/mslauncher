@@ -18,22 +18,22 @@ using System.Web.Script.Serialization;
 [assembly: AssemblyCompany("MSLaunch Team")]
 [assembly: AssemblyProduct("MSLaunch")]
 [assembly: AssemblyCopyright("Copyright (c) 2026 MSLaunch Team")]
-[assembly: AssemblyVersion("1.9.7.0")]
-[assembly: AssemblyFileVersion("1.9.7.0")]
-[assembly: AssemblyInformationalVersion("Release Beta 1.9.7")]
+[assembly: AssemblyVersion("1.9.8.0")]
+[assembly: AssemblyFileVersion("1.9.8.0")]
+[assembly: AssemblyInformationalVersion("Release Beta 1.9.8")]
 
 internal static class Program
 {
     private const string AppName = "MSLaunch";
     private const string ExeName = "MSLauncher.exe";
     private const string PackageName = "MSLaunchPayload.dat";
-    private const string PackageSha256 = "5247144f2df8657320524a2f0e3664ed388a7e1d25afcb9bd310ac1686fa7931";
+    private const string PackageSha256 = "91835ffbd508827ccdcc3bf66a37d9e06a6838a48c9ce304100f043c2e31b656";
     private const int ChunkSize = 262144;
 
     private static readonly string[] BootstrapManifests =
     {
         "https://mslaunch.186.246.12.238.sslip.io/downloads/bootstrap.json",
-        "https://github.com/mio-openliven/MSNukem/releases/download/v1.9.7/bootstrap.json",
+        "https://github.com/mio-openliven/MSNukem/releases/download/v1.9.8/bootstrap.json",
     };
 
     [STAThread]
@@ -191,7 +191,7 @@ internal static class Program
                     var parsed = ParseBootstrap(DownloadString(manifestUrl));
                     if (parsed.Count > 0)
                     {
-                        return parsed;
+            return parsed;
                     }
                 }
                 catch
@@ -202,7 +202,7 @@ internal static class Program
             return new List<Source>
             {
                 new Source("Host", "https://mslaunch.186.246.12.238.sslip.io/downloads/" + PackageName, PackageSha256),
-                new Source("GitHub", "https://github.com/mio-openliven/MSNukem/releases/download/v1.9.7/MSLaunchPayload.dat", PackageSha256),
+                new Source("GitHub", "https://github.com/mio-openliven/MSNukem/releases/download/v1.9.8/MSLaunchPayload.dat", PackageSha256),
             };
         }
 

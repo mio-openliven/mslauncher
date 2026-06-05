@@ -31,7 +31,7 @@ Agent 0 в текущем release pass:
 
 Ожидаемое поведение:
 
-- Если лаунчер уже версии `1.9.7`, он может показать `Обновлений нет`; это нормально.
+- Если лаунчер уже версии `1.9.8`, он может показать `Обновлений нет`; это нормально.
 - Download Mods / Play для Nukem идет через password gate и sync.
 - Если панель активной сборки еще не настроена, текущий release path использует GitHub fallback.
 
@@ -94,12 +94,12 @@ Agent 0 в текущем release pass:
 
 ## Текущая публичная релизная цепочка
 
-- Version: `1.9.7`
+- Version: `1.9.8`
 - Public client: `https://mslaunch.186.246.12.238.sslip.io/client`
 - Direct setup: `https://mslaunch.186.246.12.238.sslip.io/downloads/MSLaunchSetup.exe`
-- Setup SHA-256: `7f2897f5eb7a93b6d707bac3d58546b56cf11e246a9e202bfdca77d1f2e82977`
-- Payload SHA-256: `5247144f2df8657320524a2f0e3664ed388a7e1d25afcb9bd310ac1686fa7931`
-- Bootstrap SHA-256: `68de708d0e4403fc6729f310fc66284011bd5dcd19f94caf76598acc954eae66`
+- Setup SHA-256: `7d2ae7c9cec048a9d2cf287445533162b458a9c865677193cf7ba827e983695c`
+- Payload SHA-256: `91835ffbd508827ccdcc3bf66a37d9e06a6838a48c9ce304100f043c2e31b656`
+- Bootstrap SHA-256: `e066b63f350d444b656863433a7ed98fa8275aed845851bcc7e97c134d152392`
 
 ## Что не делать
 
