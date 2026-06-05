@@ -14,9 +14,9 @@ def main() -> int:
     assert "MSLaunchPayload.dat" in script
     assert "MSLaunchSetup.exe" in script
     assert "bootstrap.json" in script
-    assert "D17D011D64CFF1F523C4B2BFC45571D79002809BEB6D6D73E0ED81892D6A717E" in script
-    assert "47AECEADCFD2A2E01456DB2B5507263BE2280505C785FD88DE379807434D27DA" in script
-    assert "99ED2C3340E6795B45C9B04F9401A4227B26CE570BBFD7525F6BE79C091F7C56" in script
+    assert "D25FB662A47EA4EF346F680B2F4FD00C626A629EDD2DFC48C8674E4AE07744ED" in script
+    assert "921AA8902A0FEF513930C935AE0D7825B9ADADE0510B52377095700F45810B94" in script
+    assert "F4D6101A8404C17744F07C6B7408DDD6DBF5C3E3B7FC70E09997296868C5C534" in script
     assert "/opt/mslaunch/data/downloads" in script
     assert "backup-$timestamp" in script
     assert "sha256sum -c -" in script
