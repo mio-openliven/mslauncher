@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS builds (
     build_id TEXT NOT NULL,
     name TEXT NOT NULL,
     minecraft_version TEXT NOT NULL,
-    loader TEXT NOT NULL CHECK(loader IN ('vanilla', 'fabric')),
+    loader TEXT NOT NULL CHECK(loader IN ('vanilla', 'fabric', 'quilt', 'neoforge')),
     loader_version TEXT NOT NULL DEFAULT 'latest',
     server TEXT NOT NULL DEFAULT '',
     port TEXT NOT NULL DEFAULT '',
@@ -127,6 +127,54 @@ def ensure_build_columns(connection: sqlite3.Connection) -> None:
     }
     if "access_hash_sha256" not in columns:
         connection.execute("ALTER TABLE builds ADD COLUMN access_hash_sha256 TEXT NOT NULL DEFAULT ''")
+    ensure_build_loader_constraint(connection)
+
+
+def ensure_build_loader_constraint(connection: sqlite3.Connection) -> None:
+    row = connection.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='builds'"
+    ).fetchone()
+    create_sql = str(row["sql"] if row else "")
+    if "loader IN ('vanilla', 'fabric')" not in create_sql:
+        return
+
+    connection.execute("ALTER TABLE builds RENAME TO builds_old_loader_constraint")
+    connection.execute(
+        """
+        CREATE TABLE builds (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_slug TEXT NOT NULL,
+            build_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            minecraft_version TEXT NOT NULL,
+            loader TEXT NOT NULL CHECK(loader IN ('vanilla', 'fabric', 'quilt', 'neoforge')),
+            loader_version TEXT NOT NULL DEFAULT 'latest',
+            server TEXT NOT NULL DEFAULT '',
+            port TEXT NOT NULL DEFAULT '',
+            access_hash_sha256 TEXT NOT NULL DEFAULT '',
+            status TEXT NOT NULL CHECK(status IN ('draft', 'active', 'archived')) DEFAULT 'draft',
+            file_count INTEGER NOT NULL DEFAULT 0,
+            total_size INTEGER NOT NULL DEFAULT 0,
+            created_by TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            activated_at TEXT NOT NULL DEFAULT '',
+            UNIQUE(project_slug, build_id)
+        )
+        """
+    )
+    connection.execute(
+        """
+        INSERT INTO builds (
+            id, project_slug, build_id, name, minecraft_version, loader, loader_version,
+            server, port, access_hash_sha256, status, file_count, total_size, created_by, created_at, activated_at
+        )
+        SELECT
+            id, project_slug, build_id, name, minecraft_version, loader, loader_version,
+            server, port, access_hash_sha256, status, file_count, total_size, created_by, created_at, activated_at
+        FROM builds_old_loader_constraint
+        """
+    )
+    connection.execute("DROP TABLE builds_old_loader_constraint")
 
 
 def seed_projects(connection: sqlite3.Connection, projects: Iterable[tuple[str, str, str, str]]) -> None:

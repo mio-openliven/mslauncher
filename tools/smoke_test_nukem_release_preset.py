@@ -20,24 +20,29 @@ def main() -> None:
     preset = json.loads(preset_path.read_text(encoding="utf-8"))
     assert preset["client_mode"] == "nukem"
     assert preset["default_language"] == "RU"
-    assert preset["default_build"] == "nukem"
+    assert preset["default_build"] == "main"
     assert preset["launch"]["loader"] == "fabric"
-    assert preset["social_links"]["nukem"]["youtube"] == "https://youtube.com/@nuckem?si=8B60TLzrzN8HVh98"
-    assert preset["social_links"]["nukem"]["discord"] == "https://discord.com/invite/P35nvXQ"
+    assert preset["panel"]["enabled"] is True
+    assert preset["panel"]["base_url"] == "https://mslaunch.186.246.12.238.sslip.io"
+    assert preset["social_links"]["nukem"]["youtube"] == "https://www.youtube.com/@Nuckem"
+    assert preset["social_links"]["nukem"]["discord"] == "https://discord.gg/P35nvXQ"
+    assert preset["social_links"]["nukem"]["vk_group"] == "https://vk.com/nuckem_garage"
+    assert preset["social_links"]["nukem"]["rutube"] == "https://rutube.ru/channel/64641198"
     assert preset["project_access"]["nukem"]["password_enabled"] is True
-    assert preset["project_access"]["nukem"]["password_hash_sha256"] == ""
+    assert len(preset["project_access"]["nukem"]["password_hash_sha256"]) == 64
     assert "admin_password_hash_sha256" in preset["project_access"]["nukem"]
+    assert preset["project_access"]["nukem"]["build_passwords"]["main"] == preset["project_access"]["nukem"]["password_hash_sha256"]
     assert len(preset["news"]["nukem"]) <= 5
 
     builds = preset["builds"]
     assert len(builds) == 1
     build = builds[0]
-    assert build["id"] == "nukem"
-    assert build["name"] == "Nukem Project"
+    assert build["id"] == "main"
+    assert build["name"] == "Main Server"
     assert build["loader"] == "fabric"
-    assert build["source_key"] == "https://raw.githubusercontent.com/OWNER/REPO/BRANCH/mslauncher/build.json"
+    assert build["source_key"] == "https://raw.githubusercontent.com/mio-openliven/MSNukem/main/build.json"
     assert build["source_key"].startswith("https://raw.githubusercontent.com/")
-    assert "OWNER/REPO/BRANCH" in build["source_key"]
+    assert "OWNER/REPO/BRANCH" not in json.dumps(preset)
 
     prepare_script = prepare_script_path.read_text(encoding="utf-8")
     assert "[ValidateSet(\"default\", \"nukem\")]" in prepare_script
@@ -46,10 +51,10 @@ def main() -> None:
     assert "Using preset: $Preset" in prepare_script
 
     docs_text = docs_path.read_text(encoding="utf-8")
-    assert "OWNER" in docs_text
-    assert "REPO" in docs_text
-    assert "BRANCH" in docs_text
+    assert "OWNER/REPO/BRANCH" not in docs_text
+    assert "https://raw.githubusercontent.com/mio-openliven/MSNukem/main/build.json" in docs_text
     assert "password_hash_sha256" in docs_text
+    assert "build_passwords" in docs_text
     assert "публичный GitHub не скрывает файлы" in docs_text
 
     print("nukem release preset smoke test: OK")

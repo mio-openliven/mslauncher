@@ -46,6 +46,8 @@ def main() -> None:
     expect_error({"loader": "vanilla", "manifest_url": "http://example.com/manifest.json"})
     expect_error({"loader": "vanilla", "port": "99999"})
     validate_build_config({"loader": "vanilla", "manifest_url": ""})
+    assert validate_build_config({"loader": "quilt", "manifest_url": ""})["loader"] == "quilt"
+    assert validate_build_config({"loader": "neoforge", "manifest_url": ""})["loader"] == "neoforge"
     try:
         validate_build_config({"loader": "vanilla", "manifest_url": ""}, require_manifest=True)
     except RemoteBuildConfigError:

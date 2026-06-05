@@ -316,6 +316,9 @@ def analyze_jar(jar_path: Path, root: Path) -> ModInfo:
             if "fabric.mod.json" in names:
                 info.loader_markers.add("fabric")
                 analyze_fabric_mod_json(jar_file, info)
+            if "quilt.mod.json" in names:
+                info.loader_markers.add("quilt")
+                analyze_quilt_mod_json(jar_file, info)
             if "META-INF/mods.toml" in names:
                 info.loader_markers.add("forge")
                 analyze_mods_toml(jar_file, "META-INF/mods.toml", info)
@@ -345,6 +348,26 @@ def analyze_fabric_mod_json(jar_file: zipfile.ZipFile, info: ModInfo) -> None:
         if isinstance(depends, dict):
             minecraft_dep = depends.get("minecraft")
             info.minecraft_versions.update(extract_versions_from_dependency(minecraft_dep))
+
+
+def analyze_quilt_mod_json(jar_file: zipfile.ZipFile, info: ModInfo) -> None:
+    try:
+        data = json.loads(jar_file.read("quilt.mod.json").decode("utf-8", errors="replace"))
+    except (KeyError, json.JSONDecodeError):
+        info.note = "unreadable quilt.mod.json"
+        return
+    if not isinstance(data, dict):
+        return
+
+    loader_section = data.get("quilt_loader")
+    if isinstance(loader_section, dict):
+        mod_id = loader_section.get("id")
+        if isinstance(mod_id, str):
+            info.mod_ids.add(mod_id)
+        depends = loader_section.get("depends")
+        info.minecraft_versions.update(extract_versions_from_dependency(depends))
+
+    info.minecraft_versions.update(extract_versions_from_text(json.dumps(data)))
 
 
 def analyze_mods_toml(jar_file: zipfile.ZipFile, toml_path: str, info: ModInfo) -> None:
@@ -387,9 +410,11 @@ def find_suspicious_files(root: Path, sources: FolderSources, report: Inspection
 
 def guess_loader(report: InspectionReport) -> None:
     fabric_count = sum(1 for mod in report.mod_infos if "fabric" in mod.loader_markers)
+    quilt_count = sum(1 for mod in report.mod_infos if "quilt" in mod.loader_markers)
     forge_count = sum(1 for mod in report.mod_infos if "forge" in mod.loader_markers)
     neoforge_count = sum(1 for mod in report.mod_infos if "neoforge" in mod.loader_markers)
     exclusive_fabric = sum(1 for mod in report.mod_infos if mod.loader_markers == {"fabric"})
+    exclusive_quilt = sum(1 for mod in report.mod_infos if mod.loader_markers == {"quilt"})
     exclusive_forge = sum(1 for mod in report.mod_infos if mod.loader_markers == {"forge"})
     exclusive_neoforge = sum(1 for mod in report.mod_infos if mod.loader_markers == {"neoforge"})
     mixed_count = sum(1 for mod in report.mod_infos if len(mod.loader_markers) > 1)
@@ -397,7 +422,12 @@ def guess_loader(report: InspectionReport) -> None:
 
     exclusive_loaders = [
         name
-        for name, count in (("fabric", exclusive_fabric), ("forge", exclusive_forge), ("neoforge", exclusive_neoforge))
+        for name, count in (
+            ("fabric", exclusive_fabric),
+            ("quilt", exclusive_quilt),
+            ("forge", exclusive_forge),
+            ("neoforge", exclusive_neoforge),
+        )
         if count
     ]
     if len(exclusive_loaders) > 1:
@@ -406,19 +436,25 @@ def guess_loader(report: InspectionReport) -> None:
         report.suspicious_files.append(f"conflicting exclusive loader markers: {', '.join(exclusive_loaders)}")
         return
 
-    if exclusive_fabric or (fabric_count and not exclusive_forge and not exclusive_neoforge):
+    if exclusive_fabric or (fabric_count and not exclusive_quilt and not exclusive_forge and not exclusive_neoforge):
         report.loader_guess = "fabric"
         report.confidence = "high" if fabric_api else "medium"
         if mixed_count:
             report.suspicious_files.append(f"{mixed_count} jar(s) contain multi-loader metadata; Fabric still dominates.")
         return
-    if exclusive_neoforge or (neoforge_count and not exclusive_fabric and not exclusive_forge):
+    if exclusive_quilt or (quilt_count and not exclusive_fabric and not exclusive_forge and not exclusive_neoforge):
+        report.loader_guess = "quilt"
+        report.confidence = "high" if quilt_count >= 2 else "medium"
+        if mixed_count:
+            report.suspicious_files.append(f"{mixed_count} jar(s) contain multi-loader metadata; Quilt still dominates.")
+        return
+    if exclusive_neoforge or (neoforge_count and not exclusive_fabric and not exclusive_quilt and not exclusive_forge):
         report.loader_guess = "neoforge"
         report.confidence = "high" if neoforge_count >= 2 else "medium"
         if mixed_count:
             report.suspicious_files.append(f"{mixed_count} jar(s) contain multi-loader metadata; NeoForge still dominates.")
         return
-    if exclusive_forge or (forge_count and not exclusive_fabric and not exclusive_neoforge):
+    if exclusive_forge or (forge_count and not exclusive_fabric and not exclusive_quilt and not exclusive_neoforge):
         report.loader_guess = "forge"
         report.confidence = "high" if forge_count >= 2 else "medium"
         if mixed_count:
@@ -435,11 +471,11 @@ def guess_loader(report: InspectionReport) -> None:
 
 def build_recommendations(report: InspectionReport, sources: FolderSources) -> None:
     versions = likely_versions(report)
-    if report.loader_guess in ("fabric", "vanilla") and versions:
+    if report.loader_guess in ("fabric", "quilt", "neoforge", "vanilla") and versions:
         report.recommendations.append(f"Use minecraft_version={versions[0][0]} and loader={report.loader_guess}.")
-    elif report.loader_guess in ("forge", "neoforge"):
+    elif report.loader_guess == "forge":
         report.recommendations.append(
-            f"Detected {report.loader_guess}, but current MSLaunch release supports vanilla/fabric sync best. Ask whether Fabric is required or plan a Forge pass."
+            "Detected forge, but this MSLaunch pass supports vanilla/fabric/quilt/neoforge. Confirm whether NeoForge is acceptable or plan a Forge pass."
         )
     else:
         report.recommendations.append("Minecraft version or loader is unknown. Ask the client for exact Minecraft version and loader.")
@@ -560,7 +596,7 @@ def render_report(report: InspectionReport) -> str:
         f"{skipped}\n\n"
         "## Questions For Client\n\n"
         "- What exact Minecraft version is this pack for?\n"
-        "- What loader is required: Fabric, Forge, NeoForge, or vanilla?\n"
+        "- What loader is required: Fabric, Quilt, NeoForge, Forge, or vanilla?\n"
         "- Is Fabric API required for this pack?\n"
     )
 

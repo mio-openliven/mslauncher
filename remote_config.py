@@ -5,6 +5,7 @@ from urllib.parse import urljoin
 
 import requests
 
+from loader_support import SUPPORTED_LOADERS, format_supported_loaders, normalize_loader
 from url_policy import URLPolicyError, ensure_same_https_origin, normalize_https_url, normalize_source_key_url
 
 
@@ -105,9 +106,9 @@ def validate_build_config(
     require_manifest: bool = False,
 ) -> dict[str, object]:
     normalized_build = dict(build)
-    loader = str(normalized_build.get("loader", "vanilla")).strip().lower() or "vanilla"
-    if loader not in ("vanilla", "fabric"):
-        raise RemoteBuildConfigError("Build loader must be vanilla or fabric.")
+    loader = normalize_loader(normalized_build.get("loader", "vanilla")) or "vanilla"
+    if loader not in SUPPORTED_LOADERS:
+        raise RemoteBuildConfigError(f"Build loader must be {format_supported_loaders()}.")
     normalized_build["loader"] = loader
 
     loader_version = str(normalized_build.get("loader_version", "latest")).strip()

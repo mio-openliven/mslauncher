@@ -30,6 +30,11 @@ def main() -> None:
     assert valid["loader"] == "fabric"
     assert valid["memory_min"] == "512M"
     assert valid["memory_max"] == "2G"
+    assert validate_launch_settings({"loader": "quilt", "memory_min": "512M", "memory_max": "2G"})["loader"] == "quilt"
+    assert (
+        validate_launch_settings({"loader": "neoforge", "memory_min": "512M", "memory_max": "2G"})["loader"]
+        == "neoforge"
+    )
 
     expect_error({"loader": "forge", "memory_min": "512M", "memory_max": "2G"})
     expect_error({"loader": "vanilla", "memory_min": "abc", "memory_max": "2G"})

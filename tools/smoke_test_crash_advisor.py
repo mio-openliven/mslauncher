@@ -66,6 +66,35 @@ def main() -> None:
     )
     assert_contains(duplicate_mods, ("duplicate", "fabric-api-1.jar", "fabric-api-2.jar"))
 
+    loader_mismatch = advise_crash(
+        [
+            "Mod file mods/example-neoforge.jar is for NeoForge and cannot be loaded by this loader",
+        ],
+        1,
+        "EN",
+    )
+    assert_contains(loader_mismatch, ("loader", "neoforge", "do not mix"))
+
+    resource_pack = advise_crash(
+        [
+            "Failed to reload resources",
+            "pack.mcmeta has invalid pack_format",
+            "resourcepacks/fancy-pack.zip",
+        ],
+        1,
+        "EN",
+    )
+    assert_contains(resource_pack, ("resource pack", "pack.mcmeta", "pack_format"))
+
+    config_error_ru = advise_crash(
+        [
+            "Toml parse error in config/example.toml",
+        ],
+        1,
+        "RU",
+    )
+    assert_contains(config_error_ru, ("\u043f\u043e\u0432\u0440\u0435\u0436\u0434\u0435\u043d config", "\u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u044e"))
+
     unknown = advise_crash(["Something unexpected happened"], 1, "EN", "C:/Temp/latest.log")
     assert_contains(unknown, ("not recognized", "latest.log", "send latest.log", "C:\\Temp\\latest.log"))
 
