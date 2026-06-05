@@ -124,10 +124,20 @@ def base_url_for(request: Request) -> str:
     return get_public_base_url(str(request.base_url).rstrip("/"))
 
 
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as file:
+        for chunk in iter(lambda: file.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest().upper()
+
+
 @app.get("/client", response_class=HTMLResponse)
 def client_page(request: Request) -> HTMLResponse:
     base_url = base_url_for(request)
     download_url = f"{base_url}/downloads/MSLaunchSetup.exe"
+    setup_path = get_downloads_root() / "MSLaunchSetup.exe"
+    setup_sha256 = file_sha256(setup_path) if setup_path.is_file() else "MSLaunchSetup.exe not uploaded yet"
     body = f"""
     <section class="hero">
       <div>
@@ -139,7 +149,7 @@ def client_page(request: Request) -> HTMLResponse:
           <b>Windows может показать синее окно защиты.</b>
           Это бета без коммерческой подписи Microsoft-reputation. Если файл скачан с этой страницы:
           нажмите <b>Подробнее</b>, затем <b>Выполнить в любом случае</b>.
-          Контрольная сумма установщика: <code>C493BCBBA070657F7E4861D8CEEDDD05076ED1A24888A1836C1CA069003FA5CD</code>
+          SHA-256: <code>{esc(setup_sha256)}</code>
         </div>
       </div>
     </section>
