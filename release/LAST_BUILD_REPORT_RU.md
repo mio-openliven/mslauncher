@@ -1,67 +1,53 @@
-# Последний отчет сборки MSLaunch
+# Последний отчет релизной сборки MSLaunch
 
-Дата: 2026-05-31 16:26:17 +02:00
+Дата: 2026-06-05
 
-Preset: `nukem`
+Версия: `1.9.7`
 
-Commit перед сборкой: `62b378e`
+Текущий release path: hosted setup + GitHub fallback.
 
-## Проверки перед сборкой
+## Публичные артефакты
 
-- `python -m py_compile gui.py`: OK
-- `Get-ChildItem tools -Filter smoke_test_*.py | Sort-Object Name | ForEach-Object { python $_.FullName }`: OK
-- `rg -n "[А-Яа-яЁё]" gui.py`: OK, совпадений нет
+- Public client: `https://mslaunch.186.246.12.238.sslip.io/client`
+- Direct setup: `https://mslaunch.186.246.12.238.sslip.io/downloads/MSLaunchSetup.exe`
+- Bootstrap: `https://mslaunch.186.246.12.238.sslip.io/downloads/bootstrap.json`
+- Payload: `https://mslaunch.186.246.12.238.sslip.io/downloads/MSLaunchPayload.dat`
 
-## Результат сборки
+## SHA-256
 
-- Build script: `release\prepare_release.ps1 -Preset nukem`
-- Release folder: `C:\Users\Li2Fox\Documents\Лаунчер\dist\MSLauncher`
-- EXE: `C:\Users\Li2Fox\Documents\Лаунчер\dist\MSLauncher\MSLauncher.exe`
-- Zip artifact: `C:\Users\Li2Fox\Documents\Лаунчер\release\MSLaunch_Nukem_TestBuild.zip`
+- `bootstrap.json`: `38e21ae303a524f616fa39a2d8bdcae1ea9ca350739b5f313775780bb46f2971`
+- `MSLaunchSetup.exe`: `166e36d6075787fe310fa45af1431e16dc7cb452133a54cd0d06c4d2922b04a3`
+- `MSLaunchPayload.dat`: `c859a9338100f74d1a1f420c2f22209a4f0c4271f7b86170398dc08adb341c37`
 
-## Проверка release folder
+## GitHub fallback
 
-- `dist\MSLauncher\MSLauncher.exe`: OK
-- `dist\MSLauncher\assets`: OK
-- `dist\MSLauncher\launcher_config.json`: OK
-- `dist\MSLauncher\docs`: OK
-- `CLIENT_SETUP_RU.md`: OK
-- `PLAYER_README_RU.txt`: OK
-- `RELEASE_CHECKLIST_RU.md`: OK
-- `POST_RELEASE_BACKLOG_RU.md`: OK
-- `NUKEM_SETUP_RU.md`: OK
+GitHub release: `mio-openliven/MSNukem`, tag `v1.9.7`.
 
-## Packaged config
+The host and GitHub fallback assets must stay hash-consistent. Do not replace only one asset.
 
-- `client_mode`: `nukem`
-- `social_links.nukem.youtube`: filled
-- `social_links.nukem.discord`: filled
-- `project_access.nukem.password_enabled`: `true`
-- Plaintext password: not present
-- `project_access.nukem.password_hash_sha256`: empty placeholder
-- `source_key`: `https://raw.githubusercontent.com/OWNER/REPO/BRANCH/mslauncher/build.json`
+## Source state
 
-Важно: пока `password_hash_sha256` пустой, Nukem password gate будет блокировать Play/Mods и попросит администратора заполнить hash. Это правильно для test build без реального пароля.
+- `main` includes PR #30 host upload safety.
+- `main` includes PR #31 source label/version sync.
+- `main` includes PR #32 team sync guardrails.
+- Open PR list was empty at the last Agent 0 check.
 
-## Smoke-run EXE
+## Checks
 
-- `MSLauncher.exe` запущен smoke-style с отдельным `MSLAUNCHER_USER_DATA_ROOT`.
-- Временный user config создан.
-- Временный user config содержит `client_mode=nukem`.
-- Minecraft во время проверки не запускался.
+- `python tools\smoke_test_gui_offscreen.py`: OK
+- `python tools\smoke_test_admin_panel.py`: OK
+- `python tools\smoke_test_launcher_update.py`: OK
+- `python tools\smoke_test_release_package.py`: OK
+- Public `/client`: 200
+- Public `/api/launcher/update`: 200, points to setup SHA `166e36d6075787fe310fa45af1431e16dc7cb452133a54cd0d06c4d2922b04a3`
+- Public `/api/projects/nukem/active-build`: 404, accepted for current fallback release.
 
-Manual clicks not done by automation:
+## Not checked by automation
 
-- визуально подтвердить MSLaunch hero/title;
-- проверить YouTube/Discord кнопки;
-- нажать Play/Mods и убедиться, что password gate блокирует запуск до настройки hash;
-- открыть settings/help;
-- закрыть окно без ошибки.
+- Minecraft launch.
+- Clean Windows/no-Python install.
+- Antivirus/SmartScreen behavior.
 
-## Ограничения
+## Do not use
 
-- Public GitHub files are public: raw links не скрывают моды.
-- Password gate is client-side: это UI-барьер, не настоящая серверная защита.
-- Java может потребоваться установить вручную.
-- Реальный запуск Minecraft/Fabric еще нужно проверить вручную.
-- Реальная HTTPS-ссылка клиента еще не указана.
+Old `MSLaunch_Nukem_TestBuild.zip` reports from 2026-05-31 are historical and not current handoff truth.

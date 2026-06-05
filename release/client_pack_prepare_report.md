@@ -1,5 +1,14 @@
 # Client Pack Prepare Report
 
+Status: historical/sample report from the earlier client-pack preparation pass.
+
+Do not use this file as current first-client release truth. Current handoff truth is in:
+
+- `release/FINAL_HANDOFF_AUDIT_RU.md`
+- `release/LAST_BUILD_REPORT_RU.md`
+- `release/OWNER_HANDOFF_RU.md`
+- `TEAM_SYNC_MSLAUNCH.md`
+
 - Archive: `C:\Users\Li2Fox\Downloads\mods.rar`
 - Output dir: `C:\Users\Li2Fox\Documents\Лаунчер\server_pack`
 - Status: `ok`
