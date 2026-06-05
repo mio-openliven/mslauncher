@@ -288,6 +288,8 @@ Supported loader values:
 
 - `vanilla`
 - `fabric`
+- `quilt`
+- `neoforge`
 
 ## Run
 

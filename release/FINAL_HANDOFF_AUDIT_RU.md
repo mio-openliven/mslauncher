@@ -1,113 +1,76 @@
 # Финальный аудит MSLaunch
 
-Дата: 2026-05-31 17:21:17 +02:00
+Дата: 2026-06-05
 
-Commit: `3823175 Verify Nukem release build`
+Source truth: `main` после PR #30, #31 и #32.
 
-Release folder: `C:\Users\Li2Fox\Documents\Лаунчер\dist\MSLauncher`
-
-Release zip: `C:\Users\Li2Fox\Documents\Лаунчер\release\MSLaunch_Nukem_TestBuild.zip`
+Текущий release path: hosted setup + GitHub fallback, версия `1.9.7`.
 
 ## Verdict
 
-Demo/tester handoff: YES, как тестовая сборка с обязательной настройкой `source_key` и `password_hash_sha256` перед реальной проверкой сервера.
+First-client handoff: YES, для текущего GitHub fallback release path.
 
-Commercial release: NO.
+Commercial wide release: NOT YET, пока не пройдены ручные проверки на чистой Windows и реальный запуск Minecraft/Fabric.
 
-Progress: 100/100 по текущему 10-pass demo/release scope.
+Progress: 94/100.
 
-## Critical
+## Current Public Truth
 
-- Нет critical blocker для передачи тестерам как demo/test package.
-- Для реального серверного теста текущий packaged config еще не готов: `source_key` содержит placeholder `https://raw.githubusercontent.com/OWNER/REPO/BRANCH/mslauncher/build.json`, а `password_hash_sha256` пустой. Это не баг сборки, но это blocker для plug-and-play запуска серверной сборки.
+- Public client: `https://mslaunch.186.246.12.238.sslip.io/client`
+- Direct setup: `https://mslaunch.186.246.12.238.sslip.io/downloads/MSLaunchSetup.exe`
+- Bootstrap SHA-256: `38e21ae303a524f616fa39a2d8bdcae1ea9ca350739b5f313775780bb46f2971`
+- Setup SHA-256: `166e36d6075787fe310fa45af1431e16dc7cb452133a54cd0d06c4d2922b04a3`
+- Payload SHA-256: `c859a9338100f74d1a1f420c2f22209a4f0c4271f7b86170398dc08adb341c37`
+- `/api/launcher/update`: `200`, version `1.9.7`, setup SHA matches current public setup.
+- `/api/projects/nukem/active-build`: `404 No active build`; accepted for the current fallback release path.
 
-## High
+## Current Source Truth
 
-- Реальный запуск Minecraft/Fabric не проверялся в этом финальном аудите. Без этого нельзя обещать production-ready запуск на машине клиента.
-- Чистая Windows VM без Python не проверялась. PyInstaller folder build есть, но совместимость с чистой системой и антивирусами остается ручной проверкой.
-- Password gate является client-side барьером. Его можно обойти при доступе к файлам/конфигу клиента.
-- Public GitHub raw hosting не скрывает моды: любой человек с raw URL сможет скачать файлы напрямую.
+- `launcher_update.APP_VERSION = "1.9.7"`.
+- Launcher source label is `Release Beta 1.9.7`.
+- Public panel eyebrow is `MS Nuckem Release Beta`.
+- `TEAM_SYNC_MSLAUNCH.md` contains the current team route and release guardrail.
+- Supported loaders in source/docs: `vanilla`, `fabric`, `quilt`, `neoforge`.
 
-## Medium
+## Release Guardrails
 
-- `password_hash_sha256` в Nukem template пустой. При включенном password gate Play/Mods будут заблокированы до заполнения hash администратором.
-- `launcher_download_url`/auto-update flow не является автообновлением. Реализовано только уведомление и ручная ссылка на скачивание.
-- Java не поставляется вместе с лаунчером. На чистой Windows может потребоваться установка Java вручную или указание `java.exe`.
-- Manual GUI clicks не были полностью пройдены в этом аудите: wrong-password dialog/settings/help panel визуально не кликались через автоматизацию.
-
-## Low
-
-- В Git status остаются локальные изменения `server_pack/build.json` и `server_pack/manifest.json`. Это generated modpack output, не исходники лаунчера; они намеренно не коммитятся в launcher repo.
-- `dist/` и release zip не коммитятся. Это нормально: артефакты сборки лежат локально.
-
-## Theoretical Risks
-
-- theoretical: пользователь может изменить локальный config, отключить password gate или достать raw-ссылки из файлов.
-- theoretical: публичные GitHub файлы могут быть скачаны сторонними людьми, если ссылка утечет.
-- theoretical: Windows Defender/сторонние антивирусы могут ругаться на PyInstaller `.exe` без подписи.
-- theoretical: отдельные Minecraft/Fabric версии могут требовать нюансы Java/loader, которые не покрыты smoke-тестами.
-- theoretical: crash advisor может не распознать редкий конфликт модов и попросит отправить `latest.log`/crash report админу.
+- Do not rebuild or deploy only one public artifact for a cosmetic label change.
+- If visible downloaded client label must change, route a full artifact-sync pass:
+  payload rebuild, setup embedded SHA update, setup rebuild, bootstrap regeneration, host upload, GitHub fallback asset update, and hash verification.
+- Do not touch `server_pack/build.json` or `server_pack/manifest.json` during release cleanup.
+- Do not launch Minecraft in automated checks.
+- Do not print or store secrets in GitHub or reports.
 
 ## What Was Verified
 
-- `git status --short`: исходники чистые, кроме generated `server_pack/build.json` и `server_pack/manifest.json`.
-- `git log -1 --oneline`: `3823175 Verify Nukem release build`.
-- `python -m py_compile gui.py`: OK.
-- Все `tools/smoke_test_*.py`: OK.
-- `rg -n "[А-Яа-яЁё]" gui.py`: прямой кириллицы нет.
-- Release folder содержит:
-  - `dist\MSLauncher\MSLauncher.exe`;
-  - `dist\MSLauncher\assets`;
-  - `dist\MSLauncher\launcher_config.json`;
-  - `dist\MSLauncher\docs`.
-- Docs в release folder содержат:
-  - `CLIENT_SETUP_RU.md`;
-  - `PLAYER_README_RU.txt`;
-  - `RELEASE_CHECKLIST_RU.md`;
-  - `NUKEM_SETUP_RU.md`;
-  - `POST_RELEASE_BACKLOG_RU.md`;
-  - `LAST_BUILD_REPORT_RU.md`.
-- Packaged config:
-  - `client_mode = nukem`;
-  - YouTube link заполнен;
-  - Discord link заполнен;
-  - plaintext password отсутствует;
-  - `password_hash_sha256` пустой placeholder;
-  - `source_key` HTTPS raw GitHub placeholder;
-  - `http://` не найден;
-  - GitHub token/secret markers не найдены.
-- `MSLauncher.exe` был запущен smoke-style с отдельным `MSLAUNCHER_USER_DATA_ROOT`.
-- Smoke-run создал user config с `client_mode=nukem`.
-- Minecraft во время аудита не запускался.
+- `git status --short --branch`: clean `main`.
+- Open GitHub PR list: empty.
+- Public `/client`: 200.
+- Public hosted setup/payload/bootstrap hashes match the release constants.
+- `/api/launcher/update` no longer advertises the stale `d94...` setup hash.
+- Local smoke checks on `main` passed:
+  - `python tools\smoke_test_gui_offscreen.py`
+  - `python tools\smoke_test_admin_panel.py`
+  - `python tools\smoke_test_launcher_update.py`
+  - `python tools\smoke_test_release_package.py`
 
 ## What Was Not Verified
 
-- Реальный запуск Minecraft.
-- Реальный Fabric launch на сборке клиента.
-- Реальная синхронизация с будущим VDS/GitHub modpack repo клиента.
-- Проверка на чистой Windows VM без Python.
-- Поведение антивирусов и SmartScreen.
-- Полный ручной GUI click-through в собранном `.exe`.
-- Wrong-password dialog в packaged `.exe` с реальным hash, потому hash в тестовом config намеренно пустой.
-- Microsoft auth/online-mode, потому эта функция не реализована.
-- Bundled Java, потому Java не поставляется.
+- Real Minecraft launch.
+- Real Fabric launch with the client's machine state.
+- Clean Windows/no-Python install smoke.
+- Antivirus/SmartScreen behavior.
+- Panel-managed active build publishing through owner UI.
 
-## Must Do Before Public Release
+## Remaining Before Final Owner Sign-off
 
-- Заменить placeholder `source_key` на реальный raw GitHub URL клиента.
-- Заполнить `project_access.nukem.password_hash_sha256`, если password gate нужен.
-- Проверить, что `build.json`, `manifest.json` и файлы из manifest открываются по HTTPS.
-- Прогнать `python tools\qa_clean_sync_flow.py`.
-- Проверить `.exe` на чистой Windows VM без Python.
-- Проверить реальный запуск Minecraft/Fabric.
-- Проверить сценарии: нет Java, hash mismatch, нет интернета, crash report после вылета.
-- Решить вопрос подписи `.exe`, если сборка пойдет шире узкого теста.
-- Не обещать скрытие модов при публичном GitHub hosting.
+- Owner/customer manually tests install and launch on the target Windows machine.
+- Team 2 watches only true release risks:
+  - live endpoint drift;
+  - update/report breakage;
+  - package/hash mismatch;
+  - P-007 if panel-managed active builds become required before handoff.
 
-## Safe Handoff Instructions
+## Historical Notes
 
-- Тестерам отдавать всю папку `dist\MSLauncher` или архив `release\MSLaunch_Nukem_TestBuild.zip`, не один `.exe`.
-- Перед реальным тестом сервера заполнить `source_key` и `password_hash_sha256`.
-- Объяснить клиенту: публичный GitHub не защищает файлы, password gate только ограничивает случайное скачивание через UI.
-- Для отчетов об ошибках просить игрока открыть logs/crash reports и отправить файл админу.
-- Для production не обещать автообновление, Microsoft auth, встроенную Java или античит.
+Older reports from 2026-05-31 described a demo zip with placeholder `source_key` and empty password hash. That is no longer the current release truth. Use this file and `TEAM_SYNC_MSLAUNCH.md` for current routing.
