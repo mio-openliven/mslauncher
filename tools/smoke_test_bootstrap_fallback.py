@@ -11,7 +11,7 @@ import bootstrapper
 
 
 EXPECTED_PAYLOAD_NAME = "MSLaunchPayload.dat"
-EXPECTED_PAYLOAD_SHA = "d25fb662a47ea4ef346f680b2f4fd00c626a629edd2dfc48c8674e4ae07744ed"
+EXPECTED_PAYLOAD_SHA = "c859a9338100f74d1a1f420c2f22209a4f0c4271f7b86170398dc08adb341c37"
 
 
 def main() -> None:
