@@ -1,6 +1,6 @@
 # MSLaunch Team Sync
 
-Date: 2026-06-04
+Date: 2026-06-05
 
 Purpose: keep two teams from doing the same work or blocking each other.
 
@@ -24,8 +24,6 @@ Before changing shared launcher behavior, Team 1 should write a short note in th
 
 Team 2 owns:
 
-- `AGENTS.md`
-- `tasks.md`
 - release and handoff coordination
 - GitHub/installer/package checks
 - panel or hosting routing only when explicitly approved
@@ -51,9 +49,11 @@ If both teams need the same file:
 
 - Repository: `mio-openliven/mslauncher`
 - Main project path on this PC: `C:\Users\Li2Fox\Documents\Лаунчер`
-- Progress: 76%/100
-- Current release path accepts GitHub fallback.
-- Panel-managed active-build remains quarantined until authorized admin/hosting action.
+- Progress: 92%/100
+- Current release path accepts GitHub fallback and the hosted bootstrap payload is version `1.9.7`.
+- Stacked release PRs are open for review: #15 integration, #17 panel upload contract, #18 bootstrap fallback constants.
+- Panel-managed active-build remains blocked until authorized admin/hosting action creates or activates the hosted Nukem build.
+- Supported launcher loaders in the current code stack: `vanilla`, `fabric`, `quilt`, `neoforge`. Forge remains outside release scope until separately approved.
 - Mascot remains parked until post-MVP approval.
 
 ## Next Coordination Step
