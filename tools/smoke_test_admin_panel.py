@@ -27,6 +27,20 @@ def main() -> None:
         with zipfile.ZipFile(archive_path, "w") as archive:
             archive.writestr("mods/example.jar", b"jar-data")
             archive.writestr("config/settings.toml", b"enabled=true")
+        invalid_archives: dict[str, dict[str, bytes]] = {
+            "non-jar-mod.zip": {"mods/readme.txt": b"not a jar"},
+            "partial.zip": {"mods/example.jar.part": b"partial"},
+            "generated.zip": {"config/build.json": b"{}"},
+            "unsafe.zip": {"mods/../evil.jar": b"nope"},
+            "empty.zip": {},
+        }
+        invalid_archive_paths: list[Path] = []
+        for archive_name, files in invalid_archives.items():
+            invalid_path = Path(temp_dir) / archive_name
+            with zipfile.ZipFile(invalid_path, "w") as archive:
+                for file_name, data in files.items():
+                    archive.writestr(file_name, data)
+            invalid_archive_paths.append(invalid_path)
 
         with TestClient(app) as client:
             login = client.post(
@@ -55,6 +69,23 @@ def main() -> None:
                     follow_redirects=False,
                 )
             assert created.status_code == 303
+            for invalid_path in invalid_archive_paths:
+                with invalid_path.open("rb") as file:
+                    invalid = client.post(
+                        "/builds/create",
+                        data={
+                            "project_slug": "nukem",
+                            "build_id": f"bad-{invalid_path.stem}",
+                            "name": "Bad Build",
+                            "minecraft_version": "1.20.1",
+                            "loader": "fabric",
+                        },
+                        files={"archive": (invalid_path.name, file, "application/zip")},
+                        follow_redirects=False,
+                    )
+                assert invalid.status_code == 303
+                assert "error=" in invalid.headers["location"]
+
             created_neoforge = client.post(
                 "/builds/create",
                 data={
@@ -156,6 +187,9 @@ def main() -> None:
             assert "VibeCraft" not in dashboard.text
             builds_page = client.get("/builds")
             assert "MS Nuckem" in builds_page.text
+            assert "Build name shown in launcher" in builds_page.text
+            assert "Upload modpack ZIP" in builds_page.text
+            assert "Make active for actors" in builds_page.text
             assert "NeoForge" in builds_page.text
             assert "Quilt" in builds_page.text
             assert "VibeCraft" not in builds_page.text
