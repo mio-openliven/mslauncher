@@ -1,0 +1,19 @@
+Черновик для заявки Codex for Open Source
+
+Важно:
+Не копировать слепо. Перед отправкой надо подставить реальный public repository URL и OpenAI Organization ID.
+
+GitHub repository URL:
+Лучший кандидат сейчас: https://github.com/mio-openliven/koth-plate
+
+Describe your role:
+Primary maintainer. I designed, implemented, documented, and maintain this small Minecraft Paper plugin as part of my learning-by-shipping work for a real server/community environment.
+
+Why does this repository qualify? 500 chars max:
+koth-plate is a small but practical open-source Paper plugin used to add King of the Hill capture-point gameplay to Minecraft servers. It is intentionally simple, documented, buildable, and useful for small communities that need lightweight gameplay mechanics without a large plugin stack. I maintain the code, releases, docs, and configuration examples.
+
+How will you use API credits? 500 chars max:
+I would use Codex/API credits to improve open-source maintenance: review plugin changes, generate regression tests, harden configuration validation, improve documentation, automate release notes, and keep small Minecraft tooling readable for other beginner server owners and maintainers.
+
+Anything else? 500 chars max:
+I am an early independent builder learning software engineering by shipping useful tools for Minecraft communities. Codex is central to my learning workflow. I keep private server/customer logic private, but I want to publish safe reusable tools, document them honestly, and grow into a disciplined open-source maintainer.

@@ -1,0 +1,47 @@
+MSLaunch / Li2Fox - сухой анализ шансов на Codex for Open Source
+
+Источник:
+Официальная форма OpenAI: https://openai.com/form/codex-for-oss/
+
+Что программа реально просит:
+- публичный GitHub-профиль;
+- публичный repository URL;
+- роль primary/core maintainer;
+- объяснение, почему проект важен: usage, adoption, ecosystem importance;
+- доказательство активной поддержки: issues, PR review, releases, maintenance.
+
+Вывод без розовых очков:
+Шанс сейчас есть, но не высокий, если подаваться "как есть".
+Причина: у тебя есть реальные проекты и коммиты, но пока мало публичной витрины, мало README/релизов/issue-трекинга, мало доказательств внешнего использования.
+
+Оценка:
+- как есть: 15-25%;
+- после мягкой уборки GitHub, README, релизов и 1-2 публичных полезных проектов: 35-50%;
+- если появятся пользователи, issue, релизы, понятные инструкции и маленькая история поддержки: 50-65%.
+
+Что усилит шанс без лишнего риска:
+1. Не открывать приватные исходники лаунчера целиком.
+2. Оставить публичным отдельный клиентский/release repo: MSNukem.
+3. Сделать публичными маленькие учебные/полезные проекты без секретов:
+   - koth-plate;
+   - возможно отдельный чистый demo/tool из TitanForge, если убрать приватные идеи;
+   - маленькие Codex helper scripts, если они авторские.
+4. Добавить README в каждый публичный repo:
+   - что это;
+   - зачем сделано;
+   - статус: learning MVP / used on my server / experimental;
+   - как собрать;
+   - как проверить;
+   - ограничения.
+5. Добавить GitHub profile README.
+6. Добавить релизы там, где есть jar/exe/demo.
+7. Не подавать чужие/форкнутые проекты как свои.
+8. Не публиковать токены, пароли, IP, клиентские моды, закрытую бизнес-логику, приватные сборки.
+
+Самая честная стратегия заявки:
+Не изображать "большого open-source maintainer".
+Позиционирование лучше такое:
+"I am an early independent builder learning by shipping useful tools for Minecraft communities. I use Codex daily to turn server problems into working MVPs, documentation, release flows, and maintenance scripts. I want to make the safe, reusable parts public and keep improving them openly."
+
+Риск:
+Если открыть всё подряд ради заявки, можно навредить себе сильнее, чем выиграть подписку. Лучше меньше публичных проектов, но чистых, понятных и безопасных.

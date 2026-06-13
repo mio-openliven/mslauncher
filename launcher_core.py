@@ -18,7 +18,9 @@ import requests
 
 from crash_advisor import advise_crash
 from java_diagnostics import JavaDiagnosticError, diagnose_launch_environment
+from launch_defaults import seed_minecraft_options
 from launcher_update import APP_DISPLAY_NAME, APP_VERSION
+from loader_support import INSTALLABLE_LOADERS, format_supported_loaders, normalize_loader
 from manifest_validator import ManifestValidationError, validate_manifest
 from profile_manager import MANAGED_MARKER
 from url_policy import URLPolicyError, normalize_https_url
@@ -41,6 +43,17 @@ class SyncPlan:
 class CrashLogSource:
     path: Path | None
     lines: list[str]
+
+
+def build_subprocess_startup_kwargs() -> dict[str, object]:
+    if os.name != "nt":
+        return {}
+
+    startupinfo = subprocess.STARTUPINFO()
+    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    startupinfo.wShowWindow = 0
+    creationflags = int(getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    return {"startupinfo": startupinfo, "creationflags": creationflags}
 
 
 class MinecraftEngine:
@@ -224,6 +237,8 @@ class MinecraftEngine:
 
         try:
             launch_version = self._install_requested_version(version, callback_options, effective_launch_options)
+            language = self._clean_config_text(effective_launch_options.get("language")) or "EN"
+            seed_minecraft_options(self.minecraft_directory, language)
 
             options = {
                 "username": username.strip() or "Player",
@@ -250,11 +265,18 @@ class MinecraftEngine:
                 encoding="utf-8",
                 errors="replace",
                 bufsize=1,
+                **build_subprocess_startup_kwargs(),
             )
             with self._process_lock:
                 self._current_process = process
 
-            language = self._clean_config_text(effective_launch_options.get("language")) or "EN"
+            game_started_callback = effective_launch_options.get("game_started_callback")
+            if callable(game_started_callback):
+                try:
+                    game_started_callback()
+                except Exception:
+                    pass
+
             detach_event = effective_launch_options.get("detach_event")
             if not isinstance(detach_event, threading.Event):
                 detach_event = None
@@ -275,7 +297,7 @@ class MinecraftEngine:
         callback_options: dict[str, Callable[..., None]],
         launch_options: dict[str, object] | None,
     ) -> str:
-        loader = self._clean_config_text((launch_options or {}).get("loader")).lower()
+        loader = normalize_loader(self._clean_config_text((launch_options or {}).get("loader")))
         loader_version = self._clean_config_text((launch_options or {}).get("loader_version"))
         java_path = self._clean_config_text((launch_options or {}).get("java_path"))
 
@@ -294,12 +316,12 @@ class MinecraftEngine:
             )
             return version
 
-        if loader != "fabric":
-            raise RuntimeError(f"Неподдерживаемый загрузчик модов: {loader}")
+        if loader not in INSTALLABLE_LOADERS:
+            raise RuntimeError(f"Unsupported mod loader: {loader}. Use {format_supported_loaders()}.")
 
-        fabric_loader = minecraft_launcher_lib.mod_loader.get_mod_loader("fabric")
+        mod_loader = minecraft_launcher_lib.mod_loader.get_mod_loader(loader)
         install_loader_version = None if loader_version in ("", "latest") else loader_version
-        return fabric_loader.install(
+        return mod_loader.install(
             version,
             str(self.minecraft_directory),
             loader_version=install_loader_version,

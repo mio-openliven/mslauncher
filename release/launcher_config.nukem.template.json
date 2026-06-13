@@ -15,8 +15,8 @@
     }
   },
   "panel": {
-    "enabled": false,
-    "base_url": "",
+    "enabled": true,
+    "base_url": "https://nukem.186.246.12.238.sslip.io",
     "project": "nukem",
     "timeout_seconds": 8,
     "allow_insecure_http": false
@@ -24,9 +24,11 @@
   "project_access": {
     "nukem": {
       "password_enabled": true,
-      "password_hash_sha256": "",
+      "password_hash_sha256": "99c3a29b690abad0a97dd39f6ed9e783f42abb07050df51897cd907968adb1ce",
       "admin_password_hash_sha256": "",
-      "build_passwords": {},
+      "build_passwords": {
+        "nukem": "99c3a29b690abad0a97dd39f6ed9e783f42abb07050df51897cd907968adb1ce"
+      },
       "password_hint": "Ask the project admin for the access password."
     }
   },
@@ -49,11 +51,11 @@
   "builds": [
     {
       "id": "nukem",
-      "name": "Nukem Project",
-      "minecraft_version": "",
+      "name": "MS Nuckem",
+      "minecraft_version": "1.20.1",
       "loader": "fabric",
       "loader_version": "latest",
-      "source_key": "https://raw.githubusercontent.com/OWNER/REPO/BRANCH/mslauncher/build.json",
+      "source_key": "https://raw.githubusercontent.com/mio-openliven/MSNukem/main/build.json",
       "server": "",
       "port": "",
       "manifest_url": ""

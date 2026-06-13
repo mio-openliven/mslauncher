@@ -1,0 +1,51 @@
+Laroy audit report
+
+Short version:
+Laroy is mostly right. His advice is directionally good, especially for stopping project chaos and making Codex sessions recoverable.
+
+What is correct:
+1. Private repos limit outside review and OSS programs.
+   Current GitHub list visible to Codex:
+   - private: titanforge-engine, mslauncher, VibePetCore, VibeAuth-Proxy, VibeCraft-Proxy-Legacy
+   - public: MSNukem, koth-plate
+   So "almost all private" is true.
+
+2. README files matter.
+   README is not decoration. It is living onboarding for people and AI. For Codex it reduces repeated explanations.
+
+3. Too many repos too early creates overhead.
+   VibeAuth-Proxy / VibeCraft-Proxy-Legacy / VibePetCore look related. If they are part of one young product, a monorepo would be easier until boundaries stabilize.
+
+4. Legacy repos should usually be archived, not copied forever.
+   Git history already keeps old versions. Separate Legacy repo is only useful if it is truly maintained/deployed separately.
+
+5. AGENTS.md + tasks.md/tasks.json is a good pattern.
+   It gives each new Codex chat a protocol and a task board. This is exactly the kind of structure this project now needs.
+
+6. Separate planner/coder/reviewer roles is good.
+   One chat reviewing its own work repeats blind spots. Separate context helps.
+
+Where he is too absolute:
+1. Cyrillic in local paths is not automatically fatal.
+   It can break weak tools, old scripts, bad encodings, shell quoting, archives, and deployment scripts. But modern Python/PowerShell/Git often handle it. Still, for release/build infrastructure, ASCII paths are safer.
+
+2. "One repo for everything" is not always best.
+   For a mature product, separate repos can be correct. For the current early chaos, fewer repos is better.
+
+3. Codex does not magically follow Kanban unless the repo and prompt enforce it.
+   AGENTS.md/tasks.md help, but the user still needs discipline: one task per chat, no mid-task scope explosion.
+
+Recommended action:
+1. Do not make all private repos public blindly.
+2. Keep source launcher private.
+3. Keep public client/release repo public.
+4. Add README to every active repo.
+5. Archive dead/unused Legacy repos.
+6. Create AGENTS.md and tasks.md in mslauncher.
+7. Split new Codex work into 4-5 chats:
+   - coordinator/audit
+   - launcher UI/core
+   - panel/backend
+   - release/GitHub/installer
+   - mascot/assets
+

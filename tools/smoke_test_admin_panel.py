@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import hashlib
 import os
 import sys
 import tempfile
 import zipfile
 from pathlib import Path
+from unittest.mock import patch
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -12,9 +14,16 @@ if str(PROJECT_ROOT) not in sys.path:
 
 
 def main() -> None:
+    smoke_test_panel_client_fallbacks()
+
     with tempfile.TemporaryDirectory() as temp_dir:
         os.environ["MSLAUNCH_PANEL_DATA"] = str(Path(temp_dir) / "panel_data")
         os.environ["MSLAUNCH_PANEL_SECRET"] = "smoke-secret"
+        installer_bytes = b"installer-data"
+        installer_sha256 = hashlib.sha256(installer_bytes).hexdigest().upper()
+        downloads_root = Path(os.environ["MSLAUNCH_PANEL_DATA"]) / "downloads"
+        downloads_root.mkdir(parents=True, exist_ok=True)
+        (downloads_root / "MSLaunchSetup.exe").write_bytes(installer_bytes)
 
         from fastapi.testclient import TestClient
 
@@ -29,12 +38,56 @@ def main() -> None:
             archive.writestr("config/settings.toml", b"enabled=true")
 
         with TestClient(app) as client:
+            client_page = client.get("/client")
+            assert client_page.status_code == 200
+            assert "MSLaunchSetup.exe" in client_page.text
+            assert 'href="/login?next=/"' in client_page.text
+            assert "Панель проекта" in client_page.text
+            assert installer_sha256 in client_page.text
+            stale_checksum = "C493BCBBA070657F7E4861D8CEEDDD05076ED1A24888A1836" "C1CA069003FA5CD"
+            assert stale_checksum not in client_page.text
+
+            installer = client.get("/downloads/MSLaunchSetup.exe")
+            assert installer.status_code == 200
+            assert installer.content == installer_bytes
+
+            builds_redirect = client.get("/builds", follow_redirects=False)
+            assert builds_redirect.status_code == 303
+            assert builds_redirect.headers["location"] == "/login?next=%2Fbuilds"
+
+            login_page = client.get("/login?next=/builds")
+            assert login_page.status_code == 200
+            assert 'name="next" type="hidden" value="/builds"' in login_page.text
+
+            panel_login = client.post(
+                "/login",
+                data={"username": "li2fly", "password": "secret", "next": "/builds"},
+                follow_redirects=False,
+            )
+            assert panel_login.status_code == 303
+            assert panel_login.headers["location"] == "/builds"
+
+            logout = client.post("/logout", follow_redirects=False)
+            assert logout.status_code == 303
+
+            unsafe_login = client.post(
+                "/login",
+                data={"username": "li2fly", "password": "secret", "next": "https://example.invalid/client"},
+                follow_redirects=False,
+            )
+            assert unsafe_login.status_code == 303
+            assert unsafe_login.headers["location"] == "/"
+
+            logout = client.post("/logout", follow_redirects=False)
+            assert logout.status_code == 303
+
             login = client.post(
                 "/login",
                 data={"username": "li2fly", "password": "secret"},
                 follow_redirects=False,
             )
             assert login.status_code == 303
+            assert login.headers["location"] == "/"
 
             with archive_path.open("rb") as file:
                 created = client.post(
@@ -61,7 +114,7 @@ def main() -> None:
             active_data = active.json()
             assert active_data["build_id"] == "nukem-test"
             assert active_data["minecraft_version"] == "1.20.1"
-            assert active_data["access_required"] == "true"
+            assert active_data["access_required"] is True
 
             manifest = client.get("/api/projects/nukem/builds/nukem-test/manifest.json")
             assert manifest.status_code == 403
@@ -152,6 +205,57 @@ def main() -> None:
             assert forbidden.status_code == 403
 
     print("admin panel smoke test: OK")
+
+
+def smoke_test_panel_client_fallbacks() -> None:
+    from panel_client import (
+        get_panel_launcher_update,
+        resolve_panel_active_build,
+    )
+
+    github_build = {
+        "id": "main",
+        "name": "GitHub fallback",
+        "minecraft_version": "1.20.1",
+        "loader": "fabric",
+        "loader_version": "latest",
+        "source_key": "https://raw.githubusercontent.com/mio-openliven/MSNukem/main/build.json",
+        "manifest_url": "",
+    }
+    disabled_config = {"panel": {"enabled": False, "base_url": ""}, "builds": [github_build]}
+    missing_url_config = {"panel": {"enabled": True, "base_url": ""}, "builds": [github_build]}
+    enabled_config = {
+        "panel": {
+            "enabled": True,
+            "base_url": "https://panel.example",
+            "project": "nukem",
+            "timeout_seconds": 1,
+        },
+        "builds": [github_build],
+    }
+
+    assert resolve_panel_active_build(disabled_config, "nukem") == {}
+    assert resolve_panel_active_build(missing_url_config, "nukem") == {}
+    assert get_panel_launcher_update(disabled_config) == {}
+    assert get_panel_launcher_update(missing_url_config) == {}
+
+    class NotFoundResponse:
+        status_code = 404
+
+        def raise_for_status(self) -> None:
+            raise AssertionError("404 must be handled as fallback before raise_for_status.")
+
+        def json(self) -> dict[str, object]:
+            raise AssertionError("404 fallback must not parse JSON.")
+
+    with patch("panel_client.requests.get", return_value=NotFoundResponse()) as request_get:
+        assert resolve_panel_active_build(enabled_config, "nukem") == {}
+        assert get_panel_launcher_update(enabled_config) == {}
+        requested_urls = [call.args[0] for call in request_get.call_args_list]
+        assert requested_urls == [
+            "https://panel.example/api/projects/nukem/active-build",
+            "https://panel.example/api/launcher/update",
+        ]
 
 
 if __name__ == "__main__":

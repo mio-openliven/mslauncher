@@ -1,0 +1,41 @@
+MSLaunch chat windows
+
+Как использовать:
+1. Открой новый чат Codex.
+2. Вставь один PROMPT-файл целиком.
+3. Не смешивай роли.
+4. Если не знаешь куда писать, всегда начинай с PROMPT_00_CONTROL_ROUTER.txt.
+
+Window 0 - Control Router
+Файл: handoff_chat_kit\PROMPT_00_CONTROL_ROUTER.txt
+Задача: выбрать роль, остановить хаос, дать один следующий шаг.
+Код: нет.
+
+Window 1 - Coordinator/Audit
+Файл: handoff_chat_kit\PROMPT_01_COORDINATOR_AUDIT.txt
+Задача: аудит проекта, риски, tasks.md/tasks.json, план на неделю.
+Код: нет, кроме docs/tasks если попросили.
+
+Window 2 - Launcher Stability/UI
+Файл: handoff_chat_kit\PROMPT_02_LAUNCHER_STABILITY_UI.txt
+Задача: стабилизировать launcher UI/core, один баг за проход.
+Код: да.
+Проверки: py_compile и smoke tests, Minecraft не запускать.
+
+Window 3 - Panel/Backend
+Файл: handoff_chat_kit\PROMPT_03_PANEL_BACKEND.txt
+Задача: panel API, reports, builds, fallback.
+Код: только backend/panel/client.
+
+Window 4 - Release/GitHub/Installer
+Файл: handoff_chat_kit\PROMPT_04_RELEASE_GITHUB_HOSTING.txt
+Задача: build exe, installer, hashes, hosting, release checklist.
+Код: только release/update/bootstrapper/build scripts.
+
+Window 5 - Mascot/Assets
+Файл: handoff_chat_kit\PROMPT_05_MASCOT_ASSETS.txt
+Задача: ассеты и прототипы mascot отдельно.
+Код launcher: нет, пока пользователь явно не разрешит.
+
+Стоп-правило:
+Если задача звучит как "и дизайн, и backend, и релиз, и тянка", окно 0 должно разбить это на отдельные чаты.

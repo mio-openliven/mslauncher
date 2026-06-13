@@ -25,6 +25,8 @@
 
 ## API для лаунчера
 
+Все ответы API отдаются как JSON. MVP-клиент использует только поля ниже; новые поля могут игнорироваться старым лаунчером. Если панель недоступна, возвращает `404` для активной сборки или отдает невалидный контракт, лаунчер должен перейти на GitHub fallback без запуска Minecraft.
+
 ### `GET /api/projects/{project}/active-build`
 
 Возвращает активную сборку:
@@ -47,6 +49,20 @@
   "launcher_notes": ""
 }
 ```
+
+Модель активной сборки:
+
+- `project`: slug проекта, например `nukem`.
+- `build_id` / `id`: один и тот же ID сборки; `id` оставлен для совместимости с лаунчером.
+- `name`: имя сборки для UI.
+- `minecraft_version`: версия Minecraft.
+- `loader`: только `vanilla` или `fabric`.
+- `loader_version`: версия загрузчика или `latest`.
+- `manifest_url`: ссылка на manifest; для закрытой сборки лаунчер использует ее только после password gate.
+- `server`, `port`: опциональные параметры сервера.
+- `access_required`: boolean, `true` если нужен пароль сборки.
+- `source`: `panel`.
+- `launcher_version`, `launcher_download_url`, `launcher_sha256`, `launcher_notes`: notice обновления лаунчера, пустые строки если notice нет.
 
 Если активной сборки нет, API возвращает `404`, а лаунчер переключается на GitHub fallback.
 
@@ -121,6 +137,36 @@
 ```
 
 Панель сохраняет отчет для `owner`/админа.
+
+## Модель данных MVP
+
+`users`:
+
+- `username`, `password_hash`, `role`, `project_slug`, `active`, `created_at`.
+- Роли: `owner`, `project_admin`, `viewer`.
+- `project_admin` и `viewer` ограничены своим `project_slug`.
+
+`projects`:
+
+- `slug`, `name`, `fallback_source_key`, `support_url`, `created_at`.
+- На MVP активен `nukem`; `vibecraft` остается placeholder.
+
+`builds`:
+
+- `project_slug`, `build_id`, `name`, `minecraft_version`, `loader`, `loader_version`, `server`, `port`.
+- `access_hash_sha256`: SHA-256 от пароля конкретной сборки или пусто.
+- `status`: `draft`, `active`, `archived`; активная сборка одна на проект.
+- `file_count`, `total_size`, `created_by`, `created_at`, `activated_at`.
+
+`launcher_updates`:
+
+- `version`, `download_url`, `sha256`, `notes`, `enabled`, `created_at`.
+- Активным считается последний `enabled=1`.
+
+`reports`:
+
+- `project`, `build_id`, `username`, `launcher_version`, `error_type`, `user_message`, `technical_details`.
+- `status`: `open` или `resolved`.
 
 ## UI панели MVP
 

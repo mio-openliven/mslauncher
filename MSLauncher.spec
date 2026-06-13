@@ -1,11 +1,13 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+from PyInstaller.utils.hooks import collect_data_files
+
 
 a = Analysis(
     ['gui.py'],
     pathex=[],
     binaries=[],
-    datas=[
+    datas=collect_data_files('minecraft_launcher_lib') + [
         ('assets', 'assets'),
         ('launcher_config.json', '.'),
         ('release/CLIENT_SETUP_RU.md', 'docs'),

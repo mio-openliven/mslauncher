@@ -19,6 +19,9 @@ def main() -> None:
 
     assert "('assets', 'assets')" in spec_file
     assert "('launcher_config.json', '.')" in spec_file
+    assert "collect_data_files('minecraft_launcher_lib')" in spec_file
+    assert "dist/MSLauncher/minecraft_launcher_lib" not in spec_file
+    assert "dist\\MSLauncher\\minecraft_launcher_lib" not in spec_file
     assert "release/CLIENT_SETUP_RU.md" in spec_file
     assert "release/NUKEM_SETUP_RU.md" in spec_file
     assert "release/PLAYER_README_RU.txt" in spec_file

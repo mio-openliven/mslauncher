@@ -47,22 +47,33 @@ def main() -> None:
     assert len(nukem_builds) == 1
     assert nukem_template["client_mode"] == "nukem"
     assert nukem_template["default_build"] == "nukem"
+    assert nukem_template["panel"]["enabled"] is True
+    assert nukem_template["panel"]["base_url"] == "https://nukem.186.246.12.238.sslip.io"
     assert nukem_template["social_links"]["nukem"]["youtube"] == "https://youtube.com/@nuckem?si=8B60TLzrzN8HVh98"
     assert nukem_template["social_links"]["nukem"]["discord"] == "https://discord.com/invite/P35nvXQ"
     assert nukem_template["project_access"]["nukem"]["password_enabled"] is True
-    assert nukem_template["project_access"]["nukem"]["password_hash_sha256"] == ""
+    assert (
+        nukem_template["project_access"]["nukem"]["password_hash_sha256"]
+        == "99c3a29b690abad0a97dd39f6ed9e783f42abb07050df51897cd907968adb1ce"
+    )
+    assert (
+        nukem_template["project_access"]["nukem"]["build_passwords"]["nukem"]
+        == "99c3a29b690abad0a97dd39f6ed9e783f42abb07050df51897cd907968adb1ce"
+    )
     assert "admin_password_hash_sha256" in nukem_template["project_access"]["nukem"]
     assert len(nukem_template["news"]["nukem"]) <= 5
     assert nukem_builds[0]["id"] == "nukem"
-    assert nukem_builds[0]["name"] == "Nukem Project"
-    assert nukem_builds[0]["source_key"] == "https://raw.githubusercontent.com/OWNER/REPO/BRANCH/mslauncher/build.json"
+    assert nukem_builds[0]["name"] == "MS Nuckem"
+    assert nukem_builds[0]["minecraft_version"] == "1.20.1"
+    assert nukem_builds[0]["source_key"] == "https://raw.githubusercontent.com/mio-openliven/MSNukem/main/build.json"
+    assert "OWNER/REPO/BRANCH" not in nukem_template_path.read_text(encoding="utf-8")
 
     checklist_text = checklist_path.read_text(encoding="utf-8")
     backlog_text = backlog_path.read_text(encoding="utf-8")
-    assert "Windows без Python" in checklist_text
+    assert "Windows без установленного Python" in checklist_text
     assert "source_key" in checklist_text
     assert "GitHub" in checklist_text
-    assert "UI-барьер" in checklist_text
+    assert "UI лаунчера" in checklist_text
     assert "POST_RELEASE_BACKLOG_RU.md" in checklist_text
     assert "Bundled Java" in backlog_text
     assert "manifest.json" in backlog_text

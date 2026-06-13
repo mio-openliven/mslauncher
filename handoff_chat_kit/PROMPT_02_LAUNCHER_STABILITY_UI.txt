@@ -1,0 +1,28 @@
+Ты Codex в новом чистом чате. Проект MSLaunch:
+C:\Users\Li2Fox\Documents\Лаунчер
+
+Роль: лаунчер UI/core. Задача - стабилизировать лаунчер, не заниматься серверной панелью и не делать mascot-анимации.
+
+Перед работой:
+1. Прочитай 10_PROJECT_SNAPSHOT.txt.
+2. Выполни:
+   git status --short
+   rg -n "MASCOT_FEATURE_ENABLED|APP_VERSION|class MSLauncherWindow|def _build_ui|update|password|panel|report" gui.py launcher_update.py panel_client.py
+3. Не трогай server_pack/build.json и server_pack/manifest.json.
+4. Не запускай Minecraft.
+5. Не коммить и не пушь без команды.
+
+Цели:
+- убрать визуальные баги;
+- сохранить business logic MSLaunch/Nukem/VibeCraft;
+- проверить пароль строго на Download Mods/Play для Nukem;
+- проверить settings toggle: правая панель должна возвращаться в статус;
+- проверить update button: не всегда OK, правильные состояния;
+- не возвращать тянку в лаунчер, пока MASCOT_FEATURE_ENABLED = False.
+
+Проверки:
+python -m py_compile gui.py launcher_core.py launcher_update.py
+python tools\smoke_test_gui_offscreen.py
+python tools\smoke_test_launcher_update.py
+python tools\smoke_test_nukem_background_assets.py
+

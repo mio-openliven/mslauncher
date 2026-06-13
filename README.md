@@ -303,6 +303,7 @@ python gui.py
 ```
 
 The build script uses `MSLauncher.spec` as the single source of truth and checks that the exe was created.
+The spec must collect package data from installed dependencies, not from an older `dist\MSLauncher` output.
 
 Output folder:
 

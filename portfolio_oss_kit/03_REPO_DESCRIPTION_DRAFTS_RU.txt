@@ -1,0 +1,55 @@
+Готовые мягкие описания репозиториев
+
+1. koth-plate
+Short description:
+Small Paper plugin for a King of the Hill pressure plate with Vault rewards.
+
+README intro:
+KingOfTheHill / koth-plate is a small Minecraft Paper plugin made as a practical learning project for my server community. It lets an admin place a capture plate, tracks players standing on it, rewards successful captures through Vault economy, and keeps the setup simple enough for a small server.
+
+Author note:
+Made as a learning project with care for real server use. It is not a large commercial plugin, but it is intended to be readable, buildable, and useful.
+
+2. MSNukem
+Short description:
+Public client download and release page for the MS Nukem launcher build.
+
+README intro:
+MSNukem is the public client delivery repository for a private Minecraft project. It contains public release files and user-facing instructions only. The launcher source, admin tooling, and protected server logic live elsewhere and are not published here.
+
+Author note:
+This repo exists so players can download the client safely and follow clear instructions without seeing private server internals.
+
+3. mslauncher
+Short description:
+Private PyQt6 Minecraft launcher, modpack sync, update flow, and admin-panel integration.
+
+Public-safe description:
+MSLaunch is a desktop launcher project for simplifying Minecraft modpack access. It focuses on player-friendly launch flow, protected mod downloads, update checks, reports, and admin-managed builds. The full source is private while client releases are published separately.
+
+4. titanforge-engine
+Short description:
+Experimental procedural toolkit for cinematic Minecraft map-generation workflows.
+
+README intro:
+TitanForge Engine is an experimental toolkit for Minecraft map generation workflows: masks, layouts, previews, heightmaps, schematics, and repeatable location builds. It is a learning project focused on turning visual map ideas into structured generation steps.
+
+Author note:
+The project is early and experimental. I use it to learn pipeline design, procedural tooling, and testable command-line workflows.
+
+5. VibeAuth-Proxy
+Short description:
+Velocity authentication plugin experiment for a Minecraft network migration.
+
+Public-safe description:
+VibeAuth-Proxy is a server-side authentication experiment for a Minecraft proxy migration. It handles login/register flows, MySQL-backed accounts, and compatibility with older password hashes. It is currently private because it is tied to real server infrastructure.
+
+6. Repair-Codex-Window
+Short description:
+Small Windows helper script for repairing a stuck Codex desktop window.
+
+README intro:
+Repair-Codex-Window is a tiny Windows helper created while learning Codex workflows. It resets or repairs a local Codex desktop window state when the app gets stuck off-screen or opens in a broken position.
+
+Author note:
+Small utility, shared in case it helps another beginner avoid losing time to a silly desktop-state problem.

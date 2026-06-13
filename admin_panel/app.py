@@ -7,6 +7,7 @@ import hmac
 import json
 import urllib.error
 import urllib.request
+from urllib.parse import urlencode
 from pathlib import Path
 from sqlite3 import Row
 from typing import Annotated
@@ -119,30 +120,55 @@ def get_project_name(project_slug: str) -> str:
     return str(row["name"]) if row is not None else project_slug
 
 
-def redirect_login() -> RedirectResponse:
-    return RedirectResponse("/login", status_code=303)
+def safe_redirect_target(target: str) -> str:
+    target = str(target or "").strip()
+    if not target.startswith("/") or target.startswith("//") or "\\" in target or "\r" in target or "\n" in target:
+        return "/"
+    return target
+
+
+def redirect_login(target: str = "/") -> RedirectResponse:
+    query = urlencode({"next": safe_redirect_target(target)})
+    return RedirectResponse(f"/login?{query}", status_code=303)
 
 
 def base_url_for(request: Request) -> str:
     return get_public_base_url(str(request.base_url).rstrip("/"))
 
 
+def download_checksum_line(filename: str) -> str:
+    target = get_downloads_root() / filename
+    if not target.is_file():
+        return "SHA-256 будет показан после публикации установщика."
+    digest = hashlib.sha256()
+    with target.open("rb") as file:
+        for chunk in iter(lambda: file.read(1024 * 1024), b""):
+            digest.update(chunk)
+    sha256 = digest.hexdigest().upper()
+    return f"SHA-256: <code>{esc(sha256)}</code>"
+
+
 @app.get("/client", response_class=HTMLResponse)
 def client_page(request: Request) -> HTMLResponse:
     base_url = base_url_for(request)
-    download_url = f"{base_url}/downloads/MSLaunchSetup.exe"
+    download_name = "MSLaunchSetup.exe"
+    download_url = f"{base_url}/downloads/{download_name}"
+    checksum_line = download_checksum_line(download_name)
     body = f"""
     <section class="hero">
       <div>
         <div class="eyebrow">MS Nuckem beta</div>
         <h1>Скачать лаунчер</h1>
         <p>Для актёров: скачайте один файл, запустите его, откройте MS Nuckem, введите ник и пароль сборки. Моды подтянутся автоматически.</p>
-        <p><a class="button primary" href="{esc(download_url)}">Скачать и запустить</a></p>
+        <p>
+          <a class="button primary" href="{esc(download_url)}">Скачать и запустить</a>
+          <a class="button secondary" href="/login?next=/">Панель проекта</a>
+        </p>
         <div class="notice">
           <b>Windows может показать синее окно защиты.</b>
           Это бета без коммерческой подписи Microsoft-reputation. Если файл скачан с этой страницы:
           нажмите <b>Подробнее</b>, затем <b>Выполнить в любом случае</b>.
-          Контрольная сумма установщика: <code>C493BCBBA070657F7E4861D8CEEDDD05076ED1A24888A1836C1CA069003FA5CD</code>
+          {checksum_line}
         </div>
       </div>
     </section>
@@ -162,9 +188,10 @@ def download_launcher(filename: str) -> FileResponse:
 
 
 @app.get("/login", response_class=HTMLResponse)
-def login_page(request: Request, error: str = "") -> HTMLResponse:
+def login_page(request: Request, error: str = "", next: str = "/") -> HTMLResponse:
+    next_target = safe_redirect_target(next)
     if get_current_user(request) is not None:
-        return HTMLResponse("", status_code=303, headers={"location": "/"})
+        return HTMLResponse("", status_code=303, headers={"location": next_target})
     message = f'<div class="error">{esc(error)}</div>' if error else ""
     lang = get_lang(request)
     if lang == "ru":
@@ -175,6 +202,7 @@ def login_page(request: Request, error: str = "") -> HTMLResponse:
     <div class="card" style="max-width:420px">
       {message}
       <form method="post" action="/login">
+        <input name="next" type="hidden" value="{esc(next_target)}">
         <label>{login_label}</label><input name="username" autocomplete="username">
         <label>{password_label}</label><input name="password" type="password" autocomplete="current-password">
         <p><button>{button_label}</button></p>
@@ -185,16 +213,18 @@ def login_page(request: Request, error: str = "") -> HTMLResponse:
 
 
 @app.post("/login")
-def login(username: Annotated[str, Form()], password: Annotated[str, Form()]) -> RedirectResponse:
+def login(username: Annotated[str, Form()], password: Annotated[str, Form()], next: str = Form("/")) -> RedirectResponse:
+    next_target = safe_redirect_target(next)
     with connect() as connection:
         user = connection.execute(
             "SELECT * FROM users WHERE username=? AND active=1",
             (username.strip(),),
         ).fetchone()
     if user is None or not verify_password(password, user["password_hash"]):
-        return RedirectResponse("/login?error=Wrong+login+or+password", status_code=303)
+        query = urlencode({"error": "Wrong login or password", "next": next_target})
+        return RedirectResponse(f"/login?{query}", status_code=303)
 
-    response = RedirectResponse("/", status_code=303)
+    response = RedirectResponse(next_target, status_code=303)
     response.set_cookie(
         SESSION_COOKIE,
         create_session_token(user["username"], get_session_secret()),
@@ -223,7 +253,7 @@ def set_language(lang: str) -> RedirectResponse:
 def dashboard(request: Request):
     user = get_current_user(request)
     if user is None:
-        return redirect_login()
+        return redirect_login(request.url.path)
 
     with connect() as connection:
         project_where, project_params = visible_project_where(user, "slug")
@@ -265,7 +295,7 @@ def dashboard(request: Request):
 def builds_page(request: Request):
     user = get_current_user(request)
     if user is None:
-        return redirect_login()
+        return redirect_login(request.url.path)
 
     with connect() as connection:
         project_where, project_params = visible_project_where(user, "slug")
@@ -455,7 +485,7 @@ def assert_build_file_access(project: str, build_id: str, access: str) -> None:
 def updates_page(request: Request):
     user = get_current_user(request)
     if user is None:
-        return redirect_login()
+        return redirect_login(request.url.path)
     with connect() as connection:
         rows = connection.execute("SELECT * FROM launcher_updates ORDER BY created_at DESC").fetchall()
     rendered = "".join(
@@ -504,7 +534,7 @@ def create_update(
 def reports_page(request: Request):
     user = get_current_user(request)
     if user is None:
-        return redirect_login()
+        return redirect_login(request.url.path)
     with connect() as connection:
         report_where, report_params = visible_project_where(user, "project")
         rows = connection.execute(f"SELECT * FROM reports{report_where} ORDER BY created_at DESC LIMIT 200", report_params).fetchall()
@@ -520,7 +550,7 @@ def reports_page(request: Request):
 def report_detail(report_id: int, request: Request):
     user = get_current_user(request)
     if user is None:
-        return redirect_login()
+        return redirect_login(request.url.path)
     with connect() as connection:
         row = connection.execute("SELECT * FROM reports WHERE id=?", (report_id,)).fetchone()
     if row is None:
@@ -553,7 +583,7 @@ def resolve_report(report_id: int, user: Annotated[Row, Depends(require_build_ad
 def admins_page(request: Request):
     user = get_current_user(request)
     if user is None:
-        return redirect_login()
+        return redirect_login(request.url.path)
     if user["role"] != "owner":
         return HTMLResponse(page("Admins", '<div class="error">Owner role required.</div>', user=user, lang=get_lang(request), project_name=get_project_name(user_project_slug(user)), project_slug=user_project_slug(user)), status_code=403)
     with connect() as connection:
@@ -640,7 +670,7 @@ def api_active_build(project: str, request: Request) -> JSONResponse:
     return JSONResponse(data)
 
 
-def build_api_payload(row: Row, manifest_url: str) -> dict[str, str]:
+def build_api_payload(row: Row, manifest_url: str) -> dict[str, object]:
     return {
         "project": row["project_slug"],
         "build_id": row["build_id"],
@@ -652,7 +682,7 @@ def build_api_payload(row: Row, manifest_url: str) -> dict[str, str]:
         "manifest_url": manifest_url,
         "server": row["server"],
         "port": row["port"],
-        "access_required": "true" if row["access_hash_sha256"] else "",
+        "access_required": bool(row["access_hash_sha256"]),
         "source": "panel",
         "launcher_version": "",
         "launcher_download_url": "",

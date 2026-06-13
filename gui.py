@@ -29,7 +29,6 @@ from PyQt6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QMenu,
-    QPlainTextEdit,
     QPushButton,
     QProgressBar,
     QFileDialog,
@@ -50,6 +49,26 @@ from app_paths import (
     get_last_config_backup_path,
 )
 from launcher_core import MinecraftEngine
+from launcher_config_helpers import (
+    CLIENT_MODE_INDEPENDENT,
+    CLIENT_MODE_NUKEM,
+    CLIENT_MODES,
+    DEFAULT_NUKEM_SOCIAL_LINKS,
+    SOCIAL_ICON_NAMES,
+    get_admin_link,
+    get_client_mode,
+    get_config_builds,
+    get_config_launch_options,
+    get_config_string_list,
+    get_config_text,
+    get_profile_base_directory,
+    get_social_links,
+    get_support_url,
+    load_launcher_config as load_launcher_config_file,
+    requires_server_manifest,
+    save_launcher_config,
+    should_sync_profile,
+)
 from launcher_update import APP_DISPLAY_NAME, APP_VERSION, get_launcher_update_notice, parse_version_numbers
 from manifest_validator import normalize_download_url, normalize_manifest_path
 from panel_client import (
@@ -65,6 +84,16 @@ from remote_config import resolve_build_config
 from settings_validator import LaunchSettingsError, validate_launch_settings
 from url_policy import URLPolicyError, normalize_https_url
 from user_error_messages import explain_user_error, write_error_report
+from gui_report_dialogs import prompt_report_message
+from gui_reporting import (
+    build_crash_google_url,
+    build_manual_report_details,
+    truncate_dialog_text,
+    with_report_path,
+    write_launcher_crash_report,
+    write_launcher_error_report,
+    write_launcher_warning_report,
+)
 
 
 CONFIG_FILE = ensure_user_config()
@@ -96,9 +125,6 @@ NUKEM_BACKGROUND_FILES = (
     "nukem_05_river.jpg",
     "nukem_06_village.jpg",
 )
-CLIENT_MODE_INDEPENDENT = "independent"
-CLIENT_MODE_NUKEM = "nukem"
-CLIENT_MODES = (CLIENT_MODE_INDEPENDENT, CLIENT_MODE_NUKEM)
 PROJECT_ICON_FILES = {
     CLIENT_MODE_INDEPENDENT: "mslaunch.png",
     CLIENT_MODE_NUKEM: "nukem.png",
@@ -111,18 +137,6 @@ MASCOT_FILES = (
     "shigure_ui_jp.gif",
     "shigure_anime.gif",
 )
-SOCIAL_ICON_NAMES = {
-    "discord": "discord",
-    "telegram": "telegram",
-    "youtube": "youtube",
-    "instagram": "instagram",
-    "tiktok": "tiktok",
-    "vk": "vk",
-    "vk_group": "vk",
-    "rutube": "rutube",
-    "website": "link",
-    "link": "link",
-}
 SOCIAL_FALLBACK_LABELS = {
     "discord": "DS",
     "telegram": "TG",
@@ -196,15 +210,6 @@ QDialog#accessDialog QPushButton#primaryDialogButton {
 }
 """
 
-DEFAULT_NUKEM_SOCIAL_LINKS = {
-    "youtube": "https://www.youtube.com/@Nuckem",
-    "discord": "https://discord.gg/P35nvXQ",
-    "vk": "https://vk.com/belchak",
-    "vk_group": "https://vk.com/nuckem_garage",
-    "rutube": "https://rutube.ru/channel/64641198",
-}
-
-
 TRANSLATIONS = {
     "EN": {
         "app_title": APP_DISPLAY_NAME,
@@ -236,6 +241,14 @@ TRANSLATIONS = {
         "open_crash_reports": "Open crash reports",
         "open_error_report": "Open logs",
         "crash_panel_title": "Minecraft crashed",
+        "crash_help_title": "Minecraft crashed",
+        "crash_help_body": "MSLaunch found a likely cause. You can send it to the owner or inspect the exact error.",
+        "crash_action_ok": "OK",
+        "crash_action_report": "Report",
+        "crash_action_self_help": "Fix myself",
+        "crash_action_google": "Ask Google",
+        "crash_self_help_title": "Crash details",
+        "crash_google_failed": "Could not open browser search.",
         "error_panel_title": "Last launcher error",
         "loader": "Loader",
         "memory_min": "Min RAM",
@@ -400,6 +413,14 @@ TRANSLATIONS = {
         "open_crash_reports": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c crash-reports",
         "open_error_report": "\u041e\u0442\u043a\u0440\u044b\u0442\u044c \u043e\u0442\u0447\u0435\u0442\u044b",
         "crash_panel_title": "Minecraft \u0432\u044b\u043b\u0435\u0442\u0435\u043b",
+        "crash_help_title": "Minecraft \u0432\u044b\u043b\u0435\u0442\u0435\u043b",
+        "crash_help_body": "MSLaunch \u043d\u0430\u0448\u0451\u043b \u0432\u0435\u0440\u043e\u044f\u0442\u043d\u0443\u044e \u043f\u0440\u0438\u0447\u0438\u043d\u0443. \u041c\u043e\u0436\u043d\u043e \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u0435\u0451 \u0432\u043b\u0430\u0434\u0435\u043b\u044c\u0446\u0443 \u0438\u043b\u0438 \u043f\u043e\u0441\u043c\u043e\u0442\u0440\u0435\u0442\u044c \u0442\u043e\u0447\u043d\u0443\u044e \u043e\u0448\u0438\u0431\u043a\u0443.",
+        "crash_action_ok": "OK",
+        "crash_action_report": "\u0421\u043e\u043e\u0431\u0449\u0438\u0442\u044c",
+        "crash_action_self_help": "\u0425\u043e\u0447\u0443 \u0441\u0430\u043c",
+        "crash_action_google": "\u0421\u043f\u0440\u043e\u0441\u0438\u0442\u044c Google",
+        "crash_self_help_title": "\u041f\u043e\u0434\u0440\u043e\u0431\u043d\u043e\u0441\u0442\u0438 \u0432\u044b\u043b\u0435\u0442\u0430",
+        "crash_google_failed": "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043a\u0440\u044b\u0442\u044c \u043f\u043e\u0438\u0441\u043a \u0432 \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u0435.",
         "error_panel_title": "\u041f\u043e\u0441\u043b\u0435\u0434\u043d\u044f\u044f \u043e\u0448\u0438\u0431\u043a\u0430 \u043b\u0430\u0443\u043d\u0447\u0435\u0440\u0430",
         "loader": "\u0417\u0430\u0433\u0440\u0443\u0437\u0447\u0438\u043a",
         "memory_min": "\u041c\u0438\u043d. RAM",
@@ -535,266 +556,6 @@ TRANSLATIONS = {
         "crash_title": "Minecraft \u0432\u044b\u043b\u0435\u0442\u0435\u043b",
     },
 }
-
-
-def load_launcher_config(config_path: str | Path = CONFIG_FILE) -> dict[str, object]:
-    global CONFIG_LOAD_WARNING
-
-    default_config: dict[str, object] = {
-        "manifest_url": "",
-        "game_directory": "",
-        "profiles_directory": "",
-        "default_profile": PROFILE_SERVER,
-        "default_language": "RU",
-        "default_username": "",
-        "recent_usernames": [],
-        "client_mode": CLIENT_MODE_INDEPENDENT,
-        "social_links": {
-            CLIENT_MODE_NUKEM: dict(DEFAULT_NUKEM_SOCIAL_LINKS),
-        },
-        "support_url": "https://github.com/mio-openliven/mslauncher/issues/new",
-        "support_urls": {
-            "independent": "https://github.com/mio-openliven/mslauncher/issues/new"
-        },
-        "panel": {
-            "enabled": False,
-            "base_url": "",
-            "project": CLIENT_MODE_NUKEM,
-            "timeout_seconds": 8,
-            "allow_insecure_http": False,
-        },
-        "admin_links": {
-            CLIENT_MODE_NUKEM: {
-                "repo_url": "https://github.com/mio-openliven/MSNukem",
-                "manifest_url": "https://raw.githubusercontent.com/mio-openliven/MSNukem/main/manifest.json",
-            }
-        },
-        "project_access": {
-            CLIENT_MODE_NUKEM: {
-                "password_enabled": False,
-                "password_hash_sha256": "",
-                "admin_password_hash_sha256": "",
-                "build_passwords": {},
-                "password_hint": "Ask the project admin for the access password.",
-            }
-        },
-        "skin_path": "",
-        "news": {
-            CLIENT_MODE_NUKEM: [],
-            CLIENT_MODE_INDEPENDENT: [],
-        },
-        "default_build": "",
-        "launch": {},
-        "builds": [],
-    }
-
-    path = Path(config_path)
-    if not path.exists():
-        return default_config
-
-    try:
-        with path.open("r", encoding="utf-8") as file:
-            loaded_config = json.load(file)
-    except json.JSONDecodeError:
-        backup_path = backup_broken_config(path)
-        copy_default_config(path)
-        CONFIG_LOAD_WARNING = str(backup_path)
-        return default_config
-    except OSError as exc:
-        CONFIG_LOAD_WARNING = str(exc)
-        return default_config
-
-    if not isinstance(loaded_config, dict):
-        return default_config
-
-    for key in (
-        "manifest_url",
-        "game_directory",
-        "profiles_directory",
-        "default_profile",
-        "default_language",
-        "default_username",
-        "client_mode",
-        "support_url",
-        "skin_path",
-        "default_build",
-    ):
-        value = loaded_config.get(key)
-        if isinstance(value, str):
-            default_config[key] = value
-
-    recent_usernames = loaded_config.get("recent_usernames")
-    if isinstance(recent_usernames, list):
-        default_config["recent_usernames"] = [
-            username.strip()
-            for username in recent_usernames
-            if isinstance(username, str) and username.strip()
-        ][:5]
-
-    social_links = loaded_config.get("social_links")
-    if isinstance(social_links, dict):
-        merged_links = {
-            CLIENT_MODE_NUKEM: dict(DEFAULT_NUKEM_SOCIAL_LINKS),
-        }
-        for project_key, project_links in social_links.items():
-            if not isinstance(project_key, str) or not isinstance(project_links, dict):
-                continue
-            project_merged = dict(merged_links.get(project_key, {}))
-            for link_key, url in project_links.items():
-                if isinstance(link_key, str) and isinstance(url, str) and url.strip():
-                    project_merged[link_key] = url.strip()
-            merged_links[project_key] = project_merged
-        default_config["social_links"] = merged_links
-
-    support_urls = loaded_config.get("support_urls")
-    if isinstance(support_urls, dict):
-        default_config["support_urls"] = support_urls
-
-    panel_config = loaded_config.get("panel")
-    if isinstance(panel_config, dict):
-        merged_panel = dict(default_config["panel"])
-        merged_panel.update(panel_config)
-        default_config["panel"] = merged_panel
-
-    for key in ("admin_links", "project_access", "news"):
-        value = loaded_config.get(key)
-        if isinstance(value, dict):
-            default_config[key] = value
-
-    builds = loaded_config.get("builds")
-    if isinstance(builds, list):
-        default_config["builds"] = [build for build in builds if isinstance(build, dict)]
-
-    launch_options = loaded_config.get("launch")
-    if isinstance(launch_options, dict):
-        default_config["launch"] = launch_options
-
-    return default_config
-
-
-def save_launcher_config(config: dict[str, object], config_path: str | Path = CONFIG_FILE) -> None:
-    path = Path(config_path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as file:
-        json.dump(config, file, ensure_ascii=False, indent=2)
-
-
-def get_config_text(config: dict[str, object], key: str, default: str = "") -> str:
-    value = config.get(key, default)
-    return value if isinstance(value, str) else default
-
-
-def get_config_string_list(config: dict[str, object], key: str) -> list[str]:
-    values = config.get(key, [])
-    if not isinstance(values, list):
-        return []
-
-    result: list[str] = []
-    for value in values:
-        if isinstance(value, str):
-            cleaned_value = value.strip()
-            if cleaned_value and cleaned_value not in result:
-                result.append(cleaned_value)
-    return result
-
-
-def get_client_mode(config: dict[str, object]) -> str:
-    mode = get_config_text(config, "client_mode", CLIENT_MODE_INDEPENDENT).strip().lower()
-    return mode if mode in CLIENT_MODES else CLIENT_MODE_INDEPENDENT
-
-
-def get_social_links(config: dict[str, object], client_mode: str = CLIENT_MODE_NUKEM) -> dict[str, str]:
-    if client_mode != CLIENT_MODE_NUKEM:
-        return {}
-
-    raw_links = config.get("social_links", {})
-    if not isinstance(raw_links, dict):
-        return {}
-
-    project_links = raw_links.get(CLIENT_MODE_NUKEM)
-    if isinstance(project_links, dict):
-        raw_links = project_links
-
-    links: dict[str, str] = {}
-    for raw_name, raw_value in raw_links.items():
-        name = str(raw_name).strip().lower()
-        if name not in SOCIAL_ICON_NAMES:
-            continue
-
-        url = ""
-        enabled = True
-        if isinstance(raw_value, str):
-            url = raw_value.strip()
-        elif isinstance(raw_value, dict):
-            enabled = bool(raw_value.get("enabled", True))
-            value = raw_value.get("url", "")
-            url = value.strip() if isinstance(value, str) else ""
-
-        if enabled and url:
-            links[name] = url
-    return links
-
-
-def get_support_url(config: dict[str, object], client_mode: str) -> str:
-    support_urls = config.get("support_urls")
-    if isinstance(support_urls, dict):
-        project_url = support_urls.get(client_mode)
-        if isinstance(project_url, str) and project_url.strip():
-            return project_url.strip()
-    return get_config_text(config, "support_url").strip()
-
-
-def get_admin_link(config: dict[str, object], client_mode: str, key: str) -> str:
-    admin_links = config.get("admin_links")
-    if not isinstance(admin_links, dict):
-        return ""
-    project_links = admin_links.get(client_mode)
-    if not isinstance(project_links, dict):
-        return ""
-    value = project_links.get(key)
-    return value.strip() if isinstance(value, str) else ""
-
-
-def get_config_builds(config: dict[str, object]) -> list[dict[str, object]]:
-    builds = config.get("builds", [])
-    if isinstance(builds, list) and builds:
-        return [build for build in builds if isinstance(build, dict)]
-
-    fallback_manifest_url = get_config_text(config, "manifest_url")
-    if fallback_manifest_url:
-        return [
-            {
-                "id": "main",
-                "name": "Main Server",
-                "minecraft_version": "",
-                "manifest_url": fallback_manifest_url,
-            }
-        ]
-
-    return []
-
-
-def get_config_launch_options(config: dict[str, object]) -> dict[str, object]:
-    launch_options = config.get("launch", {})
-    return launch_options if isinstance(launch_options, dict) else {}
-
-
-def get_profile_base_directory(config: dict[str, object]) -> str:
-    profiles_directory = get_config_text(config, "profiles_directory").strip()
-    if profiles_directory:
-        return profiles_directory
-    legacy_game_directory = get_config_text(config, "game_directory").strip()
-    if legacy_game_directory:
-        return legacy_game_directory
-    return str(get_default_profiles_directory())
-
-
-def should_sync_profile(client_mode: str, profile: LauncherProfile) -> bool:
-    return client_mode == CLIENT_MODE_NUKEM and profile.server_sync_enabled
-
-
-def requires_server_manifest(profile: LauncherProfile, manifest_url: str, client_mode: str) -> bool:
-    return should_sync_profile(client_mode, profile) and not manifest_url.strip()
 
 
 class VersionsWorker(QThread):
@@ -1546,7 +1307,9 @@ class ParallaxFrame(QFrame):
 class MSLauncherWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.config = load_launcher_config()
+        self.config, config_warning = load_launcher_config_file(CONFIG_FILE)
+        global CONFIG_LOAD_WARNING
+        CONFIG_LOAD_WARNING = config_warning
         self.builds = get_config_builds(self.config)
         config_language = get_config_text(self.config, "default_language", "EN")
         self.language = config_language if config_language in TRANSLATIONS else "EN"
@@ -4641,48 +4404,18 @@ class MSLauncherWindow(QMainWindow):
         self.open_crash_reports_folder()
 
     def open_report_dialog(self) -> None:
-        dialog = QDialog(self)
-        dialog.setObjectName("accessDialog")
-        dialog.setWindowTitle(self.translate("report_dialog_title"))
-        dialog.setModal(True)
-        dialog.setMinimumWidth(460)
-        dialog.setStyleSheet(SYSTEM_DIALOG_STYLESHEET)
-
-        layout = QVBoxLayout(dialog)
-        layout.setContentsMargins(18, 18, 18, 18)
-        layout.setSpacing(12)
-
-        title = QLabel(self.translate("report_dialog_title"))
-        title.setObjectName("accessTitle")
-        title.setWordWrap(True)
-        body = QLabel(self.translate("report_dialog_body"))
-        body.setObjectName("accessBody")
-        body.setWordWrap(True)
-        message_input = QPlainTextEdit()
-        message_input.setObjectName("reportTextInput")
-        message_input.setPlaceholderText(self.translate("report_dialog_placeholder"))
-        message_input.setMinimumHeight(150)
-
-        buttons = QHBoxLayout()
-        buttons.addStretch(1)
-        cancel_button = QPushButton(self.translate("report_dialog_cancel"))
-        send_button = QPushButton(self.translate("report_dialog_send"))
-        send_button.setObjectName("primaryDialogButton")
-        cancel_button.clicked.connect(dialog.reject)
-        send_button.clicked.connect(dialog.accept)
-        buttons.addWidget(cancel_button)
-        buttons.addWidget(send_button)
-
-        layout.addWidget(title)
-        layout.addWidget(body)
-        layout.addWidget(message_input)
-        layout.addLayout(buttons)
-
-        if dialog.exec() != QDialog.DialogCode.Accepted:
-            return
-        user_message = message_input.toPlainText().strip()
-        if not user_message:
-            self.show_error(self.translate("report_empty"))
+        user_message = prompt_report_message(
+            self,
+            title=self.translate("report_dialog_title"),
+            body=self.translate("report_dialog_body"),
+            placeholder=self.translate("report_dialog_placeholder"),
+            accept_label=self.translate("report_dialog_send"),
+            cancel_label=self.translate("report_dialog_cancel"),
+            stylesheet=SYSTEM_DIALOG_STYLESHEET,
+            empty_message=self.translate("report_empty"),
+            on_empty=self.show_error,
+        )
+        if user_message is None:
             return
         self.submit_manual_report(user_message)
 
@@ -4827,6 +4560,8 @@ class MSLauncherWindow(QMainWindow):
         self.skin_status_label.setText(self.translate("skin_empty"))
 
     def on_launch_failed(self, error: str, technical_report: str = "") -> None:
+        if self.hidden_to_tray_for_game:
+            self.restore_launcher_from_tray()
         self.reset_action_buttons()
         user_error = explain_user_error(error, language=self.language, context="launch")
         report_path = self.write_launcher_error_report(user_error, technical_report or error, "launch")
@@ -4834,6 +4569,8 @@ class MSLauncherWindow(QMainWindow):
         self.set_status("ready")
 
     def on_game_crashed(self, crash_reason: str) -> None:
+        if self.hidden_to_tray_for_game:
+            self.restore_launcher_from_tray()
         self.reset_action_buttons()
         self.last_crash_reason = crash_reason
         self.last_crash_report_path = self.write_launcher_crash_report(crash_reason, "mslauncher-last-crash.txt")
@@ -4843,28 +4580,124 @@ class MSLauncherWindow(QMainWindow):
         for button in self.social_buttons:
             button.show()
         self.set_status("ready")
+        QTimer.singleShot(0, self.show_crash_help_dialog)
 
-    def write_launcher_crash_report(self, crash_reason: str, file_name: str) -> Path | None:
-        profile = self.profile_manager.get_profile(self.get_selected_profile_id())
-        reports_path = profile.directory / "crash-reports"
-        try:
-            reports_path.mkdir(parents=True, exist_ok=True)
-            report_path = reports_path / file_name
-            report_path.write_text(crash_reason, encoding="utf-8")
-            return report_path
-        except OSError:
-            return None
+    def show_crash_help_dialog(self) -> None:
+        if not self.last_crash_reason:
+            return
 
-    def write_launcher_error_report(self, user_message: str, technical_details: str, context: str) -> Path | None:
+        dialog = QMessageBox(self)
+        dialog.setIcon(QMessageBox.Icon.Warning)
+        dialog.setWindowTitle(self.translate("crash_help_title"))
+        dialog.setText(self.translate("crash_help_body"))
+        dialog.setInformativeText(truncate_dialog_text(self.last_crash_reason))
+        dialog.setStyleSheet(SYSTEM_DIALOG_STYLESHEET)
+
+        ok_button = dialog.addButton(self.translate("crash_action_ok"), QMessageBox.ButtonRole.AcceptRole)
+        report_button = dialog.addButton(self.translate("crash_action_report"), QMessageBox.ButtonRole.ActionRole)
+        self_help_button = dialog.addButton(
+            self.translate("crash_action_self_help"),
+            QMessageBox.ButtonRole.ActionRole,
+        )
+        google_button = dialog.addButton(self.translate("crash_action_google"), QMessageBox.ButtonRole.ActionRole)
+
+        dialog.setDefaultButton(ok_button)
+        dialog.exec()
+        clicked_button = dialog.clickedButton()
+        if clicked_button == report_button:
+            self.handle_crash_report_action()
+        elif clicked_button == self_help_button:
+            self.show_crash_self_help_dialog()
+        elif clicked_button == google_button:
+            self.open_crash_google_search()
+
+    def handle_crash_report_action(self) -> None:
+        user_message = self.request_player_report_message()
+        if user_message is None:
+            return
+        self.submit_crash_report(user_message)
+
+    def submit_crash_report(self, user_message: str) -> bool:
+        technical_details = self.last_crash_reason or self.build_manual_report_details()
+        if self.send_panel_report("crash", user_message, technical_details):
+            self.set_status_text(self.translate("report_sent"))
+            return True
+        self.save_crash_report_fallback(user_message, technical_details)
+        self.set_status_text(self.translate("report_send_failed"))
+        return False
+
+    def save_crash_report_fallback(self, user_message: str, technical_details: str) -> Path | None:
         try:
             profile = self.profile_manager.get_profile(self.get_selected_profile_id())
             report_path = write_error_report(
                 technical_details,
                 user_message=user_message,
-                context=context,
+                context="crash",
                 base_directory=profile.directory,
             )
         except OSError:
+            return None
+
+        self.last_error_message = user_message
+        self.last_error_report_path = report_path
+        return report_path
+
+    def show_crash_self_help_dialog(self) -> None:
+        if not self.last_crash_reason:
+            return
+        QMessageBox.information(
+            self,
+            self.translate("crash_self_help_title"),
+            truncate_dialog_text(self.last_crash_reason, limit=3600),
+        )
+
+    def request_player_report_message(self) -> str | None:
+        return prompt_report_message(
+            self,
+            title=self.translate("report_dialog_title"),
+            body=self.translate("report_dialog_body"),
+            placeholder=self.translate("report_dialog_placeholder"),
+            accept_label=self.translate("report_dialog_send"),
+            cancel_label=self.translate("report_dialog_cancel"),
+            stylesheet=SYSTEM_DIALOG_STYLESHEET,
+            empty_message=self.translate("report_empty"),
+            on_empty=self.set_status_text,
+        )
+
+    def build_manual_report_details(self) -> str:
+        return build_manual_report_details(
+            app_display_name=APP_DISPLAY_NAME,
+            app_version=APP_VERSION,
+            client_mode=self.client_mode,
+            build_id=self.get_selected_build_id(),
+            profile_id=self.get_selected_profile_id(),
+            last_error=self.last_error_message,
+        )
+
+    def build_crash_google_url(self) -> str:
+        return build_crash_google_url(
+            self.version_combo.currentText(),
+            self.loader_setting_combo.currentText(),
+            self.last_crash_reason,
+        )
+
+    def open_crash_google_search(self) -> None:
+        if not QDesktopServices.openUrl(QUrl(self.build_crash_google_url())):
+            self.set_status_text(self.translate("crash_google_failed"))
+
+    def write_launcher_crash_report(self, crash_reason: str, file_name: str) -> Path | None:
+        profile = self.profile_manager.get_profile(self.get_selected_profile_id())
+        return write_launcher_crash_report(profile.directory, crash_reason, file_name)
+
+    def write_launcher_error_report(self, user_message: str, technical_details: str, context: str) -> Path | None:
+        profile = self.profile_manager.get_profile(self.get_selected_profile_id())
+        report_path = write_launcher_error_report(
+            profile.directory,
+            user_message=user_message,
+            technical_details=technical_details,
+            context=context,
+        )
+        if report_path is None:
             return None
 
         self.last_error_message = user_message
@@ -4878,21 +4711,15 @@ class MSLauncherWindow(QMainWindow):
         return report_path
 
     def write_launcher_warning_report(self, technical_details: str, context: str) -> Path | None:
-        try:
-            profile = self.profile_manager.get_profile(self.get_selected_profile_id())
-            return write_error_report(
-                technical_details,
-                user_message="Launcher warning; no action was blocked.",
-                context=context,
-                base_directory=profile.directory,
-            )
-        except OSError:
-            return None
+        profile = self.profile_manager.get_profile(self.get_selected_profile_id())
+        return write_launcher_warning_report(profile.directory, technical_details, context)
 
     def with_report_path(self, message: str, report_path: Path | None) -> str:
-        if report_path is None:
-            return message
-        return f"{message}\n\n{self.translate('error_report_saved', path=report_path)}"
+        return with_report_path(
+            message,
+            report_path,
+            self.translate("error_report_saved", path=report_path),
+        )
 
     def on_game_closed(self) -> None:
         self.reset_action_buttons()

@@ -1,0 +1,31 @@
+Ты Codex в новом чистом чате. Проект MSLaunch:
+C:\Users\Li2Fox\Documents\Лаунчер
+
+Роль: панель / backend / API. Не трогай дизайн лаунчера и mascot.
+
+Контекст:
+- Панель должна быть главным источником сборок, паролей, reports, новостей, launcher updates, фонов и логотипов.
+- GitHub должен быть fallback.
+- Для Nukem игрок не выбирает версию: админ активирует сборку, лаунчер подтягивает правильные modpack/version/loader/server.
+- Reports Nukem должны уходить в админку Nukem.
+
+Перед работой:
+1. Прочитай 10_PROJECT_SNAPSHOT.txt.
+2. Осмотри:
+   admin_panel
+   panel_client.py
+   release\PANEL_TZ_RU.md
+   launcher_config.json
+3. Не трогай server_pack/build.json и server_pack/manifest.json без прямой команды.
+4. Не коммить и не пушь.
+
+Цели:
+- аудит текущей панели;
+- список недостающих endpoint;
+- предложить минимальный MVP;
+- проверить, что лаунчер корректно работает, если panel недоступна и GitHub fallback есть.
+
+Проверки:
+python -m py_compile panel_client.py
+python tools\smoke_test_admin_panel.py
+

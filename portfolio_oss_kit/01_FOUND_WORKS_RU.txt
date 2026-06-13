@@ -1,0 +1,70 @@
+Найденные работы и предварительная классификация
+
+1. MSLaunch
+Путь: C:\Users\Li2Fox\Documents\Лаунчер
+GitHub: mio-openliven/mslauncher
+Статус: приватный исходный проект.
+Коммиты: 71, активная разработка 2026-05-30 -> 2026-06-02.
+Что это: PyQt6 Minecraft launcher, mod sync, update/bootstrapper, Nukem password gate, admin panel direction.
+Рекомендация: держать приватным. Публичить только клиентскую выдачу, installer/release repo, документацию без секретов и, возможно, отдельные безопасные компоненты.
+Причина: внутри есть логика панели, update pipeline, хостинг, отчеты, private release flow, следы тестовых паролей/админки/адресов.
+
+2. MSNukem
+GitHub: mio-openliven/MSNukem
+Статус: публичный клиентский/release repo.
+Что это: публичная точка скачивания клиента/релизов, без исходников.
+Рекомендация: оставить публичным, привести README к формату "скачать, запустить, что делать при SmartScreen".
+
+3. KingOfTheHill / koth-plate
+Путь: C:\Users\Li2Fox\Documents\koth-plate
+GitHub: mio-openliven/koth-plate
+Статус: публичный, хороший кандидат.
+Коммиты: 8, активность 2026-06-01.
+Что это: маленький Paper 1.20.1 плагин для capture plate / King of the Hill с Vault-наградой.
+Рекомендация: лучший публичный учебный проект для заявки. Добавить screenshots/config example/release jar/changelog.
+
+4. TitanForge Engine
+Путь: C:\Users\Li2Fox\Documents\ГИГАНТ
+GitHub: mio-openliven/titanforge-engine
+Статус: приватный.
+Коммиты: 16, активность 2026-05-29.
+Что это: procedural toolkit для cinematic Minecraft maps: masks, layouts, previews, terrain/location pipeline.
+Рекомендация: пока приватный. Можно подготовить публичный lite/demo repo без приватных идей и ассетов.
+
+5. VibeAuth-Proxy
+Путь: C:\Users\Li2Fox\Desktop\CodexServerMC\newserver_devtools\VibeAuth-Proxy
+GitHub: mio-openliven/VibeAuth-Proxy
+Статус: приватный.
+Коммиты: 3, активность 2026-05-31.
+Что это: Velocity auth plugin для VibeCraft network, login/register/email/change password, MySQL, legacy hash preservation.
+Рекомендация: держать приватным, либо позже сделать sanitised public version без привязки к реальной сети.
+
+6. VibeCraft-Proxy-Legacy
+Путь: C:\Users\Li2Fox\Desktop\CodexServerMC\newserver_devtools\VibeCraft-Proxy-Legacy
+GitHub: mio-openliven/VibeCraft-Proxy-Legacy
+Статус: приватный legacy/migration repo.
+Коммиты: 1, активность 2026-05-31.
+Рекомендация: не использовать для заявки. Лучше архивировать, если это только reference.
+
+7. VibeActionHaus / zAuctionHouse-main
+Путь: C:\Users\Li2Fox\Documents\New project 13\VibeActionHaus
+Путь: C:\Users\Li2Fox\Documents\New project 13\zAuctionHouse-main
+Статус: похоже на сторонний premium plugin/readme/исходник.
+Рекомендация: не публиковать и не выдавать как свою работу. Можно упоминать только как исследование/локальный reference, если права позволяют, но лучше вообще не трогать для заявки.
+
+8. ПЕРЕЕЗД НА НОВЫЙ ХОСТИНГ
+Путь: C:\Users\Li2Fox\Documents\ПЕРЕЕЗД НА НОВЫЙ ХОСТИНГ
+Статус: локальная repo без коммитов.
+Что это: миграционные скрипты, SQL, deploy scripts, private host work.
+Рекомендация: приватно. Не публиковать.
+
+9. пк и кодекс
+Путь: C:\Users\Li2Fox\Documents\пк и кодекс
+Статус: локальная repo без коммитов.
+Что это: Repair-Codex-Window.ps1.
+Рекомендация: можно превратить в маленький публичный helper repo только после проверки, что там нет личных путей/секретов.
+
+10. Codex plugin cache/tmp
+Пути: C:\Users\Li2Fox\.codex\...
+Статус: в основном bundled/curated/cache, не авторские проекты.
+Рекомендация: не публиковать как свои.

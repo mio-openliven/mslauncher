@@ -1,0 +1,48 @@
+Что публичить, что держать закрытым
+
+Публично безопасно после проверки:
+1. koth-plate
+   - уже публичный;
+   - добавить release jar;
+   - добавить README sections: features, commands, config, build, screenshots/gif.
+
+2. MSNukem
+   - уже публичный;
+   - не исходники;
+   - только клиентский setup/release/instructions;
+   - добавить понятный README для актёров.
+
+3. Repair-Codex-Window или похожие маленькие helper scripts
+   - можно сделать отдельным публичным repo;
+   - удалить личные пути;
+   - README: проблема, запуск, ограничения.
+
+4. Sanitised TitanForge demo
+   - не открывать весь приватный проект сразу;
+   - сделать lite/demo subset: mask preview / tiny location demo / examples.
+
+Держать приватным:
+1. mslauncher source
+   - содержит логику лаунчера, панели, обновлений, хостинга, private flow.
+
+2. VibeAuth-Proxy
+   - привязан к реальной сети/БД/миграции.
+
+3. VibeCraft-Proxy-Legacy
+   - legacy artifacts/configs, возможные сторонние jar/config references.
+
+4. ПЕРЕЕЗД НА НОВЫЙ ХОСТИНГ
+   - deploy scripts, SQL, host migration.
+
+5. VibeActionHaus / zAuctionHouse-main
+   - похоже на сторонний premium plugin/reference, нельзя выставлять как своё.
+
+Перед публикацией любого repo:
+- rg по секретам: password|token|secret|api_key|ssh|root|IP;
+- проверить .gitignore;
+- удалить dist/build/target, если они не нужны;
+- добавить LICENSE;
+- добавить README;
+- сделать 2-3 нормальных commit message;
+- добавить GitHub description и topics;
+- сделать release, если есть jar/exe.

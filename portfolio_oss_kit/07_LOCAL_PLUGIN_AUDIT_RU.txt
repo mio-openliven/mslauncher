@@ -1,0 +1,175 @@
+Local Minecraft plugin audit
+
+Scanned:
+- C:\Plugins
+- C:\Users\Li2Fox\IdeaProjects
+- C:\Users\Li2Fox\.codex\plugins
+- C:\Users\Li2Fox\.codex\.tmp\plugins
+
+Important conclusion:
+There is more work here than the public GitHub currently shows, but most of it should not be published raw. Some folders are old experiments, duplicate copies, generated builds, or private server-specific tools. The safe strategy is to present them as private/in-progress experience, then publish only cleaned repositories one by one.
+
+Best candidates to mention as private/in-progress:
+
+1. VibePetCore
+Paths:
+- C:\Plugins\VibePetCore
+- C:\Users\Li2Fox\IdeaProjects\VibePetCore
+GitHub: mio-openliven/VibePetCore, currently private.
+What it is:
+Large RPG pet-system experiment for Minecraft servers: pets, evolution, quests, GUI, storage, combat reactions, player data, migration notes, RU/EN messages.
+Usefulness:
+Could become a real server feature for long-term player retention and personality.
+Status:
+Large in-progress MVP. Many migration notes show active iteration, but it needs cleanup before public release.
+Risk:
+Very big surface area, possible server-specific assumptions, old generated/cache folders, possible messy text/migration history.
+Recommendation:
+Keep private for now. Later create a cleaned public README or demo branch only if the code is sanitized.
+
+2. VibeChat
+Path: C:\Plugins\VibeChat
+What it is:
+Minecraft chat/private-message/mail style plugin experiment.
+Usefulness:
+Small community servers often need better chat UX without a giant plugin stack.
+Status:
+Potential small public project, but needs cleanup, README, license, and secret check.
+Risk:
+There are duplicate folders and generated codex-build output.
+Recommendation:
+Do not publish raw. Clean source-only repo if needed.
+
+3. VibeClan
+Path: C:\Plugins\VibeClan
+What it is:
+Clan system with commands, GUI, roles, bank, invites, database/service layers and integrations.
+Usefulness:
+Useful for survival/SMP/community servers that need lightweight group mechanics.
+Status:
+Large private/in-progress system.
+Risk:
+More complex than koth-plate; likely needs serious README and testing before public.
+Recommendation:
+Mention as private/in-progress. Do not public raw yet.
+
+4. VibeCombatSystems
+Path: C:\Plugins\VibeCombatSystems
+What it is:
+Combat-related server plugin experiment.
+Usefulness:
+Potential server balancing and PvP/PvE control.
+Status:
+Private/in-progress.
+Risk:
+Combat plugins are high-risk for fairness and player trust; needs test notes.
+Recommendation:
+Keep private unless cleaned into a focused small plugin.
+
+5. VibeEventSnow
+Path: C:\Plugins\VibeEventSnow
+What it is:
+Seasonal/event plugin.
+Usefulness:
+Good small portfolio candidate if it is self-contained and harmless.
+Status:
+Potential public candidate after cleanup.
+Risk:
+Need verify build, commands, assets, permissions.
+
+6. VibeTpa
+Path: C:\Plugins\VibeTpa
+What it is:
+Teleport request plugin.
+Usefulness:
+Common server QoL feature.
+Status:
+Small candidate, likely publishable after cleanup.
+Risk:
+Many existing TPA plugins exist; present it as learning/QoL, not a breakthrough.
+
+7. VibeStreemerClient / VibeStreemer
+Paths:
+- C:\Plugins\VibeStreemerClient
+- C:\Plugins\VibeStreemer
+What it is:
+Streamer-related plugin/client experiment.
+Usefulness:
+Could be relevant to creator/server tooling.
+Status:
+Needs review. Has README/build files in client folder.
+Risk:
+May contain creator-specific assumptions or unfinished client logic.
+
+8. VibeAntiCheat
+Path: C:\Plugins\VibeAntiCheat
+What it is:
+Anti-cheat/combat-check experiment.
+Usefulness:
+Shows ambition, but anti-cheat is hard and high-risk.
+Status:
+Do not present as production-ready.
+Risk:
+False positives, fairness, security claims.
+Recommendation:
+Keep private. If mentioned, call it an experiment only.
+
+9. AuthSpawnFix / VibeAuth / VibeAuth-Proxy
+Paths:
+- C:\Plugins\AuthSpawnFix
+- C:\Plugins\VibeAuth
+- C:\Users\Li2Fox\Desktop\CodexServerMC\newserver_devtools\VibeAuth-Proxy
+What it is:
+Authentication/proxy/migration work.
+Usefulness:
+Real server infrastructure value.
+Status:
+Private.
+Risk:
+Auth code, database assumptions, security-sensitive flows.
+Recommendation:
+Do not public raw.
+
+10. TestPlugin / TestPl / TestPl copy / PrimeShop / VibeBalancer
+Paths:
+- C:\Plugins\TestPlugin
+- C:\Users\Li2Fox\IdeaProjects\TestPl
+- C:\Users\Li2Fox\IdeaProjects\TestPl — копия
+- C:\Users\Li2Fox\IdeaProjects\PrimeShop
+- C:\Users\Li2Fox\IdeaProjects\VibeBalancer
+What it is:
+Old tests/early experiments.
+Recommendation:
+Do not use for portfolio unless one is cleaned and renamed into a real project.
+
+Codex plugin folders:
+- C:\Users\Li2Fox\.codex\plugins is mostly installed/cache/vendor material.
+- C:\Users\Li2Fox\.codex\.tmp\plugins contains marketplace/plugin clones.
+Recommendation:
+Do not publish these as your own work. They are useful references/tools, not portfolio projects.
+
+Suggested public/private split:
+
+Public now:
+- koth-plate
+- titanforge-engine
+- MSNukem as client release page only
+- mio-openliven profile README
+
+Public later after cleanup:
+- VibeTpa
+- VibeEventSnow
+- possibly VibeChat
+- small Codex/Windows helper script if sanitized
+
+Private:
+- MSLaunch source
+- VibePetCore
+- VibeAuth/VibeAuth-Proxy
+- VibeClan
+- VibeCombatSystems
+- server migration/deploy scripts
+- zAuctionHouse/VibeActionHaus unless license and author permission are clear
+
+Recommended profile wording:
+"I have several private Minecraft server tools in progress, including launcher, pet-system, chat, clan, auth, and event experiments. I publish the reusable parts only after they are cleaned, documented, and safe to share."

@@ -1,0 +1,35 @@
+Ты Codex в новом чистом чате. Проект MSLaunch:
+C:\Users\Li2Fox\Documents\Лаунчер
+
+Роль: релиз / GitHub / хостинг / установщик. Не трогай UI и mascot без прямой задачи.
+
+Важно:
+- Не пушь и не делай релиз без явной команды.
+- Публичный клиентский репозиторий: mio-openliven/MSNukem.
+- Приватный исходный репозиторий: mio-openliven/mslauncher.
+- Публичный GitHub не защищает моды, если raw URL известен. Password gate в лаунчере - только UI-барьер, пока нет backend/token/signed URLs.
+- SmartScreen не лечится переименованием exe. Реальные варианты: код-подпись, репутация, Microsoft submit, нормальный installer, время.
+
+Перед работой:
+1. Прочитай 10_PROJECT_SNAPSHOT.txt.
+2. Проверь:
+   launcher_update.py
+   bootstrapper.py
+   setup_bootstrapper/MSLaunchSetup.cs
+   MSLauncher.spec
+   build_exe.ps1
+   build_bootstrapper.ps1
+3. Не трогай server_pack/build.json и server_pack/manifest.json.
+4. Не запускай Minecraft.
+
+Цели:
+- проверить installer/update hash flow;
+- исключить неполные установки;
+- проверить публичный download asset;
+- описать точный release checklist.
+
+Проверки:
+python -m py_compile bootstrapper.py launcher_update.py
+python tools\smoke_test_launcher_update.py
+.\build_exe.ps1
+

@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -22,14 +23,15 @@ USER_CONFIG_PATH = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roa
 DESKTOP = Path(os.environ.get("USERPROFILE", str(Path.home()))) / "Desktop"
 SHORTCUT_PATH = DESKTOP / "MSLaunch.lnk"
 EXE_NAME = "MSLauncher.exe"
-PACKAGE_NAME = "MSLaunch-1.9.0-beta.zip"
-PACKAGE_SHA256 = "885a99ecb8fa8c6e29ed071ddb64542249dfa492476fe96318861e9f500553ab"
+PACKAGE_NAME = "MSLaunchPayload.dat"
+PACKAGE_SHA256 = "bf2909862e9e6d7876e57df70403b61177549ee2ca704b6a497216c3650a9f70"
 BOOTSTRAP_MANIFESTS = [
     "https://mslaunch.186.246.12.238.sslip.io/downloads/bootstrap.json",
     "https://github.com/mio-openliven/MSNukem/releases/download/v1.9.0-beta.1/bootstrap.json",
 ]
 PROBE_BYTES = 64 * 1024
 CHUNK_SIZE = 1024 * 256
+SHA256_PATTERN = re.compile(r"^[a-f0-9]{64}$")
 
 SOURCES = [
     ("Host", f"https://mslaunch.186.246.12.238.sslip.io/downloads/{PACKAGE_NAME}", PACKAGE_SHA256),
@@ -121,7 +123,7 @@ def parse_bootstrap_manifest(payload: object) -> list[tuple[str, str, str]]:
         name = str(item.get("name", "")).strip()[:40] or "Source"
         url = str(item.get("url", "")).strip()
         sha256_value = str(item.get("sha256", "")).strip().lower()
-        if not url.startswith("https://") or len(sha256_value) != 64:
+        if not url.startswith("https://") or not SHA256_PATTERN.fullmatch(sha256_value):
             continue
         parsed.append((name, url, sha256_value))
     return parsed
@@ -178,6 +180,7 @@ def sha256(path: Path) -> str:
 
 def extract_package(ui: SetupUi, archive_path: Path) -> None:
     ui.set_text("Распаковка...", str(INSTALL_ROOT))
+    stop_running_launcher()
     staging = INSTALL_ROOT.with_name(INSTALL_ROOT.name + ".staging")
     if staging.exists():
         shutil.rmtree(staging)
@@ -187,6 +190,22 @@ def extract_package(ui: SetupUi, archive_path: Path) -> None:
     if INSTALL_ROOT.exists():
         shutil.rmtree(INSTALL_ROOT)
     staging.replace(INSTALL_ROOT)
+
+
+def stop_running_launcher() -> None:
+    subprocess.run(
+        [
+            "powershell",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            "Get-Process MSLauncher -ErrorAction SilentlyContinue | Stop-Process -Force",
+        ],
+        check=False,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
 
 
 def create_shortcut(exe_path: Path) -> None:
@@ -215,6 +234,7 @@ def update_user_config() -> None:
         "recent_usernames",
         "skin_path",
         "launch",
+        "last_seen_launcher_version",
     )
     merged = dict(bundled)
     for key in preserve_keys:
@@ -275,6 +295,8 @@ def install(ui: SetupUi) -> None:
                 exe_path = INSTALL_ROOT / EXE_NAME
                 if not exe_path.is_file():
                     raise RuntimeError("MSLauncher.exe не найден после распаковки.")
+                if not (INSTALL_ROOT / "minecraft_launcher_lib" / "version.txt").is_file():
+                    raise RuntimeError("Служебные файлы лаунчера распакованы не полностью.")
                 ui.set_progress(92)
                 ui.set_text("Обновление настроек...", str(USER_CONFIG_PATH))
                 update_user_config()

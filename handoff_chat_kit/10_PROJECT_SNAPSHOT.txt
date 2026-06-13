@@ -1,0 +1,57 @@
+MSLaunch snapshot for new Codex chats
+
+Project:
+C:\Users\Li2Fox\Documents\Лаунчер
+
+What it is:
+MSLaunch is a PyQt6 Minecraft launcher with project modes:
+- MSLaunch / independent
+- MS Nuckem / protected modpack flow
+- VibeCraft placeholder only
+
+Core files:
+- gui.py: launcher UI, project switcher, reports, password gates, update button, admin panel view
+- launcher_core.py: Minecraft version install/launch, mod sync, process handling
+- launcher_update.py: APP_VERSION and update notice helpers
+- panel_client.py: panel API calls for active builds, launcher updates, reports
+- launcher_config.json: default local config template
+- MSLauncher.spec: PyInstaller launcher build
+- setup_bootstrapper/MSLaunchSetup.cs: .NET setup bootstrapper
+- bootstrapper.py: Python bootstrapper
+
+Current important state:
+- APP_VERSION currently says 1.9.7 in launcher_update.py.
+- Mascot feature is temporarily disabled in gui.py by MASCOT_FEATURE_ENABLED = False.
+- There are local uncommitted changes. Do not assume the tree is clean.
+- server_pack/build.json and server_pack/manifest.json are generated files and must not be touched unless explicitly requested.
+- dist/MSLauncher is a working folder build that has launched successfully in earlier checks.
+- Current installed launcher path used by user:
+  C:\Users\Li2Fox\AppData\Local\MSLaunch\Launcher\MSLauncher.exe
+
+Business rules:
+- MSLaunch/independent: Mods/Game Folder opens the game/profile folder.
+- MS Nuckem: Download Mods must go through build password gate and sync.
+- Each mod build can have its own password.
+- Nukem uses its slideshow backgrounds and Nukem-only social links.
+- VibeCraft remains disabled/placeholder.
+- Do not launch Minecraft during automated tests.
+
+Panel direction:
+- Panel is intended to become priority source for builds, passwords, reports, launcher updates, backgrounds, logos, news.
+- GitHub remains fallback source.
+- Reports from Nukem should go to Nukem/admin panel.
+- MSLaunch generic reports may go to GitHub/local reports if implemented safely.
+
+Known pain points:
+- Launcher UI still needs cleanup and consistency.
+- Update/installer flow has had hash/package mismatch bugs.
+- SmartScreen/Defender warnings are expected for unsigned new exe; real fix is signing/reputation, not code tricks.
+- Mascot animation experiments are prototypes only and should not be mixed back into launcher until assets are production-ready.
+
+Good smoke checks:
+python -m py_compile gui.py launcher_core.py launcher_update.py bootstrapper.py
+python tools\smoke_test_gui_offscreen.py
+python tools\smoke_test_launcher_update.py
+python tools\smoke_test_nukem_background_assets.py
+python tools\smoke_test_admin_panel.py
+

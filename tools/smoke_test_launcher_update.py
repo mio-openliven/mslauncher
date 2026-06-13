@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
+
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -17,6 +20,62 @@ def expect_remote_error(callback) -> None:
     except RemoteBuildConfigError:
         return
     raise AssertionError("Expected RemoteBuildConfigError")
+
+
+def smoke_gui_update_states(next_version: str) -> None:
+    import gui
+    from PyQt6.QtWidgets import QApplication
+
+    gui.MSLauncherWindow.load_versions = lambda self: self.set_status("ready")
+    gui.MSLauncherWindow.auto_check_launcher_update = lambda self: None
+
+    app = QApplication.instance() or QApplication(sys.argv)
+    window = gui.MSLauncherWindow()
+    try:
+        window.on_launcher_update_loaded(
+            {
+                "launcher_version": next_version,
+                "launcher_download_url": "https://example.com/MSLaunchSetup.exe",
+                "launcher_sha256": "a" * 64,
+                "launcher_notes": "Smoke update",
+            }
+        )
+        assert window.update_check_state == "available"
+        assert window.update_check_button.text() == "!"
+        assert next_version in window.update_check_button.toolTip()
+        assert window.info_panel_mode == "update"
+        assert window.launcher_update_version == next_version
+
+        window.update_check_manual = False
+        window.on_launcher_update_failed("network down")
+        assert window.update_check_state == "available"
+        assert window.update_check_button.text() == "!"
+        assert window.launcher_update_version == next_version
+
+        window.launcher_update_version = ""
+        window.launcher_update_url = ""
+        window.launcher_update_notes = ""
+        window.info_panel_mode = "status"
+        window.set_update_check_state("ok")
+        window.update_check_manual = False
+        window.on_launcher_update_failed("network down")
+        assert window.update_check_state == "error"
+        assert window.update_check_button.text() == "!"
+        assert "network down" in window.update_check_button.toolTip()
+
+        window.update_check_manual = True
+        window.on_launcher_update_loaded({"launcher_version": APP_VERSION})
+        assert window.update_check_state == "ok"
+        assert window.update_check_button.text() == "OK"
+        assert window.update_check_button.toolTip() == window.translate("manual_update_tooltip")
+
+        window.update_check_manual = True
+        window.on_launcher_update_loaded({"launcher_version": "version-next"})
+        assert window.update_check_state == "error"
+        assert window.update_check_button.text() == "!"
+        assert "Malformed launcher_version" in window.update_check_button.toolTip()
+    finally:
+        window.close()
 
 
 def main() -> None:
@@ -87,6 +146,8 @@ def main() -> None:
             }
         )
     )
+
+    smoke_gui_update_states(next_version)
 
     print("launcher update smoke test: OK")
 

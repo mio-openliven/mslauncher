@@ -8,23 +8,31 @@
 
 ## Что заменить перед сборкой
 
-Откройте `release/launcher_config.nukem.template.json` и замените:
+Для текущего R-004 GitHub fallback release в `release/launcher_config.nukem.template.json` уже заполнены:
 
-- `OWNER` / `REPO` / `BRANCH` в `source_key`;
-- `minecraft_version` после анализа архива клиента;
+- `source_key`: `https://raw.githubusercontent.com/mio-openliven/MSNukem/main/build.json`;
+- `minecraft_version`: `1.20.1`;
+- `loader`: `fabric`;
+- `password_hash_sha256`: SHA-256 для начального пароля `NUKEN`;
+- `panel.enabled`: `false`, чтобы путь игрока шел напрямую через GitHub fallback.
+
+Если меняется клиентская сборка, замените только подтвержденные release inputs:
+
+- `source_key`;
+- `minecraft_version`;
 - `server` и `port`, если лаунчер должен сразу подключать сервер;
-- `password_hash_sha256`, если включен password gate.
+- `password_hash_sha256` и `build_passwords`, если меняется пароль.
 
 Пример `source_key`:
 
 ```json
-"source_key": "https://raw.githubusercontent.com/OWNER/REPO/BRANCH/mslauncher/build.json"
+"source_key": "https://raw.githubusercontent.com/mio-openliven/MSNukem/main/build.json"
 ```
 
 Проверьте в браузере, что открывается:
 
 ```text
-https://raw.githubusercontent.com/OWNER/REPO/BRANCH/mslauncher/build.json
+https://raw.githubusercontent.com/mio-openliven/MSNukem/main/build.json
 ```
 
 ## Password gate
@@ -51,7 +59,8 @@ https://raw.githubusercontent.com/OWNER/REPO/BRANCH/mslauncher/build.json
 - Видны YouTube и Discord кнопки Nukem.
 - `source_key` указывает на raw GitHub `build.json`.
 - `minecraft_version` заполнен.
-- `password_hash_sha256` заполнен, если пароль нужен.
+- `password_hash_sha256` и `build_passwords.nukem` заполнены для начального пароля `NUKEN`.
+- `panel.enabled` выключен для player path; hosted panel active-build не нужен для первого actor test.
 - `.\release\prepare_release.ps1 -Preset nukem` собирает `dist\MSLauncher`.
 
 Игрокам отдавайте всю папку `dist\MSLauncher`, не один `.exe`.

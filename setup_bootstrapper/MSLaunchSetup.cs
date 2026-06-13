@@ -8,6 +8,7 @@ using System.Net;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -18,8 +19,9 @@ internal static class Program
     private const string AppName = "MSLaunch";
     private const string ExeName = "MSLauncher.exe";
     private const string PackageName = "MSLaunchPayload.dat";
-    private const string PackageSha256 = "885a99ecb8fa8c6e29ed071ddb64542249dfa492476fe96318861e9f500553ab";
+    private const string PackageSha256 = "bf2909862e9e6d7876e57df70403b61177549ee2ca704b6a497216c3650a9f70";
     private const int ChunkSize = 262144;
+    private static readonly Regex Sha256Pattern = new Regex("^[a-f0-9]{64}$", RegexOptions.Compiled);
 
     private static readonly string[] BootstrapManifests =
     {
@@ -89,7 +91,12 @@ internal static class Program
                 SetProgress(100);
                 SetText("Готово.", "Лаунчер запускается...");
                 Thread.Sleep(1200);
-                BeginInvoke((Action)Close);
+                BeginInvoke((Action)(() =>
+                {
+                    Close();
+                    Application.ExitThread();
+                    Environment.Exit(0);
+                }));
             }
             catch (Exception ex)
             {
@@ -149,6 +156,10 @@ internal static class Program
                         if (!File.Exists(exePath))
                         {
                             throw new FileNotFoundException("MSLauncher.exe не найден после распаковки.");
+                        }
+                        if (!File.Exists(Path.Combine(installRoot, "minecraft_launcher_lib", "version.txt")))
+                        {
+                            throw new FileNotFoundException("Служебные файлы лаунчера распакованы не полностью.");
                         }
                         ui.SetProgress(92);
                         ui.SetText("Обновление настроек...", userConfigPath);
@@ -220,7 +231,7 @@ internal static class Program
                 var name = Convert.ToString(source.ContainsKey("name") ? source["name"] : "Source");
                 var url = Convert.ToString(source.ContainsKey("url") ? source["url"] : "");
                 var sha = Convert.ToString(source.ContainsKey("sha256") ? source["sha256"] : "").ToLowerInvariant();
-                if (url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) && sha.Length == 64)
+                if (url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) && Sha256Pattern.IsMatch(sha))
                 {
                     result.Add(new Source(name, url, sha));
                 }
@@ -284,6 +295,7 @@ internal static class Program
         private static void ExtractPackage(SetupForm ui, string archivePath, string installRoot)
         {
             ui.SetText("Распаковка...", installRoot);
+            StopRunningLauncher();
             var staging = installRoot + ".staging";
             TryDeleteDirectory(staging);
             Directory.CreateDirectory(staging);
@@ -291,6 +303,21 @@ internal static class Program
             TryDeleteDirectory(installRoot);
             Directory.CreateDirectory(Path.GetDirectoryName(installRoot));
             Directory.Move(staging, installRoot);
+        }
+
+        private static void StopRunningLauncher()
+        {
+            foreach (var process in Process.GetProcessesByName("MSLauncher"))
+            {
+                try
+                {
+                    process.Kill();
+                    process.WaitForExit(5000);
+                }
+                catch
+                {
+                }
+            }
         }
 
         private static void UpdateUserConfig(string installRoot, string userConfigPath)
@@ -303,7 +330,7 @@ internal static class Program
             var bundled = ReadJsonObject(bundledPath);
             var current = ReadJsonObject(userConfigPath);
             var merged = new Dictionary<string, object>(bundled);
-            foreach (var key in new[] { "game_directory", "profiles_directory", "default_profile", "default_username", "recent_usernames", "skin_path", "launch" })
+            foreach (var key in new[] { "game_directory", "profiles_directory", "default_profile", "default_username", "recent_usernames", "skin_path", "launch", "last_seen_launcher_version" })
             {
                 if (current.ContainsKey(key))
                 {
