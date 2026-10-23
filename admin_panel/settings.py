@@ -7,6 +7,9 @@ from pathlib import Path
 APP_NAME = "MSLaunch Panel"
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
+SESSION_SECRET_ENV = "MSLAUNCH_PANEL_SECRET"
+SESSION_SECRET_MIN_LENGTH = 32
+INSECURE_SESSION_SECRETS = frozenset({"dev-panel-secret-change-me", "change-me"})
 
 
 def get_panel_data_root() -> Path:
@@ -28,8 +31,23 @@ def get_downloads_root() -> Path:
     return get_panel_data_root() / "downloads"
 
 
+class PanelSecretError(RuntimeError):
+    pass
+
+
 def get_session_secret() -> str:
-    return os.environ.get("MSLAUNCH_PANEL_SECRET", "dev-panel-secret-change-me")
+    secret = os.environ.get(SESSION_SECRET_ENV, "").strip()
+    hint = (
+        f"Set {SESSION_SECRET_ENV} to a long random value (at least {SESSION_SECRET_MIN_LENGTH} characters), "
+        'for example: python -c "import secrets; print(secrets.token_urlsafe(48))"'
+    )
+    if not secret:
+        raise PanelSecretError(f"{SESSION_SECRET_ENV} is not set. The admin panel refuses to start without it. {hint}")
+    if secret in INSECURE_SESSION_SECRETS:
+        raise PanelSecretError(f"{SESSION_SECRET_ENV} uses a known placeholder value. {hint}")
+    if len(secret) < SESSION_SECRET_MIN_LENGTH:
+        raise PanelSecretError(f"{SESSION_SECRET_ENV} is too short ({len(secret)} characters). {hint}")
+    return secret
 
 
 def get_public_base_url(default: str = "") -> str:

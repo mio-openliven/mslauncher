@@ -37,6 +37,7 @@ from .settings import (
     APP_NAME,
     DEFAULT_HOST,
     DEFAULT_PORT,
+    PanelSecretError,
     get_downloads_root,
     get_public_base_url,
     get_session_secret,
@@ -51,6 +52,7 @@ app = FastAPI(title=APP_NAME)
 
 @app.on_event("startup")
 def startup() -> None:
+    get_session_secret()
     init_db()
 
 
@@ -783,6 +785,10 @@ def clean_text(value: object, limit: int) -> str:
 
 
 def main() -> None:
+    try:
+        get_session_secret()
+    except PanelSecretError as exc:
+        raise SystemExit(f"{APP_NAME}: {exc}") from None
     uvicorn.run("admin_panel.app:app", host=DEFAULT_HOST, port=DEFAULT_PORT, reload=False)
 
 

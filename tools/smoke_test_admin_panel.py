@@ -14,7 +14,7 @@ if str(PROJECT_ROOT) not in sys.path:
 def main() -> None:
     with tempfile.TemporaryDirectory() as temp_dir:
         os.environ["MSLAUNCH_PANEL_DATA"] = str(Path(temp_dir) / "panel_data")
-        os.environ["MSLAUNCH_PANEL_SECRET"] = "smoke-secret"
+        os.environ["MSLAUNCH_PANEL_SECRET"] = "smoke-secret-0123456789abcdefghijklmnopqrstuv"
 
         from fastapi.testclient import TestClient
 
@@ -206,7 +206,39 @@ def main() -> None:
             )
             assert forbidden.status_code == 403
 
+        check_panel_secret_required(app)
+
     print("admin panel smoke test: OK")
+
+
+def check_panel_secret_required(app) -> None:
+    from fastapi.testclient import TestClient
+
+    from admin_panel.settings import PanelSecretError, get_session_secret
+
+    good_secret = os.environ["MSLAUNCH_PANEL_SECRET"]
+    try:
+        for bad_value in (None, "", "   ", "dev-panel-secret-change-me", "change-me", "x" * 31):
+            if bad_value is None:
+                os.environ.pop("MSLAUNCH_PANEL_SECRET", None)
+            else:
+                os.environ["MSLAUNCH_PANEL_SECRET"] = bad_value
+            try:
+                get_session_secret()
+            except PanelSecretError as exc:
+                assert "MSLAUNCH_PANEL_SECRET" in str(exc)
+            else:
+                raise AssertionError(f"weak panel secret accepted: {bad_value!r}")
+            try:
+                with TestClient(app):
+                    pass
+            except PanelSecretError:
+                pass
+            else:
+                raise AssertionError(f"panel started with weak secret: {bad_value!r}")
+    finally:
+        os.environ["MSLAUNCH_PANEL_SECRET"] = good_secret
+    assert get_session_secret() == good_secret
 
 
 if __name__ == "__main__":
