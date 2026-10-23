@@ -140,7 +140,7 @@ MVP принимает `.zip` с корнями `mods/`, `config/`, `resourcepac
 ## Безопасность
 
 - Админские пароли: bcrypt, если установлен; fallback PBKDF2 для dev.
-- Session cookie подписывается секретом `MSLAUNCH_PANEL_SECRET`.
+- Session cookie и build-access токены подписываются секретом `MSLAUNCH_PANEL_SECRET`. Панель не запускается, если переменная не задана, пустая, равна старому placeholder (`dev-panel-secret-change-me`, `change-me`) или короче 32 символов.
 - Upload paths проходят проверку.
 - Секреты и локальные пароли пишутся только в ignored local files/env.
 - Публичный GitHub fallback не защищает файлы. Настоящая защита - панель/private storage/token/signed URLs.
@@ -149,7 +149,8 @@ MVP принимает `.zip` с корнями `mods/`, `config/`, `resourcepac
 
 ```powershell
 pip install -r requirements.txt
-$env:MSLAUNCH_PANEL_SECRET="change-me"
+# Сгенерировать один раз и хранить вне git (env сервера / systemd / secret store):
+$env:MSLAUNCH_PANEL_SECRET = python -c "import secrets; print(secrets.token_urlsafe(48))"
 python -m admin_panel.cli init-db
 python -m admin_panel.cli create-user --username li2fly --role owner
 python -m admin_panel.app

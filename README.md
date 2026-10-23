@@ -117,6 +117,16 @@ Required Java versions:
 
 On a clean Windows install, Java may not exist yet. Install a compatible Java version or set the full path to `java.exe` in launcher settings.
 
+## Admin Panel Secret
+
+The admin panel (`python -m admin_panel.app`) signs login sessions and build download tokens with `MSLAUNCH_PANEL_SECRET`. It refuses to start if that variable is missing, empty, a known placeholder, or shorter than 32 characters. Generate one value per server and keep it out of git:
+
+```powershell
+$env:MSLAUNCH_PANEL_SECRET = python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+Changing the secret logs out all panel users and invalidates outstanding build download links.
+
 ## How Admin Updates A Modpack
 
 ```powershell
